@@ -1,0 +1,9 @@
+This folder will contain results in the following format
+
+- results/<dataset name>/<experiment_name>/<date & time>/
+
+These folders will contain various things, depending on the listeners used during training.
+These can be:
+    - images                (imgs/)
+    - saved parameters      (params/)
+    - experiment settings   (hyperparams.json)

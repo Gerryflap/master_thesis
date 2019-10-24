@@ -5,20 +5,21 @@ from abc import ABC, abstractmethod
 
 
 class TrainLoop(ABC):
-    def __init__(self, listeners: list, epochs=1):
+    def __init__(self, listeners: list, epochs):
         self.listeners = listeners
         self.epochs = epochs
         self.current_epoch = 0
 
     def train(self):
         for epoch in range(self.epochs):
-            state_dict = self.step()
+            self.current_epoch = epoch
+            state_dict = self.epoch()
 
             for listener in self.listeners:
                 listener.report(state_dict)
 
     @abstractmethod
-    def step(self):
+    def epoch(self):
         """
             Performs one epoch over the dataset and reports the current statistics to the state_dict
             :return: A state dict. This dictionary must contain information required by the listeners
