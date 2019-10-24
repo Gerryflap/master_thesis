@@ -8,6 +8,9 @@ import torch
 import argparse
 
 # Parse commandline arguments
+from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
+from trainloops.listeners.loss_reporter import LossReporter
+
 parser = argparse.ArgumentParser(description="MNIST DCGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
@@ -45,7 +48,7 @@ dataset = data.MNIST("data/downloads/mnist", train=True, download=True, transfor
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
 G = Generator28(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_G)
-D = Discriminator28(args.l_size, args.h_size, args.use_mish)
+D = Discriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish)
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
@@ -53,7 +56,10 @@ if args.cuda:
     G = G.cuda()
     D = D.cuda()
 
-listeners = []
+listeners = [
+    LossReporter(),
+    GanImageSampleLogger(output_path, args, pad_value=1)
+]
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
                           cuda=args.cuda, epochs=args.epochs)
 

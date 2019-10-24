@@ -9,8 +9,15 @@ class TrainLoop(ABC):
         self.listeners = listeners
         self.epochs = epochs
         self.current_epoch = 0
+        self.registered = False
+
 
     def train(self):
+        if not self.registered:
+            for listener in self.listeners:
+                listener.register(self)
+            self.registered = True
+
         for epoch in range(self.epochs):
             self.current_epoch = epoch
             state_dict = self.epoch()
