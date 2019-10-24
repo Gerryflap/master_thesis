@@ -7,7 +7,7 @@ class LossReporter(Listener):
 
     def report(self, state_dict: dict):
         print("Epoch %d"%state_dict["epoch"])
-        for key, value in state_dict.items():
+        for key, value in state_dict["losses"].items():
             if "loss" in key:
                 print(key, value)
         print()

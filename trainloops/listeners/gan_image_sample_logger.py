@@ -1,6 +1,6 @@
 """
     The GAN image sample logger produces samples from G for every epoch with constant latent vectors and writes them
-    to disk. It requires a GAN-based training loop.
+    to disk. It requires a training loop that either has a G (generator) or a dec (decoder). It will also work for VAEs.
 """
 import math
 import os
@@ -26,7 +26,13 @@ class GanImageSampleLogger(Listener):
 
     def report(self, state_dict):
         epoch = state_dict["epoch"]
-        G = state_dict["G"]
+
+        if "G" in state_dict["networks"]:
+            G = state_dict["networks"]["G"]
+        elif "dec" in state_dict["networks"]:
+            G = state_dict["networks"]["dec"]
+        else:
+            raise ValueError("Could not find a generator-like network in the state dict!")
 
         images = G(self.z)
         torchvision.utils.save_image(

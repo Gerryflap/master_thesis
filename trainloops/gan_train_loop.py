@@ -89,12 +89,18 @@ class GanTrainLoop(TrainLoop):
 
         return {
             "epoch": self.current_epoch,
-            "D_loss: ": d_loss.detach().item(),
-            "G_loss: ": g_loss.detach().item(),
-            "G": self.G,
-            "D": self.D,
-            "G_optimizer": self.G_optimizer,
-            "D_optimizer": self.D_optimizer
+            "losses": {
+                "D_loss: ": d_loss.detach().item(),
+                "G_loss: ": g_loss.detach().item(),
+            },
+            "networks": {
+                "G": self.G,
+                "D": self.D,
+            },
+            "optimizers": {
+                "G_optimizer": self.G_optimizer,
+                "D_optimizer": self.D_optimizer
+            }
         }
 
     def generate_z_batch(self, batch_size):
