@@ -3,4 +3,4 @@
 """
 
 from torchvision.datasets import MNIST
-from data.celeba_cropped import CelebaCropped
+from data.celeba_cropped import CroppedImageDataset
