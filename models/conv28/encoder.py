@@ -3,8 +3,10 @@ from util.torch.activations import mish
 
 
 class Encoder28(torch.nn.Module):
-    def __init__(self, latent_size, h_size, use_mish=False):
+    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1):
         super().__init__()
+
+        self.n_channels = n_channels
 
         if use_mish:
             self.activ = mish
@@ -13,7 +15,7 @@ class Encoder28(torch.nn.Module):
 
         self.latent_size = latent_size
         self.h_size = h_size
-        self.conv_1 = torch.nn.Conv2d(1, h_size, kernel_size=4, stride=1)
+        self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=4, stride=1)
         self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=5, stride=2)
         self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2)
         self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=4, stride=1)

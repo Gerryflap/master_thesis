@@ -39,5 +39,7 @@ class GanImageSampleLogger(Listener):
             images,
             os.path.join(self.path, "output-%06d.png"%epoch),
             nrow=self.rows,
-            pad_value=self.pad_value
+            pad_value=self.pad_value,
+            range=(-1, 1),
+            normalize=True
         )
