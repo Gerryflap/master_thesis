@@ -6,10 +6,10 @@ from PIL import Image
 
 
 def crop_images(
-        predictor_path="../shape_predictor_5_face_landmarks.dat",
         input_dir="/run/media/gerben/LinuxData/data/celeba/img_align_celeba/",
         output_dir="/run/media/gerben/LinuxData/data/celeba/cropped_zoom_10_faces64/"
 ):
+    predictor_path = "data/data_prep/shape_predictor_5_face_landmarks.dat"
     # Crop size. The full face image will have the resolution 64 + 2*crop_size and then crop_size pixels will be cut off at the top, bottom, left and right
     # Is used to zoom in on facial features
     crop_size = 10
