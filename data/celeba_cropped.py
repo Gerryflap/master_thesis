@@ -5,7 +5,7 @@ from functools import partial
 import PIL
 import pandas
 import torch
-from torchvision.datasets import CelebA
+from torchvision.datasets import VisionDataset, CelebA
 import os
 
 from torchvision.datasets.utils import verify_str_arg
@@ -16,11 +16,16 @@ from shutil import copyfile
 assert os.path.isdir("data")
 
 
-class CroppedImageDataset(CelebA):
+class CelebaCropped(VisionDataset):
     cropped_base_folder = "celeba_cropped/img_align/"
 
     def __init__(self, split="train", transform=None, target_transform=None, download=False):
-        super().__init__("data", split, [], transform, target_transform, download)
+        super().__init__("data", transforms=None, transform=transform, target_transform=target_transform)
+
+        if not os.path.isdir("data/celeba"):
+            # try to download celeba
+            celeba = CelebA("data", split=split, transform=transform, target_transform=target_transform, download=download)
+
 
         # Check if files exist
         if not os.path.isdir("data/" + self.cropped_base_folder):
@@ -80,4 +85,5 @@ class CroppedImageDataset(CelebA):
 
 
 if __name__ == "__main__":
-    ds = CroppedImageDataset(download=True)
+    ds = CelebaCropped(download=True)
+
