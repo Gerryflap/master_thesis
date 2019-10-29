@@ -1,7 +1,7 @@
 from trainloops.gan_train_loop import GanTrainLoop
 from models.conv28.discriminator import Discriminator28
 from models.conv28.generator import Generator28
-from data.celeba_cropped import CroppedImageDataset
+from data.celeba_cropped import CelebaCropped
 import util.output
 from torchvision import transforms
 import torch
@@ -41,7 +41,7 @@ args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("celeba28", "gan", args)
 
-dataset = CroppedImageDataset(split="train", download=True, transform=transforms.Compose([
+dataset = CelebaCropped(split="train", download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
