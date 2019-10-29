@@ -43,7 +43,12 @@ class ModelSaver(Listener):
         else:
             folder_path = os.path.join(self.path, "all_epochs")
 
-        for name, model in state_dict["networks"].items() + state_dict["optimizers"].items():
+        for name, model in state_dict["networks"].items():
+            fpath = os.path.join(folder_path, name + ".pt")
+            with open(fpath, "w") as f:
+                torch.save(model, f)
+
+        for name, model in state_dict["optimizers"].items():
             fpath = os.path.join(folder_path, name + ".pt")
             with open(fpath, "w") as f:
                 torch.save(model, f)
