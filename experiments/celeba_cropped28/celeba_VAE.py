@@ -1,3 +1,4 @@
+from trainloops.listeners.model_saver import ModelSaver
 from trainloops.vae_train_loop import VaeTrainLoop
 from models.conv28.encoder import Encoder28
 from models.conv28.generator import Generator28
@@ -58,7 +59,8 @@ if args.cuda:
 
 listeners = [
     LossReporter(),
-    GanImageSampleLogger(output_path, args, pad_value=1)
+    GanImageSampleLogger(output_path, args, pad_value=1),
+    ModelSaver(output_path, n=5, overwrite=True, print_output=True)
 ]
 train_loop = VaeTrainLoop(listeners, enc, dec, enc_optimizer, dec_optimizer, dataloader,
                           cuda=args.cuda, epochs=args.epochs)
