@@ -45,12 +45,12 @@ class ModelSaver(Listener):
 
         for name, model in state_dict["networks"].items():
             fpath = os.path.join(folder_path, name + ".pt")
-            with open(fpath, "w") as f:
+            with open(fpath, "wb") as f:
                 torch.save(model, f)
 
         for name, model in state_dict["optimizers"].items():
             fpath = os.path.join(folder_path, name + ".pt")
-            with open(fpath, "w") as f:
+            with open(fpath, "wb") as f:
                 torch.save(model, f)
 
         if self.print_output:
