@@ -23,13 +23,17 @@ else:
 orig_img = None
 should_update = True
 
-root = tk.Tk()
-filename_enc = tk.filedialog.askopenfilename(initialdir="./results", title="Select encoder",
-                                           filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
-filename_dec = tk.filedialog.askopenfilename(initialdir="./results", title="Select decoder",
-                                           filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
+# root = tk.Tk()
+# filename_enc = tk.filedialog.askopenfilename(initialdir="./results", title="Select encoder",
+#                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
+# filename_dec = tk.filedialog.askopenfilename(initialdir="./results", title="Select decoder",
+#                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
+#
+# root.destroy()
 
-root.destroy()
+filename_enc = "results/test/params/all_epochs/enc.pt"
+filename_dec = "results/test/params/all_epochs/dec.pt"
+
 Gz = torch.load(filename_enc, map_location=torch.device('cpu'))
 Gx = torch.load(filename_dec, map_location=torch.device('cpu'))
 
@@ -39,8 +43,8 @@ detector = dlib.get_frontal_face_detector()
 sp = dlib.shape_predictor(predictor_path)
 
 z_size = Gx.latent_size
-resolution = int(Gx(torch.zeros((z_size,))).size()[0])
-
+resolution = int(Gx(torch.zeros((z_size,))).size()[2])
+print(resolution)
 real_resolution = resolution
 
 if resolution == 32 or resolution == 28:
@@ -85,24 +89,30 @@ def update():
 
 
     frame = Image.fromarray(frame)
-    input_frame = tvF.scale(frame, 28)
-    input_frame = tvF.to_tensor(input_frame)
+    input_frame = tvF.scale(frame, real_resolution)
+    input_frame = tvF.to_tensor(input_frame).float()
 
-    input_frame = torch.from_numpy(input_frame).float()
-    input_frame = input_frame.permute(2, 0, 1)
-    input_frame /= 255.0
-    z, z_mean, z_logvar = Gz.predict(input_frame)
+    # input_frame = input_frame.permute(2, 0, 1)
+    input_frame = input_frame.unsqueeze(0)
+    # input_frame /= 255.0
+    input_frame = input_frame * 2 - 1
+    z, z_mean, z_logvar = Gz(input_frame)
     if random_mode == 0:
         z = z_mean
 
-    decoded = Gx.predict(z)[0]*255.0
+    decoded = Gx(z)[0]
+    decoded = (decoded + 1)/2
+    decoded *= 255.0
 
-    img = Image.fromarray((input_frame[0]*255.0).astype(np.uint8))
+    input_frame = (input_frame + 1)/2
+    input_frame *= 255.0
+
+    img = Image.fromarray((input_frame.permute(0, 2, 3, 1).detach().numpy()[0]).astype(np.uint8))
     img = img.resize((320, 320))
     img = ImageTk.PhotoImage(image=img)
     image = img
 
-    img2 = Image.fromarray(decoded.detach().numpy().astype(np.uint8))
+    img2 = Image.fromarray(decoded.detach().permute(1, 2, 0).numpy().astype(np.uint8))
     img2 = img2.resize((320, 320))
     img2 = ImageTk.PhotoImage(image=img2)
     image2 = img2
