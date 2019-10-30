@@ -77,11 +77,16 @@ def update_canvas(iets):
         z[0, i] = sliders[i].get()
     # array = G(z).eval(session=K.get_session())[0]
     array = generator(torch.from_numpy(z))[0]
-    if array.shape[0] == 1:
-        array = array[0, :, :]
+
     array = (array + 1) / 2
     array *= 255.0
     array = array.detach().numpy().astype(np.uint8)
+
+    if array.shape[0] == 1:
+        array = array[0, :, :]
+    else:
+        array = np.stack(list(array), axis=2)
+
     img = Image.fromarray(array)
     orig_img = img
     img = img.resize((200, 200))
