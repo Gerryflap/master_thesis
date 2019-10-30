@@ -7,11 +7,14 @@ from torchvision import transforms
 import torch
 import argparse
 
+# Might be useful: https://jjallaire.github.io/deep-learning-with-r-notebooks/notebooks/8.5-introduction-to-gans.nb.html
+
 # Parse commandline arguments
 from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
+from trainloops.listeners.model_saver import ModelSaver
 
-parser = argparse.ArgumentParser(description="MNIST DCGAN experiment.")
+parser = argparse.ArgumentParser(description="Celeba DCGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
@@ -28,14 +31,8 @@ parser.add_argument("--use_mish", action="store_true", default=False,
 parser.add_argument("--no_bias_in_G", action="store_true", default=False, help="Disables biases in the Generator")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
-# parser.add_argument("--load_path", action="store", type=str, default=None,
-#                     help="When given, loads models from LOAD_PATH folder")
-# parser.add_argument("--save_path", action="store", type=str, default=None,
-#                     help="When given, saves models to LOAD_PATH folder after all epochs (or every epoch)")
-# parser.add_argument("--save_every_epoch", action="store_true", default=False,
-#                     help="When a save path is given, store the model after every epoch instead of only the last")
-# parser.add_argument("--img_path", action="store", type=str, default=None,
-#                     help="When given, saves samples to the given directory")
+parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
+                    help="Sets the dropout rate on the input of the first fully connected layer of D")
 
 args = parser.parse_args()
 
@@ -49,7 +46,7 @@ dataset = CelebaCropped(split="train", download=True, transform=transforms.Compo
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
 G = Generator28(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_G, n_channels=3)
-D = Discriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3)
+D = Discriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate)
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
@@ -59,7 +56,8 @@ if args.cuda:
 
 listeners = [
     LossReporter(),
-    GanImageSampleLogger(output_path, args, pad_value=1)
+    GanImageSampleLogger(output_path, args, pad_value=1),
+    ModelSaver(output_path, n=5, overwrite=True, print_output=True)
 ]
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
                           cuda=args.cuda, epochs=args.epochs)
