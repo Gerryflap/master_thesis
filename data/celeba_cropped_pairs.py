@@ -82,15 +82,6 @@ class CelebaCroppedPairs(VisionDataset):
     def __len__(self):
         return len(self.ident_list)
 
-    def crop(self):
-
-        # Create the data directory
-        os.mkdir("data/" + self.cropped_base_folder)
-
-        # Crop images
-        face_cropper.crop_images("data/celeba/img_align_celeba/", "data/" + self.cropped_base_folder + "/")
-
-
 if __name__ == "__main__":
     ds = CelebaCropped(download=True)
 

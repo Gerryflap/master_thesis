@@ -25,7 +25,7 @@ class GanTrainLoop(TrainLoop):
         self.D_steps_per_G_step = D_steps_per_G_step
         self.cuda = cuda
 
-        self.loss_fn = torch.nn.BCELoss()
+        self.loss_fn = torch.nn.BCEWithLogitsLoss()
         self.real_label = torch.zeros((self.batch_size, 1))
         self.fake_label = torch.ones((self.batch_size, 1))
 

@@ -3,9 +3,10 @@ from util.torch.activations import mish
 
 
 class Discriminator28(torch.nn.Module):
-    def __init__(self, h_size, use_bn=False, use_mish=False, n_channels=1, dropout=0.0):
+    def __init__(self, h_size, use_bn=False, use_mish=False, n_channels=1, dropout=0.0, use_logits=True):
         super().__init__()
 
+        self.use_logits = use_logits
         self.n_channels = n_channels
 
         if use_mish:
@@ -61,5 +62,6 @@ class Discriminator28(torch.nn.Module):
             x = self.dropout_layer(x)
 
         x = self.lin_1(x)
-        x = torch.sigmoid(x)
+        if not self.use_logits:
+            x = torch.sigmoid(x)
         return x
