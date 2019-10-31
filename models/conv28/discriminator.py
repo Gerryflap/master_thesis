@@ -3,7 +3,7 @@ from util.torch.activations import mish
 
 
 class Discriminator28(torch.nn.Module):
-    def __init__(self, h_size, use_bn=False, use_mish=False, n_channels=1):
+    def __init__(self, h_size, use_bn=False, use_mish=False, n_channels=1, dropout=0.0):
         super().__init__()
 
         self.n_channels = n_channels
@@ -13,6 +13,7 @@ class Discriminator28(torch.nn.Module):
         else:
             self.activ = self.leaky_relu
 
+        self.dropout = dropout
         self.h_size = h_size
         self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=4,  stride=1)
         self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=5, stride=2)
@@ -24,6 +25,9 @@ class Discriminator28(torch.nn.Module):
             self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
             self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
             self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
+
+        if dropout != 0:
+            self.dropout_layer = torch.nn.Dropout(dropout, True)
 
         self.lin_1 = torch.nn.Linear(h_size * 4, h_size * 4)
         self.lin_2 = torch.nn.Linear(h_size * 4, 1)
@@ -53,6 +57,9 @@ class Discriminator28(torch.nn.Module):
 
         # Flatten to vector
         x = x.view(-1, self.h_size * 4)
+
+        if self.dropout != 0:
+            x = self.dropout_layer(x)
 
         x = self.lin_1(x)
         x = self.activ(x)
