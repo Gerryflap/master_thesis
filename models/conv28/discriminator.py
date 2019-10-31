@@ -29,8 +29,7 @@ class Discriminator28(torch.nn.Module):
         if dropout != 0:
             self.dropout_layer = torch.nn.Dropout(dropout, True)
 
-        self.lin_1 = torch.nn.Linear(h_size * 4, h_size * 4)
-        self.lin_2 = torch.nn.Linear(h_size * 4, 1)
+        self.lin_1 = torch.nn.Linear(h_size * 4, 1)
 
     @staticmethod
     def leaky_relu(x):
@@ -62,8 +61,5 @@ class Discriminator28(torch.nn.Module):
             x = self.dropout_layer(x)
 
         x = self.lin_1(x)
-        x = self.activ(x)
-
-        x = self.lin_2(x)
         x = torch.sigmoid(x)
         return x
