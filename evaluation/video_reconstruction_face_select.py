@@ -1,3 +1,5 @@
+import os
+
 import cv2
 
 import numpy as np
@@ -23,16 +25,17 @@ else:
 orig_img = None
 should_update = True
 
-# root = tk.Tk()
-# filename_enc = tk.filedialog.askopenfilename(initialdir="./results", title="Select encoder",
-#                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
-# filename_dec = tk.filedialog.askopenfilename(initialdir="./results", title="Select decoder",
-#                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
-#
-# root.destroy()
+root = tk.Tk()
+filename_enc = tk.filedialog.askopenfilename(initialdir="./results", title="Select encoder",
+                                           filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
+init_dir = os.path.split(filename_enc)[0]
+filename_dec = tk.filedialog.askopenfilename(initialdir=init_dir, title="Select decoder",
+                                           filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
 
-filename_enc = "results/test/params/all_epochs/enc.pt"
-filename_dec = "results/test/params/all_epochs/dec.pt"
+root.destroy()
+
+# filename_enc = "results/test/params/all_epochs/enc.pt"
+# filename_dec = "results/test/params/all_epochs/dec.pt"
 
 Gz = torch.load(filename_enc, map_location=torch.device('cpu'))
 Gx = torch.load(filename_dec, map_location=torch.device('cpu'))
@@ -46,10 +49,6 @@ z_size = Gx.latent_size
 resolution = int(Gx(torch.zeros((z_size,))).size()[2])
 print(resolution)
 real_resolution = resolution
-
-if resolution == 32 or resolution == 28:
-    resolution = 32
-    crop_region_size //= 2
 
 
 root = tk.Tk()
@@ -74,7 +73,7 @@ def update():
     faces = dlib.full_object_detections()
     for detection in dets:
         faces.append(sp(frame, detection))
-    frame = dlib.get_face_chip(frame, faces[0], size=(resolution + crop_region_size*2)*8)
+    frame = dlib.get_face_chip(frame, faces[0], size=(64 + crop_region_size*2))
 
 
     # frame = frame[::8, ::8]
