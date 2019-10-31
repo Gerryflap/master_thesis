@@ -53,6 +53,10 @@ class GanTrainLoop(TrainLoop):
                 # Compute loss for G, images should become more 'real' to the discriminator
                 g_loss = self.loss_fn(self.D(fake_batch), self.real_label)
                 g_loss.backward()
+
+                # Clip gradients
+                torch.nn.utils.clip_grad_norm_(self.G.parameters(), 1.0)
+
                 self.G_optimizer.step()
 
             # Train D
@@ -83,6 +87,9 @@ class GanTrainLoop(TrainLoop):
 
             # Back propagate
             d_loss.backward()
+
+            # Clip gradients
+            torch.nn.utils.clip_grad_norm_(self.D.parameters(), 1.0)
 
             # Update weights
             self.D_optimizer.step()
