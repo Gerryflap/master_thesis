@@ -1,8 +1,10 @@
 import torch
+
+from models.morphing_encoder import MorphingEncoder
 from util.torch.activations import mish
 
 
-class Encoder28(torch.nn.Module):
+class Encoder28(MorphingEncoder):
     def __init__(self, latent_size, h_size, use_mish=False, n_channels=1):
         super().__init__()
 
