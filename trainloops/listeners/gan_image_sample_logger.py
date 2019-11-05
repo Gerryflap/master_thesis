@@ -31,6 +31,8 @@ class GanImageSampleLogger(Listener):
             G = state_dict["networks"]["G"]
         elif "dec" in state_dict["networks"]:
             G = state_dict["networks"]["dec"]
+        elif "Gx" in state_dict["networks"]:
+            G = state_dict["networks"]["Gx"]
         else:
             raise ValueError("Could not find a generator-like network in the state dict!")
 
