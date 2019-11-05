@@ -1,3 +1,4 @@
+from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.model_saver import ModelSaver
 from trainloops.vae_train_loop import VaeTrainLoop
 from models.conv28.encoder import Encoder28
@@ -45,6 +46,13 @@ dataset = CelebaCropped(split="train", download=True, transform=transforms.Compo
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
+
+valid_dataset = CelebaCropped(split="valid", download=True, transform=transforms.Compose([
+    transforms.Resize(28),
+    transforms.ToTensor(),
+    transforms.Lambda(lambda img: img * 2 - 1)
+]))
+
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
 
@@ -59,7 +67,8 @@ if args.cuda:
 
 listeners = [
     LossReporter(),
-    GanImageSampleLogger(output_path, args, pad_value=1),
+    # GanImageSampleLogger(output_path, args, pad_value=1),
+    AEImageSampleLogger(output_path, valid_dataset, args),
     ModelSaver(output_path, n=5, overwrite=True, print_output=True)
 ]
 train_loop = VaeTrainLoop(listeners, enc, dec, enc_optimizer, dec_optimizer, dataloader,
