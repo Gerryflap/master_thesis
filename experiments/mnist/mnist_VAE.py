@@ -1,3 +1,4 @@
+from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.vae_train_loop import VaeTrainLoop
 from models.conv28.encoder import Encoder28
 from models.conv28.generator import Generator28
@@ -43,7 +44,13 @@ dataset = data.MNIST("data/downloads/mnist", train=True, download=True, transfor
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
+
+valid_dataset = data.MNIST("data/downloads/mnist", train=False, download=True, transform=transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(lambda img: img * 2 - 1)
+]))
+
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 
 enc = Encoder28(args.l_size, args.h_size, args.use_mish)
@@ -57,7 +64,7 @@ if args.cuda:
 
 listeners = [
     LossReporter(),
-    GanImageSampleLogger(output_path, args, pad_value=1)
+    AEImageSampleLogger(output_path, valid_dataset, args),
 ]
 train_loop = VaeTrainLoop(listeners, enc, dec, enc_optimizer, dec_optimizer, dataloader,
                           cuda=args.cuda, epochs=args.epochs)

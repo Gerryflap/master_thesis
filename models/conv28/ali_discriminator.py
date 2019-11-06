@@ -111,7 +111,6 @@ class ALIDiscriminator28(torch.nn.Module):
         if self.dropout != 0:
             h = self.dropout_layer(h)
         h = self.lin_xz3(h)
-        h = self.activ(h)
 
         return h
 

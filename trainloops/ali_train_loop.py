@@ -21,6 +21,10 @@ class ALITrainLoop(TrainLoop):
         self.cuda = cuda
 
     def epoch(self):
+        self.Gx.train()
+        self.Gz.train()
+        self.D.train()
+
         for i, (x, _) in enumerate(self.dataloader):
             if x.size()[0] != self.batch_size:
                 continue
@@ -38,11 +42,12 @@ class ALITrainLoop(TrainLoop):
             dis_p = self.D((x_tilde, z))
 
             # Compute Discriminator loss
-            L_d = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q), reduction="mean") + \
-                  F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
-
-            L_g = F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q), reduction="mean") + \
+            L_d = F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q), reduction="mean") + \
                   F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q), reduction="mean")
+
+            L_gz = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q), reduction="mean")
+            L_gx = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
+            L_g = L_gz + L_gx
 
             # Gradient update on Discriminator network
             self.optim_D.zero_grad()
@@ -53,6 +58,9 @@ class ALITrainLoop(TrainLoop):
             self.optim_G.zero_grad()
             L_g.backward()
             self.optim_G.step()
+        self.Gx.eval()
+        self.Gz.eval()
+        self.D.eval()
         return {
             "epoch": self.current_epoch,
             "losses": {

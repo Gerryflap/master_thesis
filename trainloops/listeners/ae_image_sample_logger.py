@@ -14,9 +14,9 @@ from trainloops.listeners.listener import Listener
 
 
 class AEImageSampleLogger(Listener):
-    def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0):
+    def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0, folder_name="AE_samples"):
         super().__init__()
-        self.path = os.path.join(experiment_output_path, "imgs", "AE_samples")
+        self.path = os.path.join(experiment_output_path, "imgs", folder_name)
         util.output.make_result_dirs(self.path)
         self.cuda = args.cuda
         self.n_images = n_images
