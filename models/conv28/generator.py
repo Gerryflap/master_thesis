@@ -15,7 +15,7 @@ class Generator28(torch.nn.Module):
 
             self.activ = mish
         else:
-            self.activ = torch.relu
+            self.activ = self.leaky_relu
 
         self.conv_1 = torch.nn.ConvTranspose2d(self.latent_size, self.h_size * 4, 4, bias=self.bias)
         self.conv_2 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size * 2, kernel_size=5, stride=2, bias=self.bias)
@@ -25,6 +25,10 @@ class Generator28(torch.nn.Module):
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size)
+
+    @staticmethod
+    def leaky_relu(x):
+        return torch.nn.functional.leaky_relu(x, 0.02)
 
     def forward(self, inp):
         x = inp.view(-1, self.latent_size, 1, 1)

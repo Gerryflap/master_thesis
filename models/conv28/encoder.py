@@ -13,7 +13,7 @@ class Encoder28(MorphingEncoder):
         if use_mish:
             self.activ = mish
         else:
-            self.activ = torch.nn.functional.relu
+            self.activ = self.leaky_relu
 
         self.latent_size = latent_size
         self.h_size = h_size
@@ -34,6 +34,10 @@ class Encoder28(MorphingEncoder):
 
         self.mean_fc = torch.nn.Linear(h_size * 4, latent_size)
         self.std_fc = torch.nn.Linear(h_size * 4, latent_size)
+
+    @staticmethod
+    def leaky_relu(x):
+        return torch.nn.functional.leaky_relu(x, 0.02)
 
     def forward(self, inp):
         x = self.conv_1(inp)
