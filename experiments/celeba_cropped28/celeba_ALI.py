@@ -29,7 +29,6 @@ parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
-parser.add_argument("--no_bias_in_G", action="store_true", default=False, help="Disables biases in the Generator")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
