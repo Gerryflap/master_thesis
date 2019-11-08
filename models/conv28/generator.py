@@ -3,14 +3,16 @@ from util.torch.activations import mish
 
 
 class Generator28(torch.nn.Module):
-    def __init__(self, latent_size, h_size, use_mish=False, bias=True, n_channels=1):
+    def __init__(self, latent_size, h_size, use_mish=False, bias=False,  n_channels=1):
         super().__init__()
+
+        # Bias is being phased out
+        assert not bias
 
         self.n_channels = n_channels
 
         self.latent_size = latent_size
         self.h_size = h_size
-        self.bias = bias
         if use_mish:
 
             self.activ = mish
@@ -26,7 +28,7 @@ class Generator28(torch.nn.Module):
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 2)
-        self.bn_3 = torch.nn.BatchNorm2d(self.h_size)
+        self.bn_4 = torch.nn.BatchNorm2d(self.h_size)
 
 
     @staticmethod
