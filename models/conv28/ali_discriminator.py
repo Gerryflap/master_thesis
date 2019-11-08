@@ -25,10 +25,10 @@ class ALIDiscriminator28(torch.nn.Module):
             self.fc_h_size = h_size*8
         else:
             self.fc_h_size = fc_h_size
-        self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=4,  stride=1)
-        self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=5, stride=2)
-        self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2)
-        self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=4, stride=1)
+        self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=4,  stride=1, bias=False)
+        self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=5, stride=2, bias=False)
+        self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
+        self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=4, stride=1, bias=False)
 
         self.use_bn = use_bn
         if use_bn:
@@ -39,12 +39,12 @@ class ALIDiscriminator28(torch.nn.Module):
         if dropout != 0:
             self.dropout_layer = torch.nn.Dropout(dropout, False)
 
-        self.lin_z1 = torch.nn.Linear(latent_size, self.fc_h_size)
-        self.lin_z2 = torch.nn.Linear(self.fc_h_size, self.fc_h_size)
+        self.lin_z1 = torch.nn.Linear(latent_size, self.fc_h_size, bias=False)
+        self.lin_z2 = torch.nn.Linear(self.fc_h_size, self.fc_h_size, bias=False)
 
-        self.lin_xz1 = torch.nn.Linear(h_size*4 + self.fc_h_size, self.fc_h_size*2)
-        self.lin_xz2 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2)
-        self.lin_xz3 = torch.nn.Linear(self.fc_h_size*2, 1)
+        self.lin_xz1 = torch.nn.Linear(h_size*4 + self.fc_h_size, self.fc_h_size*2, bias=True)
+        self.lin_xz2 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2, bias=True)
+        self.lin_xz3 = torch.nn.Linear(self.fc_h_size*2, 1, bias=True)
 
     @staticmethod
     def leaky_relu(x):
