@@ -86,6 +86,12 @@ def update():
     # input_frame += 0.5 - np.mean(input_frame)
     # input_frame = np.clip(input_frame, 0, 1)
 
+    frame = frame.astype(np.float32)
+    imin, imax = np.min(frame), np.max(frame)
+    frame -= imin
+    frame *= 255.0/(imax - imin)
+    frame = frame.astype(np.uint8)
+
 
     frame = Image.fromarray(frame)
     input_frame = tvF.scale(frame, real_resolution)
