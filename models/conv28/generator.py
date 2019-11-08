@@ -19,10 +19,10 @@ class Generator28(torch.nn.Module):
         else:
             self.activ = self.leaky_relu
 
-        self.conv_1 = torch.nn.ConvTranspose2d(self.latent_size, self.h_size * 4, 4, bias=self.bias)
-        self.conv_2 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size * 2, kernel_size=5, stride=2, bias=self.bias)
-        self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size * 2, kernel_size=5, stride=2, bias=self.bias)
-        self.conv_4 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size, kernel_size=4, stride=1, bias=self.bias)
+        self.conv_1 = torch.nn.ConvTranspose2d(self.latent_size, self.h_size * 4, 4, bias=False)
+        self.conv_2 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size * 2, kernel_size=5, stride=2, bias=False)
+        self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size * 2, kernel_size=5, stride=2, bias=False)
+        self.conv_4 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size, kernel_size=4, stride=1, bias=False)
         self.conv_5 = torch.nn.Conv2d(self.h_size, n_channels, kernel_size=1, stride=1, bias=True)
 
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 4)
