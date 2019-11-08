@@ -1,5 +1,6 @@
 import torch
 from util.torch.activations import mish
+from util.torch.initialization import weights_init
 
 
 class Generator28(torch.nn.Module):
@@ -29,6 +30,9 @@ class Generator28(torch.nn.Module):
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_4 = torch.nn.BatchNorm2d(self.h_size)
+
+        # Initialize weights
+        self.apply(weights_init)
 
 
     @staticmethod

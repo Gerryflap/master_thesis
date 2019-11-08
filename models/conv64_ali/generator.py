@@ -1,5 +1,6 @@
 import torch
 from util.torch.activations import mish
+from util.torch.initialization import weights_init
 
 
 class Generator64(torch.nn.Module):
@@ -29,6 +30,9 @@ class Generator64(torch.nn.Module):
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_5 = torch.nn.BatchNorm2d(self.h_size)
+
+        # Initialize weights
+        self.apply(weights_init)
 
     @staticmethod
     def leaky_relu(x):

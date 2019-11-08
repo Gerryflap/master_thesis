@@ -1,5 +1,6 @@
 import torch
 from util.torch.activations import mish
+from util.torch.initialization import weights_init
 
 
 class Discriminator28(torch.nn.Module):
@@ -31,6 +32,9 @@ class Discriminator28(torch.nn.Module):
             self.dropout_layer = torch.nn.Dropout(dropout, True)
 
         self.lin_1 = torch.nn.Linear(h_size * 4, 1)
+
+        # Initialize weights
+        self.apply(weights_init)
 
     @staticmethod
     def leaky_relu(x):

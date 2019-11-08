@@ -4,6 +4,7 @@
 """
 import torch
 from util.torch.activations import mish
+from util.torch.initialization import weights_init
 
 
 class ALIDiscriminator28(torch.nn.Module):
@@ -45,6 +46,9 @@ class ALIDiscriminator28(torch.nn.Module):
         self.lin_xz1 = torch.nn.Linear(h_size*4 + self.fc_h_size, self.fc_h_size*2, bias=True)
         self.lin_xz2 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2, bias=True)
         self.lin_xz3 = torch.nn.Linear(self.fc_h_size*2, 1, bias=True)
+
+        # Initialize weights
+        self.apply(weights_init)
 
     @staticmethod
     def leaky_relu(x):

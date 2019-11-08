@@ -2,6 +2,7 @@ import torch
 
 from models.morphing_encoder import MorphingEncoder
 from util.torch.activations import mish
+from util.torch.initialization import weights_init
 
 
 class Encoder64(MorphingEncoder):
@@ -31,6 +32,9 @@ class Encoder64(MorphingEncoder):
 
         self.mean_fc = torch.nn.Linear(h_size * 4, latent_size)
         self.std_fc = torch.nn.Linear(h_size * 4, latent_size)
+
+        # Initialize weights
+        self.apply(weights_init)
 
     def forward(self, inp):
         x = self.conv_1(inp)

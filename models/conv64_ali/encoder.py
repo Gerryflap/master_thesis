@@ -6,6 +6,7 @@ import torch
 
 from models.morphing_encoder import MorphingEncoder
 from util.torch.activations import mish
+from util.torch.initialization import weights_init
 
 
 class Encoder64(MorphingEncoder):
@@ -35,6 +36,9 @@ class Encoder64(MorphingEncoder):
 
         self.mean_fc = torch.nn.Linear(h_size * 8, latent_size, bias=True)
         self.std_fc = torch.nn.Linear(h_size * 8, latent_size, bias=True)
+
+        # Initialize weights
+        self.apply(weights_init)
 
     @staticmethod
     def leaky_relu(x):
