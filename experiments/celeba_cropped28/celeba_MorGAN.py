@@ -40,13 +40,13 @@ args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("celeba28", "MorGAN", args)
 
-dataset = CelebaCropped(split="train", download=True, transform=transforms.Compose([
+dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
-valid_dataset = CelebaCropped(split="valid", download=True, transform=transforms.Compose([
+valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
