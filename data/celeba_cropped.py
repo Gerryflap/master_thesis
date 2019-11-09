@@ -13,13 +13,15 @@ from torchvision.datasets.utils import verify_str_arg
 import data.data_prep.face_cropper as face_cropper
 from shutil import copyfile
 
+from data.data_prep.celeba_sideways_detector import gen_aligned_faces
+
 assert os.path.isdir("data")
 
 
 class CelebaCropped(VisionDataset):
     cropped_base_folder = "celeba_cropped/img_align/"
 
-    def __init__(self, split="train", transform=None, target_transform=None, download=False):
+    def __init__(self, split="train", transform=None, target_transform=None, download=False, morgan_like_filtering=False):
         super().__init__("data", transforms=None, transform=transform, target_transform=target_transform)
 
         if not os.path.isdir("data/celeba"):
@@ -47,6 +49,23 @@ class CelebaCropped(VisionDataset):
             with open("data/celeba_cropped/list_eval_partition.txt", "w") as f:
                 f.writelines(outlines)
 
+        if morgan_like_filtering and os.path.isfile("data/" + self.cropped_base_folder + "list_eval_partition_filtered.txt"):
+            # Get all aligned faces
+            aligned = gen_aligned_faces()
+
+            with open("data/celeba/list_eval_partition.txt", "r") as f:
+                lines = f.readlines()
+                splitted = [line.split(" ") for line in lines]
+                outlines = []
+                for fname, n in splitted:
+                    if not os.path.isfile("data/" + self.cropped_base_folder + fname) or fname not in aligned:
+                        continue
+                    outlines.append("%s %s" % (fname, n))
+
+            with open("data/celeba_cropped/list_eval_partition.txt", "w") as f:
+                f.writelines(outlines)
+
+
         split_map = {
             "train": 0,
             "valid": 1,
@@ -57,7 +76,9 @@ class CelebaCropped(VisionDataset):
                                          ("train", "valid", "test", "all"))]
 
         fn = partial(os.path.join, self.root)
-        splits = pandas.read_csv(fn("celeba_cropped/list_eval_partition.txt"), delim_whitespace=True, header=None,
+        partition_file = "celeba_cropped/list_eval_partition.txt" if not morgan_like_filtering else \
+            "celeba_cropped/list_eval_partition_filtered.txt"
+        splits = pandas.read_csv(fn(partition_file), delim_whitespace=True, header=None,
                                  index_col=0)
 
         mask = slice(None) if split is None else (splits[1] == split)
