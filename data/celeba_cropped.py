@@ -62,7 +62,7 @@ class CelebaCropped(VisionDataset):
                         continue
                     outlines.append("%s %s" % (fname, n))
 
-            with open("data/celeba_cropped/list_eval_partition.txt", "w") as f:
+            with open("data/celeba_cropped/list_eval_partition_filtered.txt", "w") as f:
                 f.writelines(outlines)
 
 
