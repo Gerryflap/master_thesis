@@ -12,7 +12,7 @@ import dlib
 
 
 # 0 = No random, 1 = Every frame a new random
-random_mode = 0
+random_mode = 1
 crop_region_size = 10
 
 if random_mode == 0:
@@ -25,17 +25,17 @@ else:
 orig_img = None
 should_update = True
 
-root = tk.Tk()
-filename_enc = tk.filedialog.askopenfilename(initialdir="./results", title="Select encoder",
-                                           filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
-init_dir = os.path.split(filename_enc)[0]
-filename_dec = tk.filedialog.askopenfilename(initialdir=init_dir, title="Select decoder",
-                                           filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
+# root = tk.Tk()
+# filename_enc = tk.filedialog.askopenfilename(initialdir="./results", title="Select encoder",
+#                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
+# init_dir = os.path.split(filename_enc)[0]
+# filename_dec = tk.filedialog.askopenfilename(initialdir=init_dir, title="Select decoder",
+#                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
+#
+# root.destroy()
 
-root.destroy()
-
-# filename_enc = "results/test/params/all_epochs/enc.pt"
-# filename_dec = "results/test/params/all_epochs/dec.pt"
+filename_enc = "results/celeba64/ali/2019-11-08T14:59:59/params/all_epochs/Gz.pt"
+filename_dec = "results/celeba64/ali/2019-11-08T14:59:59/params/all_epochs/Gx.pt"
 
 Gz = torch.load(filename_enc, map_location=torch.device('cpu'))
 Gx = torch.load(filename_dec, map_location=torch.device('cpu'))
@@ -73,6 +73,7 @@ def update():
     faces = dlib.full_object_detections()
     for detection in dets:
         faces.append(sp(frame, detection))
+
     frame = dlib.get_face_chip(frame, faces[0], size=(64 + crop_region_size*2))
 
 

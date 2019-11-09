@@ -1,5 +1,6 @@
 """
     Models a train loop for ALI: Adversarially Learned Inference (https://arxiv.org/abs/1606.00704)
+    Additionally, this train loop can also perform the MorGAN algorithm by setting the MorGAN alpha
 """
 import torch
 import torch.nn.functional as F
@@ -8,7 +9,7 @@ from trainloops.train_loop import TrainLoop
 
 
 class ALITrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
@@ -19,6 +20,8 @@ class ALITrainLoop(TrainLoop):
         self.optim_D = optim_D
         self.dataloader = dataloader
         self.cuda = cuda
+        self.morgan_alpha = morgan_alpha
+        self.morgan = morgan_alpha != 0
 
     def epoch(self):
         self.Gx.train()
@@ -49,6 +52,12 @@ class ALITrainLoop(TrainLoop):
             L_gx = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
             L_g = L_gz + L_gx
 
+            # Extra code for the MorGAN algorithm. This is not part of ALI
+            if self.morgan:
+                x_recon = self.Gx(z_hat)
+                L_pixel = self.morgan_pixel_loss(x_recon, x)
+                L_syn = L_g + self.morgan_alpha * L_pixel
+
             # Gradient update on Discriminator network
             self.optim_D.zero_grad()
             L_d.backward(create_graph=True)
@@ -56,7 +65,10 @@ class ALITrainLoop(TrainLoop):
 
             # Gradient update on Generator networks
             self.optim_G.zero_grad()
-            L_g.backward()
+            if self.morgan:
+                L_syn.backward()
+            else:
+                L_g.backward()
             self.optim_G.step()
         self.Gx.eval()
         self.Gz.eval()
@@ -90,3 +102,10 @@ class ALITrainLoop(TrainLoop):
 
         # Return outputs
         return self.Gx(z)
+
+    @staticmethod
+    def morgan_pixel_loss(x_recon, target):
+        absolute_errors = torch.abs(x_recon - target)
+        WxH = float(int(absolute_errors.size()[2]) * int(absolute_errors.size()[3]))
+        loss = absolute_errors.sum()/WxH
+        return loss
