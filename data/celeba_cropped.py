@@ -49,7 +49,7 @@ class CelebaCropped(VisionDataset):
             with open("data/celeba_cropped/list_eval_partition.txt", "w") as f:
                 f.writelines(outlines)
 
-        if morgan_like_filtering and os.path.isfile("data/" + self.cropped_base_folder + "list_eval_partition_filtered.txt"):
+        if morgan_like_filtering and not os.path.isfile("data/" + self.cropped_base_folder + "list_eval_partition_filtered.txt"):
             # Get all aligned faces
             aligned = gen_aligned_faces()
 
