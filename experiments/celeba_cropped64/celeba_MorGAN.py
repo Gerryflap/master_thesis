@@ -38,7 +38,7 @@ parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("celeba64", "ali", args)
+output_path = util.output.init_experiment_output_dir("celeba64", "MorGAN", args)
 
 dataset = CelebaCropped(split="train", download=True, transform=transforms.Compose([
     transforms.ToTensor(),
