@@ -25,17 +25,17 @@ else:
 orig_img = None
 should_update = True
 
-# root = tk.Tk()
-# filename_enc = tk.filedialog.askopenfilename(initialdir="./results", title="Select encoder",
-#                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
-# init_dir = os.path.split(filename_enc)[0]
-# filename_dec = tk.filedialog.askopenfilename(initialdir=init_dir, title="Select decoder",
-#                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
-#
-# root.destroy()
+root = tk.Tk()
+filename_enc = tk.filedialog.askopenfilename(initialdir="./results", title="Select encoder",
+                                           filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
+init_dir = os.path.split(filename_enc)[0]
+filename_dec = tk.filedialog.askopenfilename(initialdir=init_dir, title="Select decoder",
+                                           filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
 
-filename_enc = "results/celeba64/ali/2019-11-08T14:59:59/params/all_epochs/Gz.pt"
-filename_dec = "results/celeba64/ali/2019-11-08T14:59:59/params/all_epochs/Gx.pt"
+root.destroy()
+
+# filename_enc = "results/celeba64/ali/2019-11-08T14:59:59/params/all_epochs/Gz.pt"
+# filename_dec = "results/celeba64/ali/2019-11-08T14:59:59/params/all_epochs/Gx.pt"
 
 Gz = torch.load(filename_enc, map_location=torch.device('cpu'))
 Gx = torch.load(filename_dec, map_location=torch.device('cpu'))
