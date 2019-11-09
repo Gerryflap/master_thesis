@@ -35,6 +35,3 @@ def gen_aligned_faces():
 
     fnames_f = {fname for i, fname in enumerate(fnames) if aligned[i]}
     return fnames_f
-
-if __name__ == "__main__":
-    gen_aligned_faces()
