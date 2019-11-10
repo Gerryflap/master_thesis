@@ -54,7 +54,7 @@ def dankify():
 def load_z():
     global should_update
     should_update = False
-    z = np.load("z_mean.npy")
+    z = np.load("z.npy")
     for i, slider in enumerate(sliders):
         slider.set(z[0, i])
 
