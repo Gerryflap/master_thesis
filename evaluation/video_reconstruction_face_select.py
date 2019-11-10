@@ -12,6 +12,7 @@ import dlib
 
 
 # 0 = No random, 1 = Every frame a new random
+load_z = True
 random_mode = 1
 crop_region_size = 10
 
@@ -49,6 +50,11 @@ z_size = Gx.latent_size
 resolution = int(Gx(torch.zeros((z_size,))).size()[2])
 print(resolution)
 real_resolution = resolution
+
+z_loaded = None
+if load_z:
+    z_loaded = np.load("z.npy")
+    z_loaded = torch.from_numpy(z_loaded)
 
 
 root = tk.Tk()
@@ -105,6 +111,9 @@ def update():
     z, z_mean, z_logvar = Gz(input_frame)
     if random_mode == 0:
         z = z_mean
+
+    if load_z:
+        z = 0.5*(z + z_loaded)
 
     decoded = Gx(z)[0]
     decoded = (decoded + 1)/2
