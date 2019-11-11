@@ -1,7 +1,6 @@
 # This file is based on a tutorial for dlib (http://dlib.net/face_alignment.py.html), but is heavily modified.
 import os
 
-import dlib
 from PIL import Image
 
 
@@ -9,6 +8,7 @@ def crop_images(
         input_dir,
         output_dir
 ):
+    import dlib
     predictor_path = "data/data_prep/shape_predictor_5_face_landmarks.dat"
     # Crop size. The full face image will have the resolution 64 + 2*crop_size and then crop_size pixels will be cut off at the top, bottom, left and right
     # Is used to zoom in on facial features
