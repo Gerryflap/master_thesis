@@ -1,3 +1,5 @@
+import os
+
 from models.conv64_ali.encoder import Encoder64
 from trainloops.ali_train_loop import ALITrainLoop
 from trainloops.gan_train_loop import GanTrainLoop
@@ -35,10 +37,13 @@ parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha parameter in the MorGAN training algorithm")
+parser.add_argument("--continue_with", action="store", type=str, default=None,
+                    help="Path the the experiment to load. Keep hyperparams the same!")
 
 args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("celeba64", "MorGAN", args)
+
 
 dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.ToTensor(),
@@ -52,17 +57,25 @@ valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filterin
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
-Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3)
-D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
-                       n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
-G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
-D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
+if args.continue_with is None:
+    Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
+    Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3)
+    D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
+                           n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+    G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
+    D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
-if args.cuda:
-    Gz = Gz.cuda()
-    Gx = Gx.cuda()
-    D = D.cuda()
+else:
+    Gz = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "Gz.pt"))
+    Gx = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "Gx.pt"))
+    D = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "D.pt"))
+    G_optimizer = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "G_optimizer.pt"))
+    D_optimizer = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "D_optimizer.pt"))
+
+    if args.cuda:
+        Gz = Gz.cuda()
+        Gx = Gx.cuda()
+        D = D.cuda()
 
 listeners = [
     LossReporter(),

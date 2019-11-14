@@ -16,7 +16,7 @@ from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 
 parser = argparse.ArgumentParser(description="Celeba MorGAN experiment.")
-parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
+parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
 parser.add_argument("--h_size", action="store", type=int, default=16,
@@ -31,7 +31,7 @@ parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
-parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
+parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate on the input of the first fully connected layer of D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha parameter in the MorGAN training algorithm")
