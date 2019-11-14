@@ -42,10 +42,10 @@ class ALIDiscriminator64(torch.nn.Module):
             # This lead to bad preliminary results for me and the official ALI code also does not do this.
             # For this reason the first layer will not have batch normalization.
 
-            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
-            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
-            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
-            self.bn_5 = torch.nn.BatchNorm2d(self.h_size * 8)
+            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2, 0.8)
+            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4, 0.8)
+            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4, 0.8)
+            self.bn_5 = torch.nn.BatchNorm2d(self.h_size * 8, 0.8)
 
         # Linear layers (1x1 convolutions in the paper)
         if dropout != 0:

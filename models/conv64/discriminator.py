@@ -25,10 +25,10 @@ class Discriminator64(torch.nn.Module):
 
         self.use_bn = use_bn
         if use_bn:
-            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
-            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 2)
-            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
-            self.bn_5 = torch.nn.BatchNorm2d(self.h_size * 4)
+            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2, 0.8)
+            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 2, 0.8)
+            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4, 0.8)
+            self.bn_5 = torch.nn.BatchNorm2d(self.h_size * 4, 0.8)
 
         if dropout != 0:
             self.dropout_layer = torch.nn.Dropout(dropout, True)

@@ -33,9 +33,9 @@ class ALIDiscriminator28(torch.nn.Module):
 
         self.use_bn = use_bn
         if use_bn:
-            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
-            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
-            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
+            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2, 0.8)
+            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4, 0.8)
+            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4, 0.8)
 
         if dropout != 0:
             self.dropout_layer = torch.nn.Dropout(dropout, False)
@@ -72,10 +72,12 @@ class ALIDiscriminator28(torch.nn.Module):
             h = self.bn_2(h)
         h = self.activ(h)
 
+
         h = self.conv_3(h)
         if self.use_bn:
             h = self.bn_3(h)
         h = self.activ(h)
+
 
         h = self.conv_4(h)
         if self.use_bn:
