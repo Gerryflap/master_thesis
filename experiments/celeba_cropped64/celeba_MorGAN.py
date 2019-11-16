@@ -66,11 +66,11 @@ if args.continue_with is None:
     D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
 else:
-    Gz = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "Gz.pt"))
-    Gx = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "Gx.pt"))
-    D = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "D.pt"))
-    G_optimizer = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "G_optimizer.pt"))
-    D_optimizer = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "D_optimizer.pt"))
+    Gz = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "Gz.pt"), map_location=torch.device('cpu'))
+    Gx = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "Gx.pt"), map_location=torch.device('cpu'))
+    D = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "D.pt"), map_location=torch.device('cpu'))
+    G_optimizer = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "G_optimizer.pt"), map_location=torch.device('cpu'))
+    D_optimizer = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "D_optimizer.pt"), map_location=torch.device('cpu'))
 
 if args.cuda:
     Gz = Gz.cuda()
