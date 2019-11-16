@@ -55,8 +55,8 @@ valid_dataset = MNIST("data/downloads/mnist", train=False, download=True, transf
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=1, add_linear_layer=True)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_G, n_channels=1)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=1)
+Gx = Generator28(args.l_size, args.h_size, args.use_mish, False, n_channels=1)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=1, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))

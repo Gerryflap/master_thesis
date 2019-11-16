@@ -41,8 +41,13 @@ class ALITrainLoop(TrainLoop):
             x_tilde = self.Gx(z)
 
             # Compute discriminator predictions
-            dis_q = self.D((x, z_hat))
-            dis_p = self.D((x_tilde, z))
+            #   The D inputs are merged in order to let Batch Normalization work correctly.
+            #   Not merging the fake and real samples would result in BatchNorm being applied to both separately,
+            #   which resulted in a complete failure to produce any useful output.
+            d_x, d_z = torch.cat((x, x_tilde), dim=0), torch.cat((z_hat, z), dim=0)
+            dis_preds = self.D((d_x, d_z))
+            dis_q = dis_preds[:self.batch_size]
+            dis_p = dis_preds[self.batch_size:]
 
             # Compute Discriminator loss
             L_d = F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q), reduction="mean") + \
