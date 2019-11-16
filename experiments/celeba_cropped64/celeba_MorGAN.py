@@ -72,10 +72,10 @@ else:
     G_optimizer = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "G_optimizer.pt"))
     D_optimizer = torch.load(os.path.join(args.continue_with, "params", "all_epochs", "D_optimizer.pt"))
 
-    if args.cuda:
-        Gz = Gz.cuda()
-        Gx = Gx.cuda()
-        D = D.cuda()
+if args.cuda:
+    Gz = Gz.cuda()
+    Gx = Gx.cuda()
+    D = D.cuda()
 
 listeners = [
     LossReporter(),
