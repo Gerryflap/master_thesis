@@ -28,7 +28,6 @@ parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
-parser.add_argument("--no_bias_in_G", action="store_true", default=False, help="Disables biases in the Generator")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
@@ -45,7 +44,7 @@ dataset = CelebaCropped(split="train", download=True, transform=transforms.Compo
 ]))
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
-G = Generator28(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_G, n_channels=3)
+G = Generator28(args.l_size, args.h_size, args.use_mish, False, n_channels=3)
 D = Discriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate)
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))

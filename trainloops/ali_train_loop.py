@@ -9,19 +9,23 @@ from trainloops.train_loop import TrainLoop
 
 
 class ALITrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0):
+    def __init__(self, listeners: list, Gz, Gx, D, optim, dataloader, cuda=False, epochs=1, morgan_alpha=0.0):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
         self.Gx = Gx
         # self.G = torch.nn.ModuleList([self.Gx, self.Gz])
         self.D = D
-        self.optim_G = optim_G
-        self.optim_D = optim_D
+        self.optim = optim
         self.dataloader = dataloader
         self.cuda = cuda
         self.morgan_alpha = morgan_alpha
         self.morgan = morgan_alpha != 0
+
+    @staticmethod
+    def set_requires_grad(model, value):
+        for param in model.parameters():
+            param.requires_grad = value
 
     def epoch(self):
         self.Gx.train()
@@ -41,15 +45,26 @@ class ALITrainLoop(TrainLoop):
             x_tilde = self.Gx(z)
 
             # Compute discriminator predictions
-            dis_q = self.D((x, z_hat))
-            dis_p = self.D((x_tilde, z))
+            self.set_requires_grad(self.D, False)
+            self.D.eval()
+            dis_q_g = self.D((x, z_hat))
+            dis_p_g = self.D((x_tilde, z))
+
+            self.D.train()
+            self.set_requires_grad(self.D, True)
+
+            z_hat = z_hat.detach()
+            x_tilde = x_tilde.detach()
+            dis_q_d = self.D((x, z_hat))
+            dis_p_d = self.D((x_tilde, z))
+
 
             # Compute Discriminator loss
-            L_d = F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q), reduction="mean") + \
-                  F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q), reduction="mean")
+            L_d = F.binary_cross_entropy_with_logits(dis_q_d, torch.ones_like(dis_q_d), reduction="mean") + \
+                  F.binary_cross_entropy_with_logits(dis_p_d, torch.zeros_like(dis_p_d), reduction="mean")
 
-            L_gz = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q), reduction="mean")
-            L_gx = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
+            L_gz = F.binary_cross_entropy_with_logits(dis_q_g, torch.zeros_like(dis_q_g), reduction="mean")
+            L_gx = F.binary_cross_entropy_with_logits(dis_p_g, torch.ones_like(dis_p_g), reduction="mean")
             L_g = L_gz + L_gx
 
             # Extra code for the MorGAN algorithm. This is not part of ALI
@@ -58,21 +73,20 @@ class ALITrainLoop(TrainLoop):
                 L_pixel = self.morgan_pixel_loss(x_recon, x)
                 L_syn = L_g + self.morgan_alpha * L_pixel
 
-            # Gradient update on Discriminator network
-            self.optim_D.zero_grad()
-            L_d.backward(create_graph=True)
-            self.optim_D.step()
+            # Gradient update on all networks
+            self.optim.zero_grad()
 
-            # Gradient update on Generator networks
-            self.optim_G.zero_grad()
-            if self.morgan:
-                L_syn.backward()
-            else:
-                L_g.backward()
-            self.optim_G.step()
+            L_total = L_d + (L_g if not self.morgan else L_syn)
+
+            L_total.backward()
+            self.optim.step()
+
         self.Gx.eval()
         self.Gz.eval()
         self.D.eval()
+
+        print(list(self.Gx.conv_1.parameters())[0].mean())
+
         return {
             "epoch": self.current_epoch,
             "losses": {
@@ -85,8 +99,7 @@ class ALITrainLoop(TrainLoop):
                 "D": self.D,
             },
             "optimizers": {
-                "G_optimizer": self.optim_G,
-                "D_optimizer": self.optim_D
+                "optimizer": self.optim,
             }
         }
 

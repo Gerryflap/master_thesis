@@ -25,17 +25,9 @@ parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
-parser.add_argument("--no_bias_in_G", action="store_true", default=False, help="Disables biases in the Generator")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
-# parser.add_argument("--load_path", action="store", type=str, default=None,
-#                     help="When given, loads models from LOAD_PATH folder")
-# parser.add_argument("--save_path", action="store", type=str, default=None,
-#                     help="When given, saves models to LOAD_PATH folder after all epochs (or every epoch)")
-# parser.add_argument("--save_every_epoch", action="store_true", default=False,
-#                     help="When a save path is given, store the model after every epoch instead of only the last")
-# parser.add_argument("--img_path", action="store", type=str, default=None,
-#                     help="When given, saves samples to the given directory")
+
 
 args = parser.parse_args()
 
@@ -47,7 +39,7 @@ dataset = data.MNIST("data/downloads/mnist", train=True, download=True, transfor
 ]))
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
-G = Generator28(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_G)
+G = Generator28(args.l_size, args.h_size, args.use_mish)
 D = Discriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish)
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))

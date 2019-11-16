@@ -34,6 +34,8 @@ class GanTrainLoop(TrainLoop):
             self.fake_label = self.fake_label.cuda()
 
     def epoch(self):
+        self.G.train()
+        self.D.train()
         for i, (real_batch, _) in enumerate(self.dataloader):
             if real_batch.size()[0] != self.batch_size:
                 continue
@@ -44,8 +46,8 @@ class GanTrainLoop(TrainLoop):
                 self.G_optimizer.zero_grad()
 
                 # Put the generator in train mode and discriminator in eval mode. This affects batch normalization
-                self.G.train()
-                self.D.eval()
+                # self.G.train()
+                # self.D.eval()
 
                 # Generate a batch of fakes
                 fake_batch = self.generate_batch(self.batch_size)
@@ -65,8 +67,8 @@ class GanTrainLoop(TrainLoop):
             self.D_optimizer.zero_grad()
 
             # Put the generator in eval mode and discriminator in train mode. This affects batch normalization
-            self.G.eval()
-            self.D.train()
+            # self.G.eval()
+            # self.D.train()
 
             # Generate a fake image batch
             fake_batch = self.generate_batch(self.batch_size)
@@ -94,6 +96,8 @@ class GanTrainLoop(TrainLoop):
             # Update weights
             self.D_optimizer.step()
 
+        self.G.eval()
+        self.D.eval()
         return {
             "epoch": self.current_epoch,
             "losses": {
