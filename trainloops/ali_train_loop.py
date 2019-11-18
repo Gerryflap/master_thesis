@@ -66,6 +66,7 @@ class ALITrainLoop(TrainLoop):
             # Gradient update on Discriminator network
             self.optim_D.zero_grad()
             L_d.backward(create_graph=True)
+            torch.nn.utils.clip_grad_norm_(list(self.D.parameters()), 1.0)
             self.optim_D.step()
 
             # Gradient update on Generator networks
@@ -74,6 +75,7 @@ class ALITrainLoop(TrainLoop):
                 L_syn.backward()
             else:
                 L_g.backward()
+            torch.nn.utils.clip_grad_norm_(list(self.Gx.parameters()) + list(self.Gz.parameters()), 1.0)
             self.optim_G.step()
         self.Gx.eval()
         self.Gz.eval()
