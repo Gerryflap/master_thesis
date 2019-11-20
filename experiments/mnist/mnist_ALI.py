@@ -1,3 +1,7 @@
+"""
+    ALI on the MNIST dataset. Can also be used as MorGAN using the MorGAN alpha parameter
+"""
+
 from torchvision.datasets import MNIST
 
 from models.conv28.encoder import Encoder28
@@ -36,7 +40,8 @@ parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate on the input of the first fully connected layer of D")
-
+parser.add_argument("--morgan_alpha", action="store", default=0.0, type=float,
+                    help="Sets the alpha parameter in the MorGAN training algorithm")
 args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("mnist", "ali", args)
@@ -81,7 +86,8 @@ train_loop = ALITrainLoop(
     optim_D=D_optimizer,
     dataloader=dataloader,
     cuda=args.cuda,
-    epochs=args.epochs
+    epochs=args.epochs,
+    morgan_alpha=args.morgan_alpha
 )
 
 train_loop.train()
