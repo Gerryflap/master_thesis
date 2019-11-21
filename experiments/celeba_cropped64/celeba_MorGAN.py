@@ -1,10 +1,15 @@
 import os
 
 from models.conv64_ali.encoder import Encoder64
-from trainloops.ali_train_loop import ALITrainLoop
-from trainloops.gan_train_loop import GanTrainLoop
 from models.conv64_ali.ali_discriminator import ALIDiscriminator64
 from models.conv64_ali.generator import Generator64
+
+from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
+from trainloops.listeners.loss_reporter import LossReporter
+from trainloops.listeners.model_saver import ModelSaver
+from trainloops.ali_train_loop import ALITrainLoop
+
 from data.celeba_cropped import CelebaCropped
 import util.output
 from torchvision import transforms
@@ -12,11 +17,7 @@ import torch
 import argparse
 
 # Parse commandline arguments
-from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
-from trainloops.listeners.cluster_killswitch import KillSwitchListener
-from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
-from trainloops.listeners.loss_reporter import LossReporter
-from trainloops.listeners.model_saver import ModelSaver
+
 
 parser = argparse.ArgumentParser(description="Celeba ALI experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 64")
