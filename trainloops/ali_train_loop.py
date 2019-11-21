@@ -65,7 +65,7 @@ class ALITrainLoop(TrainLoop):
 
             # Gradient update on Discriminator network
             self.optim_D.zero_grad()
-            L_d.backward(create_graph=True)
+            L_d.backward(retain_graph=True)
             torch.nn.utils.clip_grad_norm_(list(self.D.parameters()), 1.0)
             self.optim_D.step()
 
@@ -80,12 +80,19 @@ class ALITrainLoop(TrainLoop):
         self.Gx.eval()
         self.Gz.eval()
         self.D.eval()
-        return {
-            "epoch": self.current_epoch,
-            "losses": {
+
+        losses = {
                 "D_loss: ": L_d.detach().item(),
                 "G_loss: ": L_g.detach().item(),
-            },
+            }
+        if self.morgan:
+            losses["L_pixel"] = L_pixel.detach().item()
+            losses["L_syn"] = L_syn.detach().item()
+
+
+        return {
+            "epoch": self.current_epoch,
+            "losses": losses,
             "networks": {
                 "Gx": self.Gx,
                 "Gz": self.Gz,
