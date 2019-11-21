@@ -97,8 +97,8 @@ class GanTrainLoop(TrainLoop):
         return {
             "epoch": self.current_epoch,
             "losses": {
-                "D_loss: ": d_loss.detach().item(),
-                "G_loss: ": g_loss.detach().item(),
+                "D_loss": d_loss.detach().item(),
+                "G_loss": g_loss.detach().item(),
             },
             "networks": {
                 "G": self.G,

@@ -8,5 +8,5 @@ class LossReporter(Listener):
     def report(self, state_dict: dict):
         print("Epoch %d"%state_dict["epoch"])
         for key, value in state_dict["losses"].items():
-            print(key, value)
+            print(key + ": ", value)
         print()

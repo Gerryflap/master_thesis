@@ -54,7 +54,7 @@ class VaeTrainLoop(TrainLoop):
         return {
             "epoch": self.current_epoch,
             "losses": {
-                "loss: ": loss.detach().item(),
+                "loss": loss.detach().item(),
             },
             "networks": {
                 "enc": self.enc,

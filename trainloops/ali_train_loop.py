@@ -82,8 +82,8 @@ class ALITrainLoop(TrainLoop):
         self.D.eval()
 
         losses = {
-                "D_loss: ": L_d.detach().item(),
-                "G_loss: ": L_g.detach().item(),
+                "D_loss": L_d.detach().item(),
+                "G_loss": L_g.detach().item(),
             }
         if self.morgan:
             losses["L_pixel"] = L_pixel.detach().item()
