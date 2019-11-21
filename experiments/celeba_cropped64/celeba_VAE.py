@@ -1,5 +1,6 @@
 from models.conv64.encoder import Encoder64
 from models.conv64.generator import Generator64
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.listeners.model_saver import ModelSaver
 from trainloops.vae_train_loop import VaeTrainLoop
 from data.celeba_cropped import CelebaCropped
@@ -60,7 +61,8 @@ if args.cuda:
 listeners = [
     LossReporter(),
     GanImageSampleLogger(output_path, args, pad_value=1),
-    ModelSaver(output_path, n=5, overwrite=True, print_output=True)
+    ModelSaver(output_path, n=5, overwrite=True, print_output=True),
+    KillSwitchListener(output_path)
 ]
 train_loop = VaeTrainLoop(listeners, enc, dec, enc_optimizer, dec_optimizer, dataloader,
                           cuda=args.cuda, epochs=args.epochs)

@@ -10,6 +10,7 @@ import argparse
 # Might be useful: https://jjallaire.github.io/deep-learning-with-r-notebooks/notebooks/8.5-introduction-to-gans.nb.html
 
 # Parse commandline arguments
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
@@ -57,7 +58,8 @@ if args.cuda:
 listeners = [
     LossReporter(),
     GanImageSampleLogger(output_path, args, pad_value=1),
-    ModelSaver(output_path, n=5, overwrite=True, print_output=True)
+    ModelSaver(output_path, n=5, overwrite=True, print_output=True),
+    KillSwitchListener(output_path)
 ]
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
                           cuda=args.cuda, epochs=args.epochs)

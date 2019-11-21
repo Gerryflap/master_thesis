@@ -13,6 +13,7 @@ import argparse
 
 # Parse commandline arguments
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
@@ -81,7 +82,8 @@ listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
-    ModelSaver(output_path, n=1, overwrite=True, print_output=True)
+    ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    KillSwitchListener(output_path)
 ]
 train_loop = ALITrainLoop(
     listeners=listeners,

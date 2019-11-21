@@ -13,7 +13,7 @@ from trainloops.listeners.listener import Listener
 class KillSwitchListener(Listener):
     def __init__(self, experiment_path):
         super().__init__()
-        self.path = os.path.join(experiment_path, ["stop"])
+        self.path = os.path.join(experiment_path, "stop")
 
     def initialize(self):
         pass
