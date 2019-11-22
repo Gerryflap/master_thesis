@@ -34,6 +34,8 @@ parser.add_argument("--disable_batchnorm_in_D", action="store_true", default=Fal
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--gamma", action="store", type=float, default=1e-6, help="Changes the gamma used by VAE/GAN")
+parser.add_argument("--epoch_step_limit", action="store", type=int, default=None,
+                    help="Cuts off epoch when step limit is reached")
 
 args = parser.parse_args()
 
@@ -69,7 +71,7 @@ listeners = [
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
-    ModelSaver(output_path, n=20, print_output=True),
+    ModelSaver(output_path, n=20, overwrite=False, print_output=True),
     KillSwitchListener(output_path)
 ]
 train_loop = VAEGANTrainLoop(
@@ -83,7 +85,8 @@ train_loop = VAEGANTrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    gamma=args.gamma
+    gamma=args.gamma,
+    max_steps_per_epoch=args.epoch_step_limit
 )
 
 train_loop.train()

@@ -10,7 +10,24 @@ from trainloops.train_loop import TrainLoop
 
 
 class VAEGANTrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_Gx, optim_Gz, optim_D, dataloader, cuda=False, epochs=1, gamma=1e-3):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_Gz, optim_Gx, optim_D, dataloader, cuda=False, epochs=1, gamma=1e-3, max_steps_per_epoch=None):
+        """
+        Initializes the VAE/GAN Trainloop
+        :param listeners: A list of listeners
+        :param Gz: The encoder model (forward should output z, z_mean, z_logvar)
+        :param Gx: The decoder model (forward should output x)
+        :param D: The discriminator model (forward should output Dis(x) and Dis_l(x)
+        :param optim_Gz: The encoder optimizer
+        :param optim_Gx: The decoder optimizer
+        :param optim_D: The discriminator optimizer
+        :param dataloader: The dataloader used
+        :param cuda: Whether cuda should be used
+        :param epochs: The number of epochs to run for
+        :param gamma: The gamma parameter used in VAE/GAN, scales L_disl_llike in the decoder
+        :param max_steps_per_epoch: Ends an epoch at this amount of steps, instead of when the dataloader is done.
+            The dataloader is NOT reset, so it might continue in the next epoch which could result in the epoch ending
+            when the dataloader is done instead of when the max_steps is reached.
+        """
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
@@ -21,6 +38,7 @@ class VAEGANTrainLoop(TrainLoop):
         self.optim_D = optim_D
         self.dataloader = dataloader
         self.cuda = cuda
+        self.max_steps_per_epoch = max_steps_per_epoch
 
         self.gan_labels = torch.zeros((self.batch_size*3, 1))
         self.gan_labels[:self.batch_size] = 1.0
@@ -36,6 +54,9 @@ class VAEGANTrainLoop(TrainLoop):
         self.D.train()
 
         for i, (x, _) in enumerate(self.dataloader):
+            if self.max_steps_per_epoch is not None and i >= self.max_steps_per_epoch:
+                break
+
             if x.size()[0] != self.batch_size:
                 continue
             # Draw M (= batch_size) samples from dataset and prior. x samples are already loaded by dataloader

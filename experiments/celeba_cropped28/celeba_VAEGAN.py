@@ -1,9 +1,6 @@
-from models.conv28.encoder import Encoder28
-from models.conv28.vaegan_discriminator import VAEGANDiscriminator28
-from trainloops.ali_train_loop import ALITrainLoop
-from trainloops.gan_train_loop import GanTrainLoop
-from models.conv28.ali_discriminator import ALIDiscriminator28
-from models.conv28.generator import Generator28
+from models.conv28_vaegan.encoder import VAEGANEncoder28
+from models.conv28_vaegan.discriminator import VAEGANDiscriminator28
+from models.conv28_vaegan.generator import VAEGANGenerator28
 from data.celeba_cropped import CelebaCropped
 import util.output
 from torchvision import transforms
@@ -13,7 +10,6 @@ import argparse
 # Parse commandline arguments
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.cluster_killswitch import KillSwitchListener
-from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 from trainloops.vae_gan_train_loop import VAEGANTrainLoop
@@ -34,6 +30,7 @@ parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate on the input of the first fully connected layer of D")
+parser.add_argument("--gamma", action="store", type=float, default=1e-3, help="Changes the gamma used by VAE/GAN")
 
 args = parser.parse_args()
 
@@ -53,9 +50,9 @@ valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filterin
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3)
-D = VAEGANDiscriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate)
+Gz = VAEGANEncoder28(args.l_size, args.h_size,  n_channels=3)
+Gx = VAEGANGenerator28(args.l_size, args.h_size, n_channels=3)
+D = VAEGANDiscriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, n_channels=3, dropout=args.dropout_rate)
 Gz_optimizer = torch.optim.Adam(Gz.parameters(), lr=args.lr, betas=(0.5, 0.999))
 Gx_optimizer = torch.optim.Adam(Gx.parameters(), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
