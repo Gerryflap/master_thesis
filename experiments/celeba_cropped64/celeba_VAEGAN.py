@@ -33,6 +33,7 @@ parser.add_argument("--disable_batchnorm_in_D", action="store_true", default=Fal
                     help="Disables batch normalization in D")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate in D")
+parser.add_argument("--gamma", action="store", type=float, default=1e-6, help="Changes the gamma used by VAE/GAN")
 
 args = parser.parse_args()
 
@@ -81,7 +82,8 @@ train_loop = VAEGANTrainLoop(
     optim_D=D_optimizer,
     dataloader=dataloader,
     cuda=args.cuda,
-    epochs=args.epochs
+    epochs=args.epochs,
+    gamma=args.gamma
 )
 
 train_loop.train()
