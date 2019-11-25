@@ -29,8 +29,7 @@ class VAEGANEncoder28(MorphingEncoder):
         self.mean_fc = torch.nn.Linear(h_size * 32, latent_size)
         self.std_fc = torch.nn.Linear(h_size * 32, latent_size)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
     def forward(self, inp):
         x = self.conv_1(inp)
@@ -56,3 +55,6 @@ class VAEGANEncoder28(MorphingEncoder):
         stds = torch.exp(0.5 * vars)
         eps = torch.randn_like(stds)
         return means + eps * stds
+
+    def init_weights(self):
+        self.apply(weights_init)

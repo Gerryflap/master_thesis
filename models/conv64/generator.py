@@ -29,8 +29,7 @@ class Generator64(torch.nn.Module):
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_4 = torch.nn.BatchNorm2d(self.h_size)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
 
     def forward(self, inp):
@@ -56,6 +55,9 @@ class Generator64(torch.nn.Module):
         x = torch.tanh(x)
 
         return x
+
+    def init_weights(self):
+        self.apply(weights_init)
 
 
 if __name__ == "__main__":

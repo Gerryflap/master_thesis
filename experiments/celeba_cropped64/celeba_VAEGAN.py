@@ -36,17 +36,19 @@ parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
 parser.add_argument("--gamma", action="store", type=float, default=1e-6, help="Changes the gamma used by VAE/GAN")
 parser.add_argument("--epoch_step_limit", action="store", type=int, default=None,
                     help="Cuts off epoch when step limit is reached")
+parser.add_argument("--real_label_value", action="store", type=float, default=1.0, help="Changes the target label for real samples")
+
 
 args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("celeba64", "vaegan", args)
 
-dataset = CelebaCropped(split="train", download=True, transform=transforms.Compose([
+dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
-valid_dataset = CelebaCropped(split="valid", download=True, transform=transforms.Compose([
+valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
@@ -65,6 +67,10 @@ if args.cuda:
     Gz = Gz.cuda()
     Gx = Gx.cuda()
     D = D.cuda()
+
+Gz.init_weights()
+Gx.init_weights()
+D.init_weights()
 
 listeners = [
     LossReporter(),
@@ -86,7 +92,8 @@ train_loop = VAEGANTrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     gamma=args.gamma,
-    max_steps_per_epoch=args.epoch_step_limit
+    max_steps_per_epoch=args.epoch_step_limit,
+    real_label_value=args.real_label_value
 )
 
 train_loop.train()

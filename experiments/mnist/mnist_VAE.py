@@ -62,6 +62,9 @@ if args.cuda:
     enc = enc.cuda()
     dec = dec.cuda()
 
+enc.init_weights()
+dec.init_weights()
+
 listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args),

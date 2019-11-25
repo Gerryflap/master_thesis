@@ -31,6 +31,8 @@ parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate on the input of the first fully connected layer of D")
 parser.add_argument("--gamma", action="store", type=float, default=1e-3, help="Changes the gamma used by VAE/GAN")
+parser.add_argument("--real_label_value", action="store", type=float, default=1.0, help="Changes the target label for real samples")
+
 
 args = parser.parse_args()
 
@@ -62,6 +64,10 @@ if args.cuda:
     Gx = Gx.cuda()
     D = D.cuda()
 
+Gz.init_weights()
+Gx.init_weights()
+D.init_weights()
+
 listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),
@@ -79,7 +85,9 @@ train_loop = VAEGANTrainLoop(
     optim_D=D_optimizer,
     dataloader=dataloader,
     cuda=args.cuda,
-    epochs=args.epochs
+    epochs=args.epochs,
+    real_label_value=args.real_label_value
+
 )
 
 train_loop.train()

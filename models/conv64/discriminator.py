@@ -35,8 +35,7 @@ class Discriminator64(torch.nn.Module):
 
         self.lin_1 = torch.nn.Linear(h_size * 4, 1)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
     @staticmethod
     def leaky_relu(x):
@@ -76,3 +75,6 @@ class Discriminator64(torch.nn.Module):
         if not self.use_logits:
             x = torch.sigmoid(x)
         return x
+
+    def init_weights(self):
+        self.apply(weights_init)

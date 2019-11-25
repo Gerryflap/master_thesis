@@ -54,6 +54,8 @@ if args.cuda:
     G = G.cuda()
     D = D.cuda()
 
+D.init_weights()
+
 listeners = [
     LossReporter(),
     GanImageSampleLogger(output_path, args, pad_value=1),

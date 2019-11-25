@@ -10,7 +10,8 @@ from trainloops.train_loop import TrainLoop
 
 
 class VAEGANTrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_Gz, optim_Gx, optim_D, dataloader, cuda=False, epochs=1, gamma=1e-3, max_steps_per_epoch=None):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_Gz, optim_Gx, optim_D, dataloader, cuda=False, epochs=1,
+                 gamma=1e-3, max_steps_per_epoch=None, real_label_value=1.0):
         """
         Initializes the VAE/GAN Trainloop
         :param listeners: A list of listeners
@@ -27,8 +28,11 @@ class VAEGANTrainLoop(TrainLoop):
         :param max_steps_per_epoch: Ends an epoch at this amount of steps, instead of when the dataloader is done.
             The dataloader is NOT reset, so it might continue in the next epoch which could result in the epoch ending
             when the dataloader is done instead of when the max_steps is reached.
+        :param real_label_value: Gives a value to the "real" label of the discriminator.
+            Using  0.9 might aide convergence according to https://towardsdatascience.com/gan-ways-to-improve-gan-performance-acf37f9f59b
         """
         super().__init__(listeners, epochs)
+        self.real_label_value = real_label_value
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
         self.Gx = Gx
@@ -41,7 +45,7 @@ class VAEGANTrainLoop(TrainLoop):
         self.max_steps_per_epoch = max_steps_per_epoch
 
         self.gan_labels = torch.zeros((self.batch_size*3, 1))
-        self.gan_labels[:self.batch_size] = 1.0
+        self.gan_labels[:self.batch_size] = real_label_value
         self.gan_labels.requires_grad = False
         if self.cuda:
             self.gan_labels = self.gan_labels.cuda()

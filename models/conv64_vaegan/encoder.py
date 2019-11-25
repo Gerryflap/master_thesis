@@ -32,8 +32,7 @@ class VAEGANEncoder64(MorphingEncoder):
         self.mean_fc = torch.nn.Linear(h_size * 32, latent_size)
         self.std_fc = torch.nn.Linear(h_size * 32, latent_size)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
     def forward(self, inp):
         x = self.conv_1(inp)

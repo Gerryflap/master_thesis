@@ -29,8 +29,7 @@ class VAEGANDiscriminator64(torch.nn.Module):
         self.lin_1 = torch.nn.Linear(8*8*h_size * 4, h_size*8)
         self.lin_2 = torch.nn.Linear(h_size * 8, 1)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
     @staticmethod
     def leaky_relu(x):

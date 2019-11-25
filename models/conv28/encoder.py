@@ -30,8 +30,7 @@ class Encoder28(MorphingEncoder):
         self.mean_fc = torch.nn.Linear(h_size * 4, latent_size, bias=True)
         self.std_fc = torch.nn.Linear(h_size * 4, latent_size, bias=True)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
     @staticmethod
     def leaky_relu(x):
@@ -65,3 +64,6 @@ class Encoder28(MorphingEncoder):
         stds = torch.exp(0.5 * vars)
         eps = torch.randn_like(stds)
         return means + eps * stds
+
+    def init_weights(self):
+        self.apply(weights_init)

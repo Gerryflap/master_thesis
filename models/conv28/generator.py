@@ -22,17 +22,14 @@ class Generator28(torch.nn.Module):
 
         self.conv_1 = torch.nn.ConvTranspose2d(self.latent_size, self.h_size * 4, 4, bias=False)
         self.conv_2 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size * 2, kernel_size=5, stride=2, bias=False)
-        self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size * 2, kernel_size=5, stride=2, bias=False)
-        self.conv_4 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size, kernel_size=4, stride=1, bias=False)
-        self.conv_5 = torch.nn.Conv2d(self.h_size, n_channels, kernel_size=1, stride=1, bias=True)
+        self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size , kernel_size=5, stride=2, bias=False)
+        self.conv_4 = torch.nn.ConvTranspose2d(self.h_size , self.n_channels, kernel_size=4, stride=1, bias=False)
 
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
-        self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 2)
-        self.bn_4 = torch.nn.BatchNorm2d(self.h_size)
+        self.bn_3 = torch.nn.BatchNorm2d(self.h_size )
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
 
     @staticmethod
@@ -55,10 +52,9 @@ class Generator28(torch.nn.Module):
         x = self.activ(x)
 
         x = self.conv_4(x)
-        x = self.bn_4(x)
-        x = self.activ(x)
-
-        x = self.conv_5(x)
         x = torch.tanh(x)
 
         return x
+
+    def init_weights(self):
+        self.apply(weights_init)

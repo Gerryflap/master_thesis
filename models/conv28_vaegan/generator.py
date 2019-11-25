@@ -28,8 +28,7 @@ class VAEGANGenerator28(torch.nn.Module):
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_4 = torch.nn.BatchNorm2d(self.h_size//2)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
 
     def forward(self, inp):
@@ -52,6 +51,8 @@ class VAEGANGenerator28(torch.nn.Module):
 
         return x
 
+    def init_weights(self):
+        self.apply(weights_init)
 
 if __name__ == "__main__":
     gen = VAEGANGenerator28(10, 32)

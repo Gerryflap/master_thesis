@@ -10,6 +10,7 @@ import argparse
 # Parse commandline arguments
 from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
+from util.torch.initialization import weights_init
 
 parser = argparse.ArgumentParser(description="MNIST DCGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
@@ -18,14 +19,13 @@ parser.add_argument("--lr", action="store", type=float, default=0.0001,
 parser.add_argument("--h_size", action="store", type=int, default=16,
                     help="Sets the h_size, which changes the size of the network")
 parser.add_argument("--epochs", action="store", type=int, default=100, help="Sets the number of training epochs")
-parser.add_argument("--d_steps", action="store", type=int, default=2,
+parser.add_argument("--d_steps", action="store", type=int, default=1,
                     help="Amount of discriminator steps per generator step")
 parser.add_argument("--l_size", action="store", type=int, default=12, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
-parser.add_argument("--no_bias_in_G", action="store_true", default=False, help="Disables biases in the Generator")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 # parser.add_argument("--load_path", action="store", type=str, default=None,
@@ -47,14 +47,19 @@ dataset = data.MNIST("data/downloads/mnist", train=True, download=True, transfor
 ]))
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
-G = Generator28(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_G)
+G = Generator28(args.l_size, args.h_size, args.use_mish)
 D = Discriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish)
-G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.5, 0.999))
-D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
+
 
 if args.cuda:
     G = G.cuda()
     D = D.cuda()
+
+G.init_weights()
+D.init_weights()
+
+G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.5, 0.999))
+D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
 listeners = [
     LossReporter(),

@@ -27,8 +27,7 @@ class VAEGANDiscriminator28(torch.nn.Module):
         self.lin_1 = torch.nn.Linear(7*7*h_size * 4, h_size*8)
         self.lin_2 = torch.nn.Linear(h_size * 8, 1)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
     @staticmethod
     def leaky_relu(x):
@@ -68,3 +67,6 @@ class VAEGANDiscriminator28(torch.nn.Module):
         # For numerical stability, logits are used as output instead.
         # This means that the sigmoid function "is embedded" in the loss function directly
         return x, dis_l
+
+    def init_weights(self):
+        self.apply(weights_init)

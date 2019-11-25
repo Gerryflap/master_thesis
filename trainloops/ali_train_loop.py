@@ -31,50 +31,59 @@ class ALITrainLoop(TrainLoop):
         for i, (x, _) in enumerate(self.dataloader):
             if x.size()[0] != self.batch_size:
                 continue
+
+            # Train D
             # Draw M (= batch_size) samples from dataset and prior. x samples are already loaded by dataloader
             if self.cuda:
                 x = x.cuda()
             z = self.generate_z_batch(self.batch_size)
 
+            self.optim_D.zero_grad()
+
             # Sample from conditionals (sampling is implemented by models)
             z_hat = self.Gz.encode(x)
+            dis_q = self.D((x, z_hat.detach()))
+            L_d_real = F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q), reduction="mean")
+            L_d_real.backward()
+
             x_tilde = self.Gx(z)
+            dis_p = self.D((x_tilde.detach(), z))
+            L_d_fake = F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q), reduction="mean")
+            L_d_fake.backward()
 
-            # Compute discriminator predictions
-            #   The D inputs are merged in order to let Batch Normalization work correctly.
-            #   Not merging the fake and real samples would result in BatchNorm being applied to both separately,
-            #   which resulted in a complete failure to produce any useful output.
-            d_x, d_z = torch.cat((x, x_tilde), dim=0), torch.cat((z_hat, z), dim=0)
-            dis_preds = self.D((d_x, d_z))
-            dis_q = dis_preds[:self.batch_size]
-            dis_p = dis_preds[self.batch_size:]
+            L_d = L_d_real + L_d_fake
 
-            # Compute Discriminator loss
-            L_d = F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q), reduction="mean") + \
-                  F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q), reduction="mean")
+            # Gradient update on Discriminator network
+            torch.nn.utils.clip_grad_norm_(list(self.D.parameters()), 1.0)
+            self.optim_D.step()
 
+            # Train G
+            self.optim_G.zero_grad()
+
+            z = self.generate_z_batch(self.batch_size)
+
+            # Sample from conditionals (sampling is implemented by models)
+            z_hat = self.Gz.encode(x)
+            dis_q = self.D((x, z_hat))
             L_gz = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q), reduction="mean")
+            L_gz.backward()
+
+            x_tilde = self.Gx(z)
+            dis_p = self.D((x_tilde, z))
             L_gx = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
+            L_gx.backward()
+
             L_g = L_gz + L_gx
 
             # Extra code for the MorGAN algorithm. This is not part of ALI
             if self.morgan:
                 x_recon = self.Gx(z_hat)
-                L_pixel = self.morgan_pixel_loss(x_recon, x)
-                L_syn = L_g + self.morgan_alpha * L_pixel
-
-            # Gradient update on Discriminator network
-            self.optim_D.zero_grad()
-            L_d.backward(retain_graph=True)
-            torch.nn.utils.clip_grad_norm_(list(self.D.parameters()), 1.0)
-            self.optim_D.step()
+                L_pixel = self.morgan_alpha * self.morgan_pixel_loss(x_recon, x)
+                L_syn = L_g + L_pixel
 
             # Gradient update on Generator networks
-            self.optim_G.zero_grad()
             if self.morgan:
-                L_syn.backward()
-            else:
-                L_g.backward()
+                L_pixel.backward()
             torch.nn.utils.clip_grad_norm_(list(self.Gx.parameters()) + list(self.Gz.parameters()), 1.0)
             self.optim_G.step()
         self.Gx.eval()

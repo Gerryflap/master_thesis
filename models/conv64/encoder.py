@@ -33,8 +33,7 @@ class Encoder64(MorphingEncoder):
         self.mean_fc = torch.nn.Linear(h_size * 4, latent_size)
         self.std_fc = torch.nn.Linear(h_size * 4, latent_size)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
     def forward(self, inp):
         x = self.conv_1(inp)
@@ -62,6 +61,9 @@ class Encoder64(MorphingEncoder):
         means = self.mean_fc(x)
         log_vars = self.std_fc(x)
         return self.sample(means, log_vars), means, log_vars
+
+    def init_weights(self):
+        self.apply(weights_init)
 
     @staticmethod
     def sample(means, vars):

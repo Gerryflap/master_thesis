@@ -64,6 +64,10 @@ if args.cuda:
     Gx = Gx.cuda()
     D = D.cuda()
 
+Gz.init_weights()
+Gx.init_weights()
+D.init_weights()
+
 listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),

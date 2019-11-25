@@ -58,8 +58,7 @@ class ALIDiscriminator64(torch.nn.Module):
         self.lin_xz2 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2, bias=True)
         self.lin_xz3 = torch.nn.Linear(self.fc_h_size*2, 1, bias=True)
 
-        # Initialize weights
-        self.apply(weights_init)
+
 
 
     @staticmethod
@@ -138,3 +137,5 @@ class ALIDiscriminator64(torch.nn.Module):
 
         return h
 
+    def init_weights(self):
+        self.apply(weights_init)
