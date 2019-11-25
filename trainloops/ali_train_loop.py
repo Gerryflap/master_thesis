@@ -60,18 +60,20 @@ class ALITrainLoop(TrainLoop):
             # Train G
             self.optim_G.zero_grad()
 
+            # Compute and backpropagate loss for x_tilde
             z = self.generate_z_batch(self.batch_size)
-
-            # Sample from conditionals (sampling is implemented by models)
-            z_hat = self.Gz.encode(x)
-            dis_q = self.D((x, z_hat))
-            L_gz = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q), reduction="mean")
-            L_gz.backward()
-
             x_tilde = self.Gx(z)
             dis_p = self.D((x_tilde, z))
             L_gx = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
             L_gx.backward()
+
+            # Compute and backpropagate loss for z_hat
+            # Sample from conditionals (sampling is implemented by models)
+            z_hat = self.Gz.encode(x)
+            dis_q = self.D((x, z_hat))
+            L_gz = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q), reduction="mean")
+            # Keep the graph if we're using MorGAN, since we still need it to backprop through Gz
+            L_gz.backward(retain_graph=self.morgan)
 
             L_g = L_gz + L_gx
 
