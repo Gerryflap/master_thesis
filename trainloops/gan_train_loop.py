@@ -62,7 +62,7 @@ class GanTrainLoop(TrainLoop):
             d_loss = d_fake_loss + d_real_loss
 
             # Clip gradients
-            # torch.nn.utils.clip_grad_norm_(self.D.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(self.D.parameters(), 1.0)
 
             # Update weights
             self.D_optimizer.step()
@@ -81,7 +81,7 @@ class GanTrainLoop(TrainLoop):
                 g_loss.backward()
 
                 # Clip gradients
-                # torch.nn.utils.clip_grad_norm_(self.G.parameters(), 1.0)
+                torch.nn.utils.clip_grad_norm_(self.G.parameters(), 1.0)
 
                 self.G_optimizer.step()
 
