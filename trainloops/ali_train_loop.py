@@ -9,7 +9,7 @@ from trainloops.train_loop import TrainLoop
 
 
 class ALITrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0, use_sigmoid_gen=False):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
@@ -22,6 +22,7 @@ class ALITrainLoop(TrainLoop):
         self.cuda = cuda
         self.morgan_alpha = morgan_alpha
         self.morgan = morgan_alpha != 0
+        self.use_sigmoid_gen = use_sigmoid_gen
 
     def epoch(self):
         self.Gx.train()
@@ -80,7 +81,7 @@ class ALITrainLoop(TrainLoop):
             # Extra code for the MorGAN algorithm. This is not part of ALI
             if self.morgan:
                 x_recon = self.Gx(z_hat)
-                L_pixel = self.morgan_alpha * self.morgan_pixel_loss(x_recon, x)
+                L_pixel = self.morgan_alpha * self.morgan_pixel_loss(x_recon, x, self.use_sigmoid_gen)
                 L_syn = L_g + L_pixel
 
             # Gradient update on Generator networks
@@ -129,8 +130,12 @@ class ALITrainLoop(TrainLoop):
         return self.Gx(z)
 
     @staticmethod
-    def morgan_pixel_loss(x_recon, target):
+    def morgan_pixel_loss(x_recon, target, use_sigmoid_gen):
         absolute_errors = torch.abs(x_recon - target)
         WxH = float(int(absolute_errors.size()[2]) * int(absolute_errors.size()[3]))
         loss = absolute_errors.sum()/WxH
+        if not use_sigmoid_gen:
+            # Multiply by 0.5 if tanh is used in order to make the loss as large as when sigmoid was used
+            loss *= 0.5
+
         return loss

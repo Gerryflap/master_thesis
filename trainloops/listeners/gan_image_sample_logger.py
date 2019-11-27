@@ -37,11 +37,17 @@ class GanImageSampleLogger(Listener):
             raise ValueError("Could not find a generator-like network in the state dict!")
 
         images = G(self.z)
+
+        if images.detach().min().item() >= 0:
+            range_ = (0, 1)
+        else:
+            range_ = (-1, 1)
+
         torchvision.utils.save_image(
             images,
             os.path.join(self.path, "output-%06d.png"%epoch),
             nrow=self.rows,
             pad_value=self.pad_value,
-            range=(-1, 1),
+            range=range_,
             normalize=True
         )

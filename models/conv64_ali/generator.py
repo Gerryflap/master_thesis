@@ -4,7 +4,7 @@ from util.torch.initialization import weights_init
 
 
 class Generator64(torch.nn.Module):
-    def __init__(self, latent_size, h_size, use_mish=False, n_channels=3):
+    def __init__(self, latent_size, h_size, use_mish=False, n_channels=3, sigmoid_out=False):
         super().__init__()
 
         self.n_channels = n_channels
@@ -16,6 +16,7 @@ class Generator64(torch.nn.Module):
             self.activ = mish
         else:
             self.activ = self.leaky_relu
+        self.sigmoid_out = sigmoid_out
 
         self.conv_1 = torch.nn.ConvTranspose2d(self.latent_size, self.h_size * 8, 4, bias=False)
         self.conv_2 = torch.nn.ConvTranspose2d(self.h_size * 8, self.h_size * 4, kernel_size=7, stride=2, bias=False)
@@ -61,7 +62,10 @@ class Generator64(torch.nn.Module):
         x = self.activ(x)
 
         x = self.conv_6(x)
-        x = torch.tanh(x)
+        if self.sigmoid_out:
+            x = torch.sigmoid(x)
+        else:
+            x = torch.tanh(x)
 
         return x
 

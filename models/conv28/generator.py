@@ -4,7 +4,7 @@ from util.torch.initialization import weights_init
 
 
 class Generator28(torch.nn.Module):
-    def __init__(self, latent_size, h_size, use_mish=False, bias=False,  n_channels=1):
+    def __init__(self, latent_size, h_size, use_mish=False, bias=False,  n_channels=1, sigmoid_out=False):
         super().__init__()
 
         # Bias is being phased out
@@ -13,6 +13,7 @@ class Generator28(torch.nn.Module):
         self.n_channels = n_channels
 
         self.latent_size = latent_size
+        self.sigmoid_out = sigmoid_out
         self.h_size = h_size
         if use_mish:
 
@@ -52,7 +53,10 @@ class Generator28(torch.nn.Module):
         x = self.activ(x)
 
         x = self.conv_4(x)
-        x = torch.tanh(x)
+        if self.sigmoid_out:
+            x = torch.sigmoid(x)
+        else:
+            x = torch.tanh(x)
 
         return x
 

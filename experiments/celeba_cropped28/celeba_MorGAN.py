@@ -11,9 +11,11 @@ import argparse
 
 # Parse commandline arguments
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
+from trainloops.listeners.discriminator_overfit_monitor import DiscriminatorOverfitMonitor
 from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
+from trainloops.listeners.parameter_value_logger import ParameterValueLogger
 
 parser = argparse.ArgumentParser(description="Celeba MorGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
@@ -54,8 +56,10 @@ valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filterin
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
+print("Dataset length: ", len(dataset))
+
 Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3)
+Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=False)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
@@ -71,9 +75,13 @@ D.init_weights()
 
 listeners = [
     LossReporter(),
-    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),
+    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
-    ModelSaver(output_path, n=1, overwrite=True, print_output=True)
+    # DiscriminatorOverfitMonitor(dataset, valid_dataset, 100, args),
+    ParameterValueLogger(output_path, "Conv"),
+    ParameterValueLogger(output_path, "Norm"),
+    ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    ModelSaver(output_path, n=4, overwrite=False, print_output=True),
 ]
 train_loop = ALITrainLoop(
     listeners=listeners,
@@ -85,7 +93,8 @@ train_loop = ALITrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    morgan_alpha=args.morgan_alpha
+    morgan_alpha=args.morgan_alpha,
+    use_sigmoid_gen=False
 )
 
 train_loop.train()
