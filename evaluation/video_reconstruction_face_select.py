@@ -50,6 +50,7 @@ z_size = Gx.latent_size
 resolution = int(Gx(torch.zeros((z_size,))).size()[2])
 print(resolution)
 real_resolution = resolution
+sigmoid_model = False
 
 z_loaded = None
 if load_z:
@@ -62,6 +63,7 @@ root.title("GAN webcam tool")
 root.attributes('-type', 'dialog')
 
 def update():
+    global sigmoid_model
     global rand_vec
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -107,7 +109,9 @@ def update():
     # input_frame = input_frame.permute(2, 0, 1)
     input_frame = input_frame.unsqueeze(0)
     # input_frame /= 255.0
-    input_frame = input_frame * 2 - 1
+
+    if not sigmoid_model:
+        input_frame = input_frame * 2 - 1
     z, z_mean, z_logvar = Gz(input_frame)
     if random_mode == 0:
         z = z_mean
@@ -116,10 +120,14 @@ def update():
         z = 0.5*(z + z_loaded)
 
     decoded = Gx(z)[0]
-    decoded = (decoded + 1)/2
+    if decoded.min().detach().item() >= 0:
+        sigmoid_model = True
+    if not sigmoid_model:
+        decoded = (decoded + 1)/2
     decoded *= 255.0
 
-    input_frame = (input_frame + 1)/2
+    if not sigmoid_model:
+        input_frame = (input_frame + 1)/2
     input_frame *= 255.0
 
     img = Image.fromarray((input_frame.permute(0, 2, 3, 1).detach().numpy()[0]).astype(np.uint8))

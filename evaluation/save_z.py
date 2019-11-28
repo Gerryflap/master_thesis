@@ -19,6 +19,7 @@ parser.add_argument("--sample", action="store_true", default=False,
                     help="If true, a sample is taken from the encoder output distribution. Otherwise the mean is used.")
 parser.add_argument("--fix_contrast", action="store_true", default=False,
                     help="If true, makes sure that the colors in the image span from 0-255")
+parser.add_argument("--sigmoid_model",action="store_true", default=False, help="This flag is required if the loaded model was trained on images with range 0-1. This is done with the MorGAN models at the time of writing." )
 args = parser.parse_args()
 
 fname_enc = args.enc
@@ -72,7 +73,8 @@ def load_process_img(fname):
     # input_frame = input_frame.permute(2, 0, 1)
     input_frame = input_frame.unsqueeze(0)
     # input_frame /= 255.0
-    input_frame = input_frame * 2 - 1
+    if not args.sigmoid_model:
+        input_frame = input_frame * 2 - 1
     return input_frame
 
 

@@ -77,8 +77,8 @@ def update_canvas(iets):
         z[0, i] = sliders[i].get()
     # array = G(z).eval(session=K.get_session())[0]
     array = generator(torch.from_numpy(z))[0]
-
-    array = (array + 1) / 2
+    if array.min().detach().item() < 0:
+        array = (array + 1) / 2
     array *= 255.0
     array = array.detach().numpy().astype(np.uint8)
 
