@@ -36,7 +36,13 @@ parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate on the input of the first fully connected layer of D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
-                    help="Sets the alpha parameter in the MorGAN training algorithm")
+                    help="Sets the alpha parameter of MorGAN")
+parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
+                    help="Sets the standard deviation for instance noise (noise added to inputs of D)")
+parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
+                    help="Changes the label value for the \"real\" output of D. "
+                         "This can be used for label smoothing. "
+                         "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
 
 args = parser.parse_args()
 
@@ -91,7 +97,9 @@ train_loop = ALITrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    morgan_alpha=args.morgan_alpha
+    morgan_alpha=args.morgan_alpha,
+    d_real_label=args.d_real_label,
+    d_img_noise_std=args.instance_noise_std
 )
 
 train_loop.train()

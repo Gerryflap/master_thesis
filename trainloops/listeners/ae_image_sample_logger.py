@@ -97,6 +97,8 @@ class AEImageSampleLogger(Listener):
             print("z_mu min: ", z_mean.min().detach().item())
             print("z_mu mean: ", z_mean.mean().detach().item())
             print("z_mu max: ", z_mean.max().detach().item())
+            print("z_mu variance: ", z_mean.var().detach().item())
+
             print()
             print("z_var min: ", z_var.min().detach().item())
             print("z_var mean: ", z_var.mean().detach().item())

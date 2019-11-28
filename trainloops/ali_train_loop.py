@@ -9,7 +9,7 @@ from trainloops.train_loop import TrainLoop
 
 
 class ALITrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
@@ -22,6 +22,8 @@ class ALITrainLoop(TrainLoop):
         self.cuda = cuda
         self.morgan_alpha = morgan_alpha
         self.morgan = morgan_alpha != 0
+        self.d_img_noise_std = d_img_noise_std
+        self.d_real_label = d_real_label
 
     def epoch(self):
         self.Gx.train()
@@ -42,12 +44,27 @@ class ALITrainLoop(TrainLoop):
 
             # Sample from conditionals (sampling is implemented by models)
             z_hat = self.Gz.encode(x)
-            dis_q = self.D((x, z_hat.detach()))
-            L_d_real = F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q), reduction="mean")
+            xr_d_inp = x
+
+            # Add noise to the inputs of D if the standard deviation isn't defined to be 0
+            if self.d_img_noise_std != 0.0:
+                xr_d_inp += torch.randn_like(xr_d_inp)*self.d_img_noise_std
+
+            dis_q = self.D((xr_d_inp, z_hat.detach()))
+            d_real_labels = torch.ones_like(dis_q)
+            if self.d_real_label != 1.0:
+                d_real_labels *= self.d_real_label
+            L_d_real = F.binary_cross_entropy_with_logits(dis_q, d_real_labels, reduction="mean")
             L_d_real.backward()
 
             x_tilde = self.Gx(z)
-            dis_p = self.D((x_tilde.detach(), z))
+            xf_d_inp = x_tilde.detach()
+
+            # Add noise to the inputs of D if the standard deviation isn't defined to be 0
+            if self.d_img_noise_std != 0.0:
+                xf_d_inp += torch.randn_like(xf_d_inp)*self.d_img_noise_std
+
+            dis_p = self.D((xf_d_inp, z))
             L_d_fake = F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q), reduction="mean")
             L_d_fake.backward()
 
