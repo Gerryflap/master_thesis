@@ -49,19 +49,17 @@ output_path = util.output.init_experiment_output_dir("celeba64", "MorGAN", args)
 
 dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.ToTensor(),
-    transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
 valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.ToTensor(),
-    transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 if args.continue_with is None:
     Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
-    Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3)
+    Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
     D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
                            n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
     G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
@@ -88,6 +86,7 @@ listeners = [
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    ModelSaver(output_path, n=10, overwrite=False, print_output=True),
     KillSwitchListener(output_path)
 ]
 train_loop = ALITrainLoop(

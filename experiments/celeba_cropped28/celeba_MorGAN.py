@@ -32,7 +32,7 @@ parser.add_argument("--cuda", action="store_true", default=False,
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
-                    help="Enables batch normalization in D, which currently does not work well")
+                    help="Enables batch normalization in D")
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate on the input of the first fully connected layer of D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
@@ -45,13 +45,11 @@ output_path = util.output.init_experiment_output_dir("celeba28", "MorGAN", args)
 dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-    transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
 valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-    transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
@@ -59,7 +57,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 print("Dataset length: ", len(dataset))
 
 Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=False)
+Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
@@ -93,8 +91,7 @@ train_loop = ALITrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    morgan_alpha=args.morgan_alpha,
-    use_sigmoid_gen=False
+    morgan_alpha=args.morgan_alpha
 )
 
 train_loop.train()
