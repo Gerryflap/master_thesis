@@ -196,4 +196,4 @@ dmypy.json
 
 # Data folders
 data/celeba/
-data/celeba_cropped/
+data/celeba_cropped/img_align/
