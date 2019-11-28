@@ -41,6 +41,12 @@ parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha parameter in the MorGAN training algorithm")
 parser.add_argument("--continue_with", action="store", type=str, default=None,
                     help="Path the the experiment to load. Keep hyperparams the same!")
+parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
+                    help="Sets the standard deviation for instance noise (noise added to inputs of D)")
+parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
+                    help="Changes the label value for the \"real\" output of D. "
+                         "This can be used for label smoothing. "
+                         "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
 
 args = parser.parse_args()
 
@@ -99,7 +105,9 @@ train_loop = ALITrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    morgan_alpha=args.morgan_alpha
+    morgan_alpha=args.morgan_alpha,
+    d_real_label=args.d_real_label,
+    d_img_noise_std=args.instance_noise_std
 
 )
 
