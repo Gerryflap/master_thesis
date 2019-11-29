@@ -12,7 +12,7 @@ import dlib
 
 
 # 0 = No random, 1 = Every frame a new random
-load_z = True
+load_z = False
 random_mode = 1
 crop_region_size = 10
 

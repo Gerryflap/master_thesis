@@ -12,7 +12,8 @@ class VaeTrainLoop(TrainLoop):
             dec_optimizer,
             dataloader: torch.utils.data.DataLoader,
             cuda=False,
-            epochs=1
+            epochs=1,
+            beta=1.0
     ):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
@@ -22,6 +23,7 @@ class VaeTrainLoop(TrainLoop):
         self.dec_optimizer = dec_optimizer
         self.dataloader = dataloader
         self.cuda = cuda
+        self.beta = beta
 
     def epoch(self):
         self.enc.train()
@@ -39,7 +41,7 @@ class VaeTrainLoop(TrainLoop):
 
             x_recon = self.dec(zs)
 
-            loss = self.loss_fn(x_recon, mbatch, means, log_vars)
+            loss = self.loss_fn(x_recon, mbatch, means, log_vars, beta=self.beta)
 
             # Backpropagate the errors
             loss.backward()
@@ -80,10 +82,10 @@ class VaeTrainLoop(TrainLoop):
         return self.dec(z)
 
     @staticmethod
-    def loss_fn(x_recon, x, means, log_vars):
+    def loss_fn(x_recon, x, means, log_vars, beta=1.0):
         l_recon = torch.nn.functional.binary_cross_entropy((x_recon + 1)/2, (x + 1)/2, reduction='sum')
 
         # The Dkl between a standard normal and the output distributions of the network
         l_prior = -0.5 * torch.sum(1 + log_vars - torch.pow(means, 2) - torch.exp(log_vars))
 
-        return l_recon + l_prior
+        return l_recon + beta * l_prior
