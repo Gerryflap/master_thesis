@@ -148,6 +148,7 @@ class ALITrainLoop(TrainLoop):
     @staticmethod
     def morgan_pixel_loss(x_recon, target):
         absolute_errors = torch.abs(x_recon - target)
-        WxH = float(int(absolute_errors.size()[2]) * int(absolute_errors.size()[3]))
-        loss = absolute_errors.sum()/WxH
+        # WxH = float(int(absolute_errors.size()[2]) * int(absolute_errors.size()[3]))
+        # loss = absolute_errors.sum()/WxH
+        loss = absolute_errors.mean()
         return loss
