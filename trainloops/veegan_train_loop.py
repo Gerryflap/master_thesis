@@ -71,7 +71,7 @@ class VEEGANTrainLoop(TrainLoop):
             L_d = L_d_real + L_d_fake
 
             # Gradient update on Discriminator network
-            torch.nn.utils.clip_grad_norm_(list(self.D.parameters()), 1.0)
+            # torch.nn.utils.clip_grad_norm_(list(self.D.parameters()), 1.0)
             self.optim_D.step()
 
             # Train G
@@ -86,13 +86,13 @@ class VEEGANTrainLoop(TrainLoop):
 
             # Reconstruct z and backpropagate the z reconstruction loss
             z_recon, _, _ = self.Gz(x_tilde)
-            z_recon_loss = torch.nn.functional.mse_loss(z_recon, z, reduction="mean")
+            z_recon_loss = self.l2_loss(z_recon, z)
             # z_recon_loss.backward()
 
             loss_g = z_recon_loss + L_gx
             loss_g.backward()
 
-            torch.nn.utils.clip_grad_norm_(list(self.Gx.parameters()) + list(self.Gz.parameters()), 1.0)
+            # torch.nn.utils.clip_grad_norm_(list(self.Gx.parameters()) + list(self.Gz.parameters()), 1.0)
             self.optim_G.step()
         self.Gx.eval()
         self.Gz.eval()
@@ -117,6 +117,12 @@ class VEEGANTrainLoop(TrainLoop):
                 "D_optimizer": self.optim_D
             }
         }
+
+    @staticmethod
+    def l2_loss(pred, target):
+        N = pred.size(0)
+        loss = torch.pow(pred - target, 2).sum()/N
+        return loss
 
     def generate_z_batch(self, batch_size):
         z = torch.normal(torch.zeros((batch_size, self.Gx.latent_size)), 1)
