@@ -1,5 +1,8 @@
 """
     Aims to reproduce the Encoder from the ALI paper.
+
+    The deterministic mode has been added, but is not part of ALI.
+    In this mode the encoder predicts the z directly instead of returning a distribution.
 """
 
 import torch
@@ -10,10 +13,11 @@ from util.torch.initialization import weights_init
 
 
 class Encoder64(MorphingEncoder):
-    def __init__(self, latent_size=512, h_size=64, use_mish=False, n_channels=3):
+    def __init__(self, latent_size=512, h_size=64, use_mish=False, n_channels=3, deterministic=False):
         super().__init__()
 
         self.n_channels = n_channels
+        self.deterministic = deterministic
 
         if use_mish:
             self.activ = mish
@@ -35,7 +39,8 @@ class Encoder64(MorphingEncoder):
         self.bn_5 = torch.nn.BatchNorm2d(self.h_size * 8)
 
         self.mean_fc = torch.nn.Linear(h_size * 8, latent_size, bias=True)
-        self.std_fc = torch.nn.Linear(h_size * 8, latent_size, bias=True)
+        if not deterministic:
+            self.std_fc = torch.nn.Linear(h_size * 8, latent_size, bias=True)
 
 
 
@@ -67,8 +72,14 @@ class Encoder64(MorphingEncoder):
         x = x.view(-1, self.h_size * 8)
 
         means = self.mean_fc(x)
-        log_vars = self.std_fc(x)
-        return self.sample(means, log_vars), means, log_vars
+
+        if self.deterministic:
+            # Output the means and return a variance close to 0 (log variance of -30).
+            # The variance could be used by some loggers or evaluation programs, so it's better to include something.
+            return means, means, torch.ones_like(means)*-30.0
+        else:
+            log_vars = self.std_fc(x)
+            return self.sample(means, log_vars), means, log_vars
 
     @staticmethod
     def sample(means, vars):
