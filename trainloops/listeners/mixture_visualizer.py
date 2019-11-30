@@ -75,13 +75,13 @@ class MixtureVisualizer(Listener):
                 cmap="Greys"
             )
             plt.colorbar(contour)
-        Gx.eval()
+        # Gx.eval()
         reals = self.data.cpu().numpy()
         gens = Gx(self.static_z).cpu().detach().numpy()
         plt.scatter(reals[:, 0], reals[:, 1], color="red", s=3, alpha=0.1, label="x")
         plt.scatter(gens[:, 0], gens[:, 1], color="blue", s=3, alpha=0.2, label="Gx(z)")
         if self.output_reproductions:
-            Gz.eval()
+            # Gz.eval()
             x = self.data
             if self.cuda:
                 x = x.cuda()
@@ -90,9 +90,9 @@ class MixtureVisualizer(Listener):
 
             x_recon = Gx(Gz(x)[gz_index]).cpu().detach()
             plt.scatter(x_recon[:, 0], x_recon[:, 1], color="green", s=3, alpha=0.2, label="Gx(Gz(x))")
-            Gz.train()
+            # Gz.train()
 
         plt.xlim(-1.2, 1.2)
         plt.ylim(-1.2, 1.2)
         plt.savefig(os.path.join(self.path, "epoch_%04d.png"%state_dict["epoch"]))
-        Gx.train()
+        # Gx.train()

@@ -11,7 +11,7 @@ from trainloops.veegan_train_loop import VEEGANTrainLoop
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.mixture_visualizer import MixtureVisualizer
 
-parser = argparse.ArgumentParser(description="Mixture ALI experiment.")
+parser = argparse.ArgumentParser(description="Mixture VEEGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
 parser.add_argument("--lr", action="store", type=float, default=0.003,
                     help="Changes the learning rate, default is 0.003")
@@ -19,6 +19,7 @@ parser.add_argument("--h_size", action="store", type=int, default=32,
                     help="Sets the h_size, which changes the size of the network")
 parser.add_argument("--epochs", action="store", type=int, default=101, help="Sets the number of training epochs")
 parser.add_argument("--l_size", action="store", type=int, default=2, help="Size of the latent space")
+parser.add_argument("--pre_train_steps", action="store", type=int, default=0, help="Number of pre training steps for Gz")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 
@@ -71,7 +72,8 @@ trainloop = VEEGANTrainLoop(
     D_optimizer,
     dataloader,
     cuda=args.cuda,
-    epochs=args.epochs
+    epochs=args.epochs,
+    pre_training_steps=args.pre_train_steps
 )
 
 trainloop.train()

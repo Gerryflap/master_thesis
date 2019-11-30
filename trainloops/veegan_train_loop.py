@@ -11,8 +11,9 @@ from trainloops.train_loop import TrainLoop
 
 
 class VEEGANTrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, d_img_noise_std=0.0, d_real_label=1.0):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, d_img_noise_std=0.0, pre_training_steps=0):
         super().__init__(listeners, epochs)
+        self.pre_training_steps = pre_training_steps
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
         self.Gx = Gx
@@ -23,13 +24,8 @@ class VEEGANTrainLoop(TrainLoop):
         self.dataloader = dataloader
         self.cuda = cuda
         self.d_img_noise_std = d_img_noise_std
-        self.d_real_label = d_real_label
 
     def epoch(self):
-        self.Gx.train()
-        self.Gz.train()
-        self.D.train()
-
         for i, (x, _) in enumerate(self.dataloader):
             if x.size()[0] != self.batch_size:
                 continue
@@ -51,9 +47,7 @@ class VEEGANTrainLoop(TrainLoop):
                 xr_d_inp += torch.randn_like(xr_d_inp)*self.d_img_noise_std
 
             dis_q = self.D((xr_d_inp, z_hat.detach()))
-            d_real_labels = torch.ones_like(dis_q)
-            if self.d_real_label != 1.0:
-                d_real_labels *= self.d_real_label
+            d_real_labels = torch.zeros_like(dis_q)
             L_d_real = F.binary_cross_entropy_with_logits(dis_q, d_real_labels, reduction="mean")
             L_d_real.backward()
 
@@ -65,7 +59,7 @@ class VEEGANTrainLoop(TrainLoop):
                 xf_d_inp += torch.randn_like(xf_d_inp)*self.d_img_noise_std
 
             dis_p = self.D((xf_d_inp, z))
-            L_d_fake = F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q), reduction="mean")
+            L_d_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
             L_d_fake.backward()
 
             L_d = L_d_real + L_d_fake
@@ -81,7 +75,7 @@ class VEEGANTrainLoop(TrainLoop):
             z = self.generate_z_batch(self.batch_size)
             x_tilde = self.Gx(z)
             dis_p = self.D((x_tilde, z))
-            L_gx = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
+            L_gx = F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q), reduction="mean")
             # L_gx.backward(retain_graph=True)
 
             # Reconstruct z and backpropagate the z reconstruction loss
@@ -94,9 +88,6 @@ class VEEGANTrainLoop(TrainLoop):
 
             # torch.nn.utils.clip_grad_norm_(list(self.Gx.parameters()) + list(self.Gz.parameters()), 1.0)
             self.optim_G.step()
-        self.Gx.eval()
-        self.Gz.eval()
-        self.D.eval()
 
         losses = {
                 "D_loss": L_d.detach().item(),
@@ -117,6 +108,18 @@ class VEEGANTrainLoop(TrainLoop):
                 "D_optimizer": self.optim_D
             }
         }
+
+    def pre_train(self):
+        for i in range(self.pre_training_steps):
+            self.optim_G.zero_grad()
+            z = self.generate_z_batch(self.batch_size)
+            x_tilde = self.Gx(z).detach()
+            z_recon, _, _ = self.Gz(x_tilde)
+            z_recon_loss = self.l2_loss(z_recon, z)
+            z_recon_loss.backward()
+            self.optim_G.step()
+
+
 
     @staticmethod
     def l2_loss(pred, target):

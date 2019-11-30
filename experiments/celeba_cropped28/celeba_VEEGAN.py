@@ -1,4 +1,5 @@
 from models.conv28.encoder import Encoder28
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.veegan_train_loop import VEEGANTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28
@@ -10,11 +11,8 @@ import argparse
 
 # Parse commandline arguments
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
-from trainloops.listeners.discriminator_overfit_monitor import DiscriminatorOverfitMonitor
-from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
-from trainloops.listeners.parameter_value_logger import ParameterValueLogger
 
 parser = argparse.ArgumentParser(description="Celeba VEEGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
@@ -36,10 +34,7 @@ parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate on the input of the first fully connected layer of D")
 parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
                     help="Sets the standard deviation for instance noise (noise added to inputs of D)")
-parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
-                    help="Changes the label value for the \"real\" output of D. "
-                         "This can be used for label smoothing. "
-                         "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
+parser.add_argument("--pre_train_steps", action="store", type=int, default=0, help="Number of pre training steps for Gz")
 
 args = parser.parse_args()
 
@@ -78,10 +73,9 @@ listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
-    # ParameterValueLogger(output_path, "Conv"),
-    # ParameterValueLogger(output_path, "Norm"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
     ModelSaver(output_path, n=20, overwrite=False, print_output=True),
+    KillSwitchListener(output_path)
 ]
 train_loop = VEEGANTrainLoop(
     listeners=listeners,
@@ -93,8 +87,8 @@ train_loop = VEEGANTrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    d_real_label=args.d_real_label,
-    d_img_noise_std=args.instance_noise_std
+    d_img_noise_std=args.instance_noise_std,
+    pre_training_steps=args.pre_train_steps
 )
 
 train_loop.train()

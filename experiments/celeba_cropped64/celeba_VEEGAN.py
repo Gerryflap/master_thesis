@@ -103,7 +103,6 @@ train_loop = VEEGANTrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    d_real_label=args.d_real_label,
     d_img_noise_std=args.instance_noise_std
 
 )
