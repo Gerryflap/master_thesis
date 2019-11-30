@@ -1,7 +1,7 @@
 from models.conv28.encoder import Encoder28
 from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.veegan_train_loop import VEEGANTrainLoop
-from models.conv28.ali_discriminator import ALIDiscriminator28
+from models.conv28.veegan_discriminator import VEEGANDiscriminator28
 from models.conv28.generator import Generator28
 from data.celeba_cropped import CelebaCropped
 import util.output
@@ -56,7 +56,7 @@ print("Dataset length: ", len(dataset))
 
 Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
-D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+D = VEEGANDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 

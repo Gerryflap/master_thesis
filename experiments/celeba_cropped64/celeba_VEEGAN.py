@@ -1,7 +1,7 @@
 import os
 
 from models.conv64_ali.encoder import Encoder64
-from models.conv64_ali.ali_discriminator import ALIDiscriminator64
+from models.conv64_ali.veegan_discriminator import VEEGANDiscriminator64
 from models.conv64_ali.generator import Generator64
 
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
@@ -64,7 +64,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 if args.continue_with is None:
     Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
     Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
-    D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
+    D = VEEGANDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
                            n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
     G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
     D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
