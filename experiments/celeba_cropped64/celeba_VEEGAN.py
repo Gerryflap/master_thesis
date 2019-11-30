@@ -48,7 +48,7 @@ parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("celeba64", "MorGAN", args)
+output_path = util.output.init_experiment_output_dir("celeba64", "VEEGAN", args)
 
 
 dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
