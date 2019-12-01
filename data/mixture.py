@@ -3,7 +3,7 @@ import torch
 
 
 class MixtureDataset(Dataset):
-    def __init__(self, hrange=(-1, 2), vrange=(-1, 2), datapoints_per_grid_position=750, stddev=0.02):
+    def __init__(self, hrange=(-1, 2), vrange=(-1, 2), datapoints_per_grid_position=750, stddev=0.1):
         data = []
         for x in range(hrange[0], hrange[1]+1):
             for y in range(vrange[0], vrange[1]+1):

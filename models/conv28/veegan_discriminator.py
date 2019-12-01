@@ -1,7 +1,3 @@
-"""
-    This discriminator takes a tuple of (x, z) instead of just an x.
-    All parameter choices are not specifically taken from ALI.
-"""
 import torch
 from util.torch.activations import mish
 from util.torch.initialization import weights_init

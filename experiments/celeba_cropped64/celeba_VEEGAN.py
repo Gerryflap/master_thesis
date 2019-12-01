@@ -45,6 +45,8 @@ parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                     help="Changes the label value for the \"real\" output of D. "
                          "This can be used for label smoothing. "
                          "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
+parser.add_argument("--pre_train_steps", action="store", type=int, default=0, help="Number of pre training steps for Gz")
+
 
 args = parser.parse_args()
 
@@ -103,7 +105,8 @@ train_loop = VEEGANTrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    d_img_noise_std=args.instance_noise_std
+    d_img_noise_std=args.instance_noise_std,
+    pre_training_steps=args.pre_train_steps
 
 )
 

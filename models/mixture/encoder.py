@@ -13,7 +13,7 @@ class Encoder(MorphingEncoder):
 
         self.model = torch.nn.Sequential(
             torch.nn.Linear(2, h_size),
-            torch.nn.BatchNorm1d(h_size),
+            # torch.nn.BatchNorm1d(h_size),
             torch.nn.LeakyReLU(0.02),
 
             torch.nn.Linear(h_size, h_size),

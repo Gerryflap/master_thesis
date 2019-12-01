@@ -6,10 +6,11 @@ from util.torch.initialization import weights_init
 
 
 class Encoder28(MorphingEncoder):
-    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1):
+    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False):
         super().__init__()
 
         self.n_channels = n_channels
+        self.deterministic = deterministic
 
         if use_mish:
             self.activ = mish
@@ -28,7 +29,8 @@ class Encoder28(MorphingEncoder):
         self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
 
         self.mean_fc = torch.nn.Linear(h_size * 4, latent_size, bias=True)
-        self.std_fc = torch.nn.Linear(h_size * 4, latent_size, bias=True)
+        if not deterministic:
+            self.std_fc = torch.nn.Linear(h_size * 4, latent_size, bias=True)
 
 
 
@@ -56,8 +58,11 @@ class Encoder28(MorphingEncoder):
         x = x.view(-1, self.h_size * 4)
 
         means = self.mean_fc(x)
-        log_vars = self.std_fc(x)
-        return self.sample(means, log_vars), means, log_vars
+        if self.deterministic:
+            return means, means, torch.ones_like(means)*-30
+        else:
+            log_vars = self.std_fc(x)
+            return self.sample(means, log_vars), means, log_vars
 
     @staticmethod
     def sample(means, vars):

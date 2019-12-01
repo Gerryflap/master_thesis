@@ -35,6 +35,8 @@ parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
 parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
                     help="Sets the standard deviation for instance noise (noise added to inputs of D)")
 parser.add_argument("--pre_train_steps", action="store", type=int, default=0, help="Number of pre training steps for Gz")
+parser.add_argument("--extended_reproduction_step", action="store_true", default=False,
+                    help="Adds a reconstruction loss between Gz(x) and Gz(Gx(Gz(x))).")
 
 args = parser.parse_args()
 
@@ -54,7 +56,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, deterministic=True)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = VEEGANDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
@@ -88,7 +90,8 @@ train_loop = VEEGANTrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     d_img_noise_std=args.instance_noise_std,
-    pre_training_steps=args.pre_train_steps
+    pre_training_steps=args.pre_train_steps,
+    extended_reproduction_step=args.extended_reproduction_step
 )
 
 train_loop.train()

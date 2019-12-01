@@ -38,6 +38,12 @@ class Discriminator(MorphingEncoder):
             torch.nn.Linear(d_out_input_size, h_size),
             torch.nn.LeakyReLU(0.02),
 
+            torch.nn.Linear(h_size, h_size),
+            torch.nn.LeakyReLU(0.02),
+
+            torch.nn.Linear(h_size, h_size),
+            torch.nn.LeakyReLU(0.02),
+
             torch.nn.Linear(h_size, 1),
         )
 
