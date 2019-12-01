@@ -65,7 +65,7 @@ if args.continue_with is None:
     Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
     Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
     D = VEEGANDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
-                           n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+                           n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size, deeper_conv=True)
     G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
     D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 

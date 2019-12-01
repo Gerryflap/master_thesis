@@ -1,6 +1,6 @@
 """
     This discriminator takes a tuple of (x, z) instead of just an x.
-    Default hyper parameters aim to reproduce the official ALI hyper parameters.
+    Using deeper_conv will give the Dx net more power
 """
 import torch
 from util.torch.activations import mish
@@ -8,11 +8,12 @@ from util.torch.initialization import weights_init
 
 
 class VEEGANDiscriminator64(torch.nn.Module):
-    def __init__(self, latent_size=512, h_size=64, fc_h_size=None, use_bn=True, use_mish=False, n_channels=3, dropout=0.2):
+    def __init__(self, latent_size=512, h_size=64, fc_h_size=None, use_bn=True, use_mish=False, n_channels=3, dropout=0.2, deeper_conv=False):
         super().__init__()
 
         self.n_channels = n_channels
         self.latent_size = latent_size
+        self.deeper_conv = deeper_conv
 
         if use_mish:
             self.activ = mish
@@ -26,24 +27,40 @@ class VEEGANDiscriminator64(torch.nn.Module):
         else:
             self.fc_h_size = fc_h_size
 
-        # In the official github repository, the biases are disabled for many layers.
-        # I have aimed to reproduce this, although tied/untied weights are not reproduced and kept on default.
+        if deeper_conv:
+            # Convolutional layers:
+            self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=2, stride=1, bias=True)
+            self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=7, stride=2, bias=False)
+            self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
+            self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=7, stride=2, bias=False)
+            self.conv_5 = torch.nn.Conv2d(h_size * 4, h_size * 8, kernel_size=4, stride=1, bias=False)
 
-        # Convolutional layers:
-        self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=5,  stride=2, bias=True)
-        self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=5, stride=2, bias=False)
-        self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
-        self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 8, kernel_size=5, stride=2, bias=False)
+            self.use_bn = use_bn
+            if use_bn:
+                # In the paper, the first layer is also supposed to have batch normalization.
+                # This lead to bad preliminary results for me and the official ALI code also does not do this.
+                # For this reason the first layer will not have batch normalization.
 
-        self.use_bn = use_bn
-        if use_bn:
-            # In the paper, the first layer is also supposed to have batch normalization.
-            # This lead to bad preliminary results for me and the official ALI code also does not do this.
-            # For this reason the first layer will not have batch normalization.
+                self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
+                self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
+                self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
+                self.bn_5 = torch.nn.BatchNorm2d(self.h_size * 8)
+        else:
+            # Convolutional layers:
+            self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=5,  stride=2, bias=True)
+            self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=5, stride=2, bias=False)
+            self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=7, stride=2, bias=False)
+            self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 8, kernel_size=4, stride=2, bias=False)
 
-            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
-            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
-            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 8)
+            self.use_bn = use_bn
+            if use_bn:
+                # In the paper, the first layer is also supposed to have batch normalization.
+                # This lead to bad preliminary results for me and the official ALI code also does not do this.
+                # For this reason the first layer will not have batch normalization.
+
+                self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
+                self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
+                self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 8)
 
         # Linear layers (1x1 convolutions in the paper)
         if dropout != 0:
@@ -89,7 +106,11 @@ class VEEGANDiscriminator64(torch.nn.Module):
             h = self.bn_4(h)
         h = self.activ(h)
 
-
+        if self.deeper_conv:
+            h = self.conv_5(h)
+            if self.use_bn:
+                h = self.bn_5(h)
+            h = self.activ(h)
 
         # Flatten to batch of vectors
         h_x = h.view(-1, self.h_size * 8)
@@ -124,6 +145,7 @@ class VEEGANDiscriminator64(torch.nn.Module):
 
     def init_weights(self):
         self.apply(weights_init)
+
 
 if __name__ == "__main__":
     D = VEEGANDiscriminator64()
