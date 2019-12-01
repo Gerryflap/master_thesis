@@ -1,9 +1,9 @@
-
-
 """
-    Models a train loop for ALI: Adversarially Learned Inference (https://arxiv.org/abs/1606.00704)
-    Additionally, this train loop can also perform the MorGAN algorithm by setting the MorGAN alpha
+    The VEEGAN train loop
+    By using the "extended reproduction step", the algorithm will not only minimize d(z, Gz(Gx(z)),
+        but also d(Gz(x), Gz(Gx(Gz(x))) wrt Gx.
 """
+
 import torch
 import torch.nn.functional as F
 
@@ -11,7 +11,7 @@ from trainloops.train_loop import TrainLoop
 
 
 class VEEGANTrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, d_img_noise_std=0.0, pre_training_steps=0):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, d_img_noise_std=0.0, pre_training_steps=0, extended_reproduction_step=False):
         super().__init__(listeners, epochs)
         self.pre_training_steps = pre_training_steps
         self.batch_size = dataloader.batch_size
@@ -24,8 +24,14 @@ class VEEGANTrainLoop(TrainLoop):
         self.dataloader = dataloader
         self.cuda = cuda
         self.d_img_noise_std = d_img_noise_std
+        self.pre_training_done = False
+        self.extended_reproduction_step = extended_reproduction_step
 
     def epoch(self):
+        if not self.pre_training_done:
+            self.pre_train()
+            self.pre_training_done = True
+
         for i, (x, _) in enumerate(self.dataloader):
             if x.size()[0] != self.batch_size:
                 continue
@@ -71,6 +77,14 @@ class VEEGANTrainLoop(TrainLoop):
             # Train G
             self.optim_G.zero_grad()
 
+            if self.extended_reproduction_step:
+                gz_x = self.Gz(x)[0].detach()
+                loss_g_extended = self.l2_loss(self.Gz(self.Gx(gz_x))[0], gz_x)
+                loss_g_extended.backward()
+
+                # Remove gradients for Gz
+                self.Gz.zero_grad()
+
             # Compute and backpropagate loss for x_tilde
             z = self.generate_z_batch(self.batch_size)
             x_tilde = self.Gx(z)
@@ -94,6 +108,9 @@ class VEEGANTrainLoop(TrainLoop):
                 "Gx_gan_loss": L_gx.detach().item(),
                 "z_reconstruction_loss": z_recon_loss.detach().item()
             }
+
+        if self.extended_reproduction_step:
+            losses["Extended_G_loss"] = loss_g_extended.detach().item()
 
         return {
             "epoch": self.current_epoch,

@@ -22,6 +22,8 @@ parser.add_argument("--l_size", action="store", type=int, default=2, help="Size 
 parser.add_argument("--pre_train_steps", action="store", type=int, default=0, help="Number of pre training steps for Gz")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
+parser.add_argument("--extended_reproduction_step", action="store_true", default=False,
+                    help="Adds a reconstruction loss between Gz(x) and Gz(Gx(Gz(x))).")
 
 args = parser.parse_args()
 
@@ -73,7 +75,8 @@ trainloop = VEEGANTrainLoop(
     dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    pre_training_steps=args.pre_train_steps
+    pre_training_steps=args.pre_train_steps,
+    extended_reproduction_step=args.extended_reproduction_step
 )
 
 trainloop.train()
