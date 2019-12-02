@@ -29,8 +29,8 @@ args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("mixture", "veegan", args)
 
-train = MixtureDataset()
-valid = MixtureDataset()
+train = MixtureDataset(datapoints_per_grid_position=5)
+valid = MixtureDataset(datapoints_per_grid_position=5)
 
 dataloader = torch.utils.data.DataLoader(train, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
@@ -61,7 +61,7 @@ listeners = [
         discriminator_output=False,
         cuda=args.cuda,
         sample_reconstructions=True,
-        every_n_epochs=10
+        every_n_epochs=200
     )
 ]
 

@@ -4,7 +4,7 @@ from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.veegan_train_loop import VEEGANTrainLoop
 from models.conv28.veegan_discriminator import VEEGANDiscriminator28
 from models.conv28.generator import Generator28
-from data.celeba_cropped import CelebaCropped
+from torchvision.datasets import CelebA
 import util.output
 from torchvision import transforms
 import torch
@@ -41,15 +41,17 @@ parser.add_argument("--extended_reproduction_step", action="store_true", default
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("celeba28", "VEEGAN", args)
+output_path = util.output.init_experiment_output_dir("celeba28_uncropped", "VEEGAN", args)
 
-dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
+dataset = CelebA("data", split="train", download=True, transform=transforms.Compose([
     transforms.Resize(28),
+    transforms.CenterCrop(28),
     transforms.ToTensor(),
 ]))
 
-valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filtering=True, transform=transforms.Compose([
+valid_dataset = CelebA("data", split="valid", download=True,  transform=transforms.Compose([
     transforms.Resize(28),
+    transforms.CenterCrop(28),
     transforms.ToTensor(),
 ]))
 
