@@ -77,6 +77,7 @@ D.init_weights()
 listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),
+    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid_train_mode", eval_mode=False),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True)
 ]

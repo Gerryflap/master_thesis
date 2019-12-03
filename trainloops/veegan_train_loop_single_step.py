@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from trainloops.train_loop import TrainLoop
 
 
-class VEEGANTrainLoop(TrainLoop):
+class VEEGANTrainLoopSingleStep(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, d_img_noise_std=0.0, decrease_noise=True, pre_training_steps=0, extended_reproduction_step=False):
         super().__init__(listeners, epochs)
         self.pre_training_steps = pre_training_steps
@@ -46,82 +46,61 @@ class VEEGANTrainLoop(TrainLoop):
                 x = x.cuda()
             z = self.generate_z_batch(self.batch_size)
 
-            self.optim_D.zero_grad()
+            # Add noise to the inputs if the standard deviation isn't defined to be 0
+            if self.d_img_noise_std != 0.0:
+                noise_factor = self.d_img_noise_std * \
+                               (1 if not self.decrease_noise else 1 - (self.current_epoch/self.epochs))
+                x = x + torch.randn_like(x) * noise_factor
 
             # Sample from conditionals (sampling is implemented by models)
             z_hat = self.Gz.encode(x)
-            xr_d_inp = x
 
-            # Add noise to the inputs of D if the standard deviation isn't defined to be 0
-            if self.d_img_noise_std != 0.0:
-                noise_factor = self.d_img_noise_std * \
-                               (1 if not self.decrease_noise else 1 - (self.current_epoch/self.epochs))
-                xr_d_inp += torch.randn_like(xr_d_inp) * noise_factor
 
-            dis_q = self.D((xr_d_inp, z_hat.detach()))
+
+            # The encoder should not get GAN gradients in VEEGAN
+            dis_q = self.D((x, z_hat.detach()))
             d_real_labels = torch.zeros_like(dis_q)
-            L_d_real = F.binary_cross_entropy_with_logits(dis_q, d_real_labels, reduction="mean")
-            L_d_real.backward()
 
             x_tilde = self.Gx(z)
-            xf_d_inp = x_tilde.detach()
 
             # Add noise to the inputs of D if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
                 noise_factor = self.d_img_noise_std * \
                                (1 if not self.decrease_noise else 1 - (self.current_epoch/self.epochs))
-                xf_d_inp += torch.randn_like(xf_d_inp) * noise_factor
+                x_tilde = x_tilde + torch.randn_like(x_tilde) * noise_factor
 
-            dis_p = self.D((xf_d_inp, z))
-            L_d_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q), reduction="mean")
-            L_d_fake.backward()
+            dis_p = self.D((x_tilde, z))
 
+            L_d_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
+            L_d_real = F.binary_cross_entropy_with_logits(dis_q, d_real_labels)
             L_d = L_d_real + L_d_fake
+
+            L_gx_gan = F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q))
+            z_recon, _, _ = self.Gz(x_tilde)
+            z_recon_loss = self.l2_loss(z_recon, z)
+
+            L_g = L_gx_gan + z_recon_loss
 
             # Gradient update on Discriminator network
             # torch.nn.utils.clip_grad_norm_(list(self.D.parameters()), 1.0)
-            if L_d.detach().item() > 0.001:
-                self.optim_D.step()
-            else:
+            if L_gx_gan.detach().item() < 3.5:
+
                 self.optim_D.zero_grad()
+                L_d.backward(retain_graph=True)
+                self.optim_D.step()
+
 
             # Train G
             self.optim_G.zero_grad()
-
-            if self.extended_reproduction_step:
-                gz_x = self.Gz(x)[0].detach()
-                loss_g_extended = self.l2_loss(self.Gz(self.Gx(gz_x))[0], gz_x)
-                loss_g_extended.backward()
-
-                # Remove gradients for Gz
-                self.Gz.zero_grad()
-
-            # Compute and backpropagate loss for x_tilde
-            z = self.generate_z_batch(self.batch_size)
-            x_tilde = self.Gx(z)
-            dis_p = self.D((x_tilde, z))
-            L_gx = F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q), reduction="mean")
-            L_gx.backward(retain_graph=True)
-
-            # Reconstruct z and backpropagate the z reconstruction loss
-            z_recon, _, _ = self.Gz(x_tilde)
-            z_recon_loss = self.l2_loss(z_recon, z)
-            z_recon_loss.backward()
-
-            loss_g = z_recon_loss + L_gx
-            # loss_g.backward()
-
-            # torch.nn.utils.clip_grad_norm_(list(self.Gx.parameters()) + list(self.Gz.parameters()), 1.0)
+            L_g.backward()
             self.optim_G.step()
 
         losses = {
                 "D_loss": L_d.detach().item(),
-                "Gx_gan_loss": L_gx.detach().item(),
+                "Gx_gan_loss": L_gx_gan.detach().item(),
                 "z_reconstruction_loss": z_recon_loss.detach().item()
             }
 
-        if self.extended_reproduction_step:
-            losses["Extended_G_loss"] = loss_g_extended.detach().item()
 
         return {
             "epoch": self.current_epoch,

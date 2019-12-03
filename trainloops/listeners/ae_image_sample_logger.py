@@ -14,7 +14,7 @@ from trainloops.listeners.listener import Listener
 
 
 class AEImageSampleLogger(Listener):
-    def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0, folder_name="AE_samples", print_stats=False):
+    def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0, folder_name="AE_samples", print_stats=False, eval_mode=True):
         super().__init__()
         self.path = os.path.join(experiment_output_path, "imgs", folder_name)
         util.output.make_result_dirs(self.path)
@@ -24,6 +24,7 @@ class AEImageSampleLogger(Listener):
         self.pad_value = pad_value
         self.loader = DataLoader(validation_dataset, self.n_images, True)
         self.print_stats = print_stats
+        self.eval_mode = eval_mode
 
     def initialize(self):
         self.z = self.trainloop.generate_z_batch(self.n_images)
@@ -53,8 +54,9 @@ class AEImageSampleLogger(Listener):
         else:
             raise ValueError("Could not find a encoder-like network in the state dict!")
 
-        Gx.eval()
-        Gz.eval()
+        if self.eval_mode:
+            Gx.eval()
+            Gz.eval()
 
         generated_images = Gx(self.z)
 
@@ -108,5 +110,6 @@ class AEImageSampleLogger(Listener):
             print("z_var max: ", z_var.max().detach().item())
             print()
 
+        if self.eval_mode:
             Gx.train()
             Gz.train()

@@ -1,5 +1,5 @@
 from models.conv28.encoder import Encoder28
-from trainloops.ali_train_loop import ALITrainLoop
+from trainloops.ali_pytorch_train_loop import ALITrainLoop
 from trainloops.gan_train_loop import GanTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28

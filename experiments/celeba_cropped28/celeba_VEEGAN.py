@@ -14,6 +14,7 @@ import argparse
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
+from trainloops.veegan_train_loop_single_step import VEEGANTrainLoopSingleStep
 
 parser = argparse.ArgumentParser(description="Celeba VEEGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
@@ -38,6 +39,8 @@ parser.add_argument("--instance_noise_std", action="store", default=0.0, type=fl
 parser.add_argument("--pre_train_steps", action="store", type=int, default=0, help="Number of pre training steps for Gz")
 parser.add_argument("--extended_reproduction_step", action="store_true", default=False,
                     help="Adds a reconstruction loss between Gz(x) and Gz(Gx(Gz(x))).")
+parser.add_argument("--single_step", action="store_true", default=False,
+                    help="Uses the single step implementation of VEEGAN")
 
 args = parser.parse_args()
 
@@ -60,8 +63,6 @@ print("Dataset length: ", len(dataset))
 Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, deterministic=True)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
-G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
-D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
 if args.cuda:
     Gz = Gz.cuda()
@@ -72,27 +73,48 @@ Gz.init_weights()
 Gx.init_weights()
 D.init_weights()
 
+G_optimizer = torch.optim.Adam([{'params': Gz.parameters()}, {'params': Gx.parameters()}], lr=args.lr, betas=(0.5, 0.999))
+D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
+
 listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
+    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid_train_mode", eval_mode=False),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
     ModelSaver(output_path, n=20, overwrite=False, print_output=True),
     KillSwitchListener(output_path)
 ]
-train_loop = VEEGANTrainLoop(
-    listeners=listeners,
-    Gz=Gz,
-    Gx=Gx,
-    D=D,
-    optim_G=G_optimizer,
-    optim_D=D_optimizer,
-    dataloader=dataloader,
-    cuda=args.cuda,
-    epochs=args.epochs,
-    d_img_noise_std=args.instance_noise_std,
-    pre_training_steps=args.pre_train_steps,
-    extended_reproduction_step=args.extended_reproduction_step
-)
+
+if args.single_step:
+    train_loop = VEEGANTrainLoopSingleStep(
+        listeners=listeners,
+        Gz=Gz,
+        Gx=Gx,
+        D=D,
+        optim_G=G_optimizer,
+        optim_D=D_optimizer,
+        dataloader=dataloader,
+        cuda=args.cuda,
+        epochs=args.epochs,
+        d_img_noise_std=args.instance_noise_std,
+        pre_training_steps=args.pre_train_steps,
+        extended_reproduction_step=args.extended_reproduction_step
+    )
+else:
+    train_loop = VEEGANTrainLoop(
+        listeners=listeners,
+        Gz=Gz,
+        Gx=Gx,
+        D=D,
+        optim_G=G_optimizer,
+        optim_D=D_optimizer,
+        dataloader=dataloader,
+        cuda=args.cuda,
+        epochs=args.epochs,
+        d_img_noise_std=args.instance_noise_std,
+        pre_training_steps=args.pre_train_steps,
+        extended_reproduction_step=args.extended_reproduction_step
+    )
 
 train_loop.train()
