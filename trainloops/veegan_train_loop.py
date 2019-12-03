@@ -28,6 +28,9 @@ class VEEGANTrainLoop(TrainLoop):
         self.extended_reproduction_step = extended_reproduction_step
 
     def epoch(self):
+        self.Gx.train()
+        self.Gz.train()
+        self.D.train()
         if not self.pre_training_done:
             self.pre_train()
             self.pre_training_done = True

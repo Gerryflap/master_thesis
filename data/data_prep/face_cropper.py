@@ -12,7 +12,7 @@ def crop_images(
     predictor_path = "data/data_prep/shape_predictor_5_face_landmarks.dat"
     # Crop size. The full face image will have the resolution 64 + 2*crop_size and then crop_size pixels will be cut off at the top, bottom, left and right
     # Is used to zoom in on facial features
-    crop_size = 10
+    crop_size = 0
 
     # Load all the models we need: a detector to find the faces, a shape predictor
     # to find face landmarks so we can precisely localize the face
@@ -26,6 +26,9 @@ def crop_images(
     for i, fname in enumerate(filelist):
         if fname[-4:] != ".png" and fname[-4:] != ".jpg":
             skipped += 1
+            continue
+
+        if os.path.isfile(output_dir + fname):
             continue
 
         # Load the image using Dlib

@@ -53,6 +53,9 @@ class AEImageSampleLogger(Listener):
         else:
             raise ValueError("Could not find a encoder-like network in the state dict!")
 
+        Gx.eval()
+        Gz.eval()
+
         generated_images = Gx(self.z)
 
         if not self.print_stats:
@@ -104,3 +107,6 @@ class AEImageSampleLogger(Listener):
             print("z_var mean: ", z_var.mean().detach().item())
             print("z_var max: ", z_var.max().detach().item())
             print()
+
+            Gx.train()
+            Gz.train()

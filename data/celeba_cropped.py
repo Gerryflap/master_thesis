@@ -21,7 +21,7 @@ assert os.path.isdir("data")
 class CelebaCropped(VisionDataset):
     cropped_base_folder = "celeba_cropped/img_align/"
 
-    def __init__(self, split="train", transform=None, target_transform=None, download=False, morgan_like_filtering=False):
+    def __init__(self, split="train", transform=None, target_transform=None, download=False, morgan_like_filtering=False, validate_files=False):
         super().__init__("data", transforms=None, transform=transform, target_transform=target_transform)
 
         if not os.path.isdir("data/celeba"):
@@ -30,7 +30,7 @@ class CelebaCropped(VisionDataset):
 
 
         # Check if files exist
-        if not os.path.isdir("data/" + self.cropped_base_folder):
+        if not os.path.isdir("data/" + self.cropped_base_folder) or validate_files:
             if not download:
                 raise IOError("Download is False, but the data does not exist")
 
@@ -99,12 +99,13 @@ class CelebaCropped(VisionDataset):
     def crop(self):
 
         # Create the data directory
-        os.mkdir("data/" + self.cropped_base_folder)
+        if not os.path.exists("data/" + self.cropped_base_folder):
+            os.mkdir("data/" + self.cropped_base_folder)
 
         # Crop images
         face_cropper.crop_images("data/celeba/img_align_celeba/", "data/" + self.cropped_base_folder + "/")
 
 
 if __name__ == "__main__":
-    ds = CelebaCropped(download=True)
+    ds = CelebaCropped(download=True, validate_files=True)
 
