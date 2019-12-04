@@ -22,6 +22,9 @@ parser.add_argument("--l_size", action="store", type=int, default=2, help="Size 
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--morgan_alpha", action="store", type=float, default=0.3, help="MorGAN alpha")
+parser.add_argument("--instance_noise_std", action="store", type=float, default=0.1,
+                    help="Standard deviation of instance noise")
+
 
 
 args = parser.parse_args()
@@ -75,6 +78,8 @@ trainloop = ALITrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     morgan_alpha=args.morgan_alpha,
+    d_img_noise_std=args.instance_noise_std,
+    decrease_noise=True
 )
 
 trainloop.train()

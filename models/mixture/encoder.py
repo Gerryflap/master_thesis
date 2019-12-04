@@ -13,7 +13,7 @@ class Encoder(MorphingEncoder):
 
         self.model = torch.nn.Sequential(
             torch.nn.Linear(2, h_size),
-            # torch.nn.BatchNorm1d(h_size),
+            torch.nn.BatchNorm1d(h_size),
             torch.nn.LeakyReLU(0.02),
 
             torch.nn.Linear(h_size, h_size),
@@ -33,7 +33,7 @@ class Encoder(MorphingEncoder):
 
             # Split the output of the model into two parts, means and log variances
             z_mean, z_logvar = model_out[:, :self.latent_size], model_out[:, self.latent_size:]
-
+            z_logvar = -torch.nn.functional.softplus(z_logvar)
             return self.sample(z_mean, z_logvar), z_mean, z_logvar
 
     @staticmethod
