@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from trainloops.train_loop import TrainLoop
 
 
-class VEEGANTrainLoopSingleStep(TrainLoop):
+class VEEGANTrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, d_img_noise_std=0.0, decrease_noise=True, pre_training_steps=0, extended_reproduction_step=False):
         super().__init__(listeners, epochs)
         self.pre_training_steps = pre_training_steps
@@ -46,44 +46,44 @@ class VEEGANTrainLoopSingleStep(TrainLoop):
                 x = x.cuda()
             z = self.generate_z_batch(self.batch_size)
 
-            # Add noise to the inputs if the standard deviation isn't defined to be 0
-            if self.d_img_noise_std != 0.0:
-                noise_factor = self.d_img_noise_std * \
-                               (1 if not self.decrease_noise else 1 - (self.current_epoch/self.epochs))
-                x = x + torch.randn_like(x) * noise_factor
 
             # Sample from conditionals (sampling is implemented by models)
             z_hat = self.Gz.encode(x)
 
+            # Add noise to the inputs if the standard deviation isn't defined to be 0
+            if self.d_img_noise_std != 0.0:
+                x = self.add_instance_noise(x)
 
 
             # The encoder should not get GAN gradients in VEEGAN
             dis_q = self.D((x, z_hat.detach()))
-            d_real_labels = torch.zeros_like(dis_q)
+            d_real_labels = torch.ones_like(dis_q)
 
             x_tilde = self.Gx(z)
+            x_tilde_no_noise = x_tilde
 
             # Add noise to the inputs of D if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
-                noise_factor = self.d_img_noise_std * \
-                               (1 if not self.decrease_noise else 1 - (self.current_epoch/self.epochs))
-                x_tilde = x_tilde + torch.randn_like(x_tilde) * noise_factor
+                x_tilde = self.add_instance_noise(x_tilde)
+
 
             dis_p = self.D((x_tilde, z))
 
-            L_d_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
+            L_d_fake = F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q))
             L_d_real = F.binary_cross_entropy_with_logits(dis_q, d_real_labels)
             L_d = L_d_real + L_d_fake
 
-            L_gx_gan = F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q))
-            z_recon, _, _ = self.Gz(x_tilde)
-            z_recon_loss = self.l2_loss(z_recon, z)
+            L_gx_gan = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
+            L_gz_gan = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q))
+            z_recon, _, _ = self.Gz(x_tilde_no_noise)
+            z_recon_loss = self.l2_loss(z_recon, z, mean=True)
+            L_gan = L_gx_gan + L_gz_gan
 
             L_g = L_gx_gan + z_recon_loss
 
             # Gradient update on Discriminator network
             # torch.nn.utils.clip_grad_norm_(list(self.D.parameters()), 1.0)
-            if L_gx_gan.detach().item() < 3.5:
+            if L_gan.detach().item() < 3.5:
 
                 self.optim_D.zero_grad()
                 L_d.backward(retain_graph=True)
@@ -134,7 +134,7 @@ class VEEGANTrainLoopSingleStep(TrainLoop):
         loss = torch.pow(pred - target, 2).sum()/N
         if mean:
             latent_size = pred.size(1)
-            loss /= latent_size
+            loss = loss/latent_size
         return loss
 
     def generate_z_batch(self, batch_size):
@@ -149,3 +149,8 @@ class VEEGANTrainLoopSingleStep(TrainLoop):
 
         # Return outputs
         return self.Gx(z)
+
+    def add_instance_noise(self, x):
+        noise_factor = self.d_img_noise_std * \
+                       (1 if not self.decrease_noise else 1 - (self.current_epoch / self.epochs))
+        return x + torch.randn_like(x) * noise_factor

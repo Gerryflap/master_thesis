@@ -88,7 +88,8 @@ train_loop = ALITrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    morgan_alpha=args.morgan_alpha
+    morgan_alpha=args.morgan_alpha,
+    d_img_noise_std=0.1
 )
 
 train_loop.train()

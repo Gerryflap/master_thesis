@@ -16,7 +16,7 @@ import argparse
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
-from trainloops.veegan_train_loop import VEEGANTrainLoop
+from trainloops.veegan_train_loop_single_step import VEEGANTrainLoop
 
 parser = argparse.ArgumentParser(description="MNIST VEEGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
@@ -87,6 +87,7 @@ train_loop = VEEGANTrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
+    d_img_noise_std=0.1
 )
 
 train_loop.train()

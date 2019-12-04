@@ -14,7 +14,7 @@ import argparse
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
-from trainloops.veegan_train_loop_single_step import VEEGANTrainLoopSingleStep
+from trainloops.veegan_train_loop_single_step import VEEGANTrainLoop
 
 parser = argparse.ArgumentParser(description="Celeba VEEGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
@@ -87,7 +87,7 @@ listeners = [
 ]
 
 if args.single_step:
-    train_loop = VEEGANTrainLoopSingleStep(
+    train_loop = VEEGANTrainLoop(
         listeners=listeners,
         Gz=Gz,
         Gx=Gx,

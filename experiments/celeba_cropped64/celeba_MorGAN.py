@@ -20,7 +20,7 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description="Celeba ALI experiment.")
-parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 64")
+parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.00001,
                     help="Changes the learning rate, default is 0.00001")
 parser.add_argument("--h_size", action="store", type=int, default=64,
@@ -109,7 +109,6 @@ train_loop = ALITrainLoop(
     d_real_label=args.d_real_label,
     d_img_noise_std=args.instance_noise_std,
     decrease_noise=True
-
 )
 
 train_loop.train()
