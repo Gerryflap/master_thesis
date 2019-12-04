@@ -1,5 +1,5 @@
 from models.conv28.encoder import Encoder28
-from trainloops.ali_train_loop import ALITrainLoop
+from trainloops.ali_train_loop_single_step import ALITrainLoop
 from trainloops.gan_train_loop import GanTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28
@@ -37,7 +37,7 @@ parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate on the input of the first fully connected layer of D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha parameter of MorGAN")
-parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
+parser.add_argument("--instance_noise_std", action="store", default=0.1, type=float,
                     help="Sets the standard deviation for instance noise (noise added to inputs of D)")
 parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                     help="Changes the label value for the \"real\" output of D. "

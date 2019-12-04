@@ -28,6 +28,7 @@ morphing = args.img2 is not None
 # filename_enc = "results/celeba64/ali/2019-11-08T14:59:59/params/all_epochs/Gz.pt"
 
 Gz = torch.load(fname_enc, map_location=torch.device('cpu'))
+Gz.eval()
 
 predictor_path = "data/data_prep/shape_predictor_5_face_landmarks.dat"
 detector = dlib.get_frontal_face_detector()
@@ -54,10 +55,11 @@ def load_process_img(fname):
     for detection in dets:
         faces.append(sp(frame, detection))
 
-    crop_region_size = 10
+    crop_region_size = 0
     frame = dlib.get_face_chip(frame, faces[0], size=(64 + crop_region_size * 2))
 
-    frame = frame[crop_region_size:-crop_region_size, crop_region_size:-crop_region_size]
+    if crop_region_size != 0:
+        frame = frame[crop_region_size:-crop_region_size, crop_region_size:-crop_region_size]
 
     if args.fix_contrast:
         frame = frame.astype(np.float32)
