@@ -1,5 +1,5 @@
 from models.conv64_ali.encoder import Encoder64
-from trainloops.ali_pytorch_train_loop import ALITrainLoop
+from trainloops.ali_train_loop import ALITrainLoop
 from models.conv64_ali.ali_discriminator import ALIDiscriminator64
 from models.conv64_ali.generator import Generator64
 
@@ -84,7 +84,9 @@ train_loop = ALITrainLoop(
     optim_D=D_optimizer,
     dataloader=dataloader,
     cuda=args.cuda,
-    epochs=args.epochs
+    epochs=args.epochs,
+    d_img_noise_std=0.1,
+    decrease_noise=True
 )
 
 train_loop.train()

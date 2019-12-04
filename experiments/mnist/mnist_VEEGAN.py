@@ -5,11 +5,8 @@
 from torchvision.datasets import MNIST
 
 from models.conv28.encoder import Encoder28
-from trainloops.ali_train_loop import ALITrainLoop
-from trainloops.gan_train_loop import GanTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28
-from data.celeba_cropped import CelebaCropped
 import util.output
 from torchvision import transforms
 import torch
@@ -17,7 +14,6 @@ import argparse
 
 # Parse commandline arguments
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
-from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 from trainloops.veegan_train_loop import VEEGANTrainLoop

@@ -7,11 +7,9 @@ import util.output
 from torchvision import transforms
 import torch
 import argparse
-
-# Parse commandline arguments
-from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 
+# Parse commandline arguments
 parser = argparse.ArgumentParser(description="MNIST VAE experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,

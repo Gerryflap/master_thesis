@@ -6,11 +6,12 @@ from util.torch.initialization import weights_init
 
 
 class Encoder28(MorphingEncoder):
-    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False):
+    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False, cap_variance=True):
         super().__init__()
 
         self.n_channels = n_channels
         self.deterministic = deterministic
+        self.cap_variance = cap_variance
 
         if use_mish:
             self.activ = mish
@@ -64,6 +65,8 @@ class Encoder28(MorphingEncoder):
             return means, means, torch.ones_like(means)*-30
         else:
             log_vars = self.std_fc(x)
+            if self.cap_variance:
+                log_vars = -torch.nn.functional.softplus(log_vars)
             return self.sample(means, log_vars), means, log_vars
 
     @staticmethod

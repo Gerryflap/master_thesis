@@ -1,5 +1,5 @@
 from models.conv28.encoder import Encoder28
-from trainloops.ali_train_loop_single_step import ALITrainLoop
+from trainloops.ali_train_loop import ALITrainLoop
 from trainloops.gan_train_loop import GanTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28
@@ -62,7 +62,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
@@ -82,10 +82,7 @@ listeners = [
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     # DiscriminatorOverfitMonitor(dataset, valid_dataset, 100, args),
-    ParameterValueLogger(output_path, "Conv"),
-    ParameterValueLogger(output_path, "Norm"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
-    ModelSaver(output_path, n=4, overwrite=False, print_output=True),
 ]
 train_loop = ALITrainLoop(
     listeners=listeners,
@@ -99,7 +96,8 @@ train_loop = ALITrainLoop(
     epochs=args.epochs,
     morgan_alpha=args.morgan_alpha,
     d_real_label=args.d_real_label,
-    d_img_noise_std=args.instance_noise_std
+    d_img_noise_std=args.instance_noise_std,
+    decrease_noise=True
 )
 
 train_loop.train()

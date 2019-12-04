@@ -64,7 +64,7 @@ valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filterin
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 if args.continue_with is None:
-    Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
+    Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
     Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
     D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
                            n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
@@ -107,7 +107,8 @@ train_loop = ALITrainLoop(
     epochs=args.epochs,
     morgan_alpha=args.morgan_alpha,
     d_real_label=args.d_real_label,
-    d_img_noise_std=args.instance_noise_std
+    d_img_noise_std=args.instance_noise_std,
+    decrease_noise=True
 
 )
 
