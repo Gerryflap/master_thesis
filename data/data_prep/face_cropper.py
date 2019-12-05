@@ -53,7 +53,7 @@ def crop_images(
         if crop_size != 0:
             image = image[crop_size:-crop_size, crop_size:-crop_size]
         img_obj = Image.fromarray(image)
-        img_obj.save(output_dir + fname)
+        img_obj.save(output_dir + fname, format='JPEG', subsampling=0, quality=100)
 
         if i % 1000 == 0:
             print("%d/%d\t\tskipped: %d" % (i, len(filelist), skipped))
