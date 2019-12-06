@@ -46,19 +46,17 @@ output_path = util.output.init_experiment_output_dir("mnist", "ali", args)
 dataset = MNIST("data/downloads/mnist", train=True, download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-    transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
 valid_dataset = MNIST("data/downloads/mnist", train=False, download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-    transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
 Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=1)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, False, n_channels=1)
+Gx = Generator28(args.l_size, args.h_size, args.use_mish, False, n_channels=1, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=1, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
@@ -89,7 +87,8 @@ train_loop = ALITrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     morgan_alpha=args.morgan_alpha,
-    d_img_noise_std=0.1
+    d_img_noise_std=0.1,
+    use_sigmoid=True
 )
 
 train_loop.train()

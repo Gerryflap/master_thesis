@@ -23,8 +23,9 @@ class Generator64(torch.nn.Module):
         self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size*4, kernel_size=5, stride=2, bias=False)
         self.conv_4 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size*2, kernel_size=7, stride=2, bias=False)
         self.conv_5 = torch.nn.ConvTranspose2d(self.h_size*2, self.h_size*1, kernel_size=2, stride=1, bias=False)
-        self.conv_6 = torch.nn.Conv2d(self.h_size, self.n_channels, kernel_size=1, stride=1, bias=True)
+        self.conv_6 = torch.nn.Conv2d(self.h_size, self.n_channels, kernel_size=1, stride=1, bias=False)
 
+        self.output_bias = torch.nn.Parameter(torch.zeros((3, 64, 64)), requires_grad=True)
 
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 8)
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 4)
@@ -62,12 +63,23 @@ class Generator64(torch.nn.Module):
         x = self.activ(x)
 
         x = self.conv_6(x)
+        # TODO: This check allows for older models to run without the output bias. It will be removed in the future
+        if hasattr(self, "output_bias"):
+            x = x + self.output_bias
         if self.sigmoid_out:
             x = torch.sigmoid(x)
         else:
             x = torch.tanh(x)
 
+        print()
+
         return x
 
     def init_weights(self):
         self.apply(weights_init)
+
+
+if __name__ == "__main__":
+    G = Generator64(256, 64)
+    G(torch.normal(0, 1, (1, 256)))
+    print(list([param.size() for param in G.parameters()]))

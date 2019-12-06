@@ -41,19 +41,17 @@ output_path = util.output.init_experiment_output_dir("celeba28", "ali", args)
 dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-    transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
 valid_dataset = CelebaCropped(split="valid", download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-    transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3)
+Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
@@ -85,7 +83,8 @@ train_loop = ALITrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     d_img_noise_std=0.1,
-    decrease_noise=True
+    decrease_noise=True,
+    use_sigmoid=True
 )
 
 train_loop.train()

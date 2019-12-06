@@ -2,7 +2,6 @@ import torch
 from util.torch.activations import mish
 from util.torch.initialization import weights_init
 
-
 class Generator28(torch.nn.Module):
     def __init__(self, latent_size, h_size, use_mish=False, bias=False,  n_channels=1, sigmoid_out=False):
         super().__init__()
@@ -26,9 +25,11 @@ class Generator28(torch.nn.Module):
         self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size , kernel_size=5, stride=2, bias=False)
         self.conv_4 = torch.nn.ConvTranspose2d(self.h_size , self.n_channels, kernel_size=4, stride=1, bias=False)
 
+        self.output_bias = torch.nn.Parameter(torch.zeros((3, 28, 28)), requires_grad=True)
+
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
-        self.bn_3 = torch.nn.BatchNorm2d(self.h_size )
+        self.bn_3 = torch.nn.BatchNorm2d(self.h_size)
 
 
 
@@ -53,6 +54,9 @@ class Generator28(torch.nn.Module):
         x = self.activ(x)
 
         x = self.conv_4(x)
+
+        x = x + self.output_bias
+
         if self.sigmoid_out:
             x = torch.sigmoid(x)
         else:

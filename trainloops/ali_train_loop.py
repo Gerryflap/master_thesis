@@ -8,9 +8,20 @@ import torch.nn.functional as F
 from trainloops.train_loop import TrainLoop
 
 
+def get_log_odds(raw_marginals, use_sigmoid):
+    if use_sigmoid:
+        marginals = torch.clamp(raw_marginals.mean(dim=0), 1e-7, 1 - 1e-7)
+    else:
+        # Correct for normalization between -1 and 1
+        raw_marginals = (raw_marginals + 1)/2
+        marginals = torch.clamp(raw_marginals.mean(dim=0), 1e-7, 1 - 1e-7)
+    return torch.log(marginals / (1 - marginals))
+
+
 class ALITrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True):
         super().__init__(listeners, epochs)
+        self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
         self.Gx = Gx
@@ -39,6 +50,14 @@ class ALITrainLoop(TrainLoop):
             # Draw M (= batch_size) samples from dataset and prior. x samples are already loaded by dataloader
             if self.cuda:
                 x = x.cuda()
+
+            if self.current_epoch == 0 and i == 0:
+                    if hasattr(self.Gx, 'output_bias'):
+                        self.Gx.output_bias.data = get_log_odds(x, self.use_sigmoid)
+                    else:
+                        print("WARNING! Gx does not have an \"output_bias\". "
+                              "Using untied biases as the last layer of Gx is advised!")
+
 
             # ========== Computations for Dis(x, z_hat) ==========
 

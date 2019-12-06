@@ -97,7 +97,8 @@ train_loop = ALITrainLoop(
     morgan_alpha=args.morgan_alpha,
     d_real_label=args.d_real_label,
     d_img_noise_std=args.instance_noise_std,
-    decrease_noise=True
+    decrease_noise=True,
+    use_sigmoid=True
 )
 
 train_loop.train()
