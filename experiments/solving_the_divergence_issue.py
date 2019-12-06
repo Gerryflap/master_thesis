@@ -8,7 +8,7 @@ def v(x):
     return x.detach().item()
 
 
-folder_path = "results/celeba64/epoch_000070/"
+folder_path = "results/celeba28/MorGAN/2019-12-06T16:04:51/params/all_epochs/"
 
 Gx = torch.load(folder_path + "Gx.pt").cpu()
 D = torch.load(folder_path + "D.pt").cpu()

@@ -70,9 +70,6 @@ class Generator64(torch.nn.Module):
             x = torch.sigmoid(x)
         else:
             x = torch.tanh(x)
-
-        print()
-
         return x
 
     def init_weights(self):
