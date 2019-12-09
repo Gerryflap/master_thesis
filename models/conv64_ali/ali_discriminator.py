@@ -8,7 +8,7 @@ from util.torch.initialization import weights_init
 
 
 class ALIDiscriminator64(torch.nn.Module):
-    def __init__(self, latent_size=512, h_size=64, fc_h_size=None, use_bn=True, use_mish=False, n_channels=3, dropout=0.2):
+    def __init__(self, latent_size=512, h_size=64, fc_h_size=None, use_bn=True, use_mish=False, n_channels=3, dropout=0.2, full_dropout=True):
         super().__init__()
 
         self.n_channels = n_channels
@@ -20,6 +20,7 @@ class ALIDiscriminator64(torch.nn.Module):
             self.activ = self.leaky_relu
 
         self.dropout = dropout
+        self.full_dropout = full_dropout
         self.h_size = h_size
         if fc_h_size is None:
             self.fc_h_size = h_size*16
@@ -51,6 +52,9 @@ class ALIDiscriminator64(torch.nn.Module):
         if dropout != 0:
             self.dropout_layer = torch.nn.Dropout(dropout, False)
 
+        if full_dropout:
+            self.conv_dropout_layer = torch.nn.Dropout2d(self.dropout, False)
+
         self.lin_z1 = torch.nn.Linear(latent_size, self.fc_h_size, bias=False)
         self.lin_z2 = torch.nn.Linear(self.fc_h_size, self.fc_h_size, bias=False)
 
@@ -79,24 +83,34 @@ class ALIDiscriminator64(torch.nn.Module):
 
     def compute_dx(self, x):
         h = self.conv_1(x)
+        if self.dropout != 0 and self.full_dropout:
+            h = self.conv_dropout_layer(h)
         h = self.activ(h)
 
         h = self.conv_2(h)
+        if self.dropout != 0 and self.full_dropout:
+            h = self.conv_dropout_layer(h)
         if self.use_bn:
             h = self.bn_2(h)
         h = self.activ(h)
 
         h = self.conv_3(h)
+        if self.dropout != 0 and self.full_dropout:
+            h = self.conv_dropout_layer(h)
         if self.use_bn:
             h = self.bn_3(h)
         h = self.activ(h)
 
         h = self.conv_4(h)
+        if self.dropout != 0 and self.full_dropout:
+            h = self.conv_dropout_layer(h)
         if self.use_bn:
             h = self.bn_4(h)
         h = self.activ(h)
 
         h = self.conv_5(h)
+        if self.dropout != 0 and self.full_dropout:
+            h = self.conv_dropout_layer(h)
         if self.use_bn:
             h = self.bn_5(h)
         h = self.activ(h)

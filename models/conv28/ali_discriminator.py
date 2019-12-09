@@ -39,6 +39,8 @@ class ALIDiscriminator28(torch.nn.Module):
 
         if dropout != 0:
             self.dropout_layer = torch.nn.Dropout(dropout, False)
+            self.dropout_conv_layer = torch.nn.Dropout2d(dropout, False)
+
 
         self.lin_z1 = torch.nn.Linear(latent_size, self.fc_h_size, bias=False)
         self.lin_z2 = torch.nn.Linear(self.fc_h_size, self.fc_h_size, bias=False)
@@ -65,21 +67,29 @@ class ALIDiscriminator28(torch.nn.Module):
 
     def compute_dx(self, x):
         h = self.conv_1(x)
+        if self.dropout != 0:
+            h = self.dropout_conv_layer(h)
         h = self.activ(h)
 
         h = self.conv_2(h)
+        if self.dropout != 0:
+            h = self.dropout_conv_layer(h)
         if self.use_bn:
             h = self.bn_2(h)
         h = self.activ(h)
 
 
         h = self.conv_3(h)
+        if self.dropout != 0:
+            h = self.dropout_conv_layer(h)
         if self.use_bn:
             h = self.bn_3(h)
         h = self.activ(h)
 
 
         h = self.conv_4(h)
+        if self.dropout != 0:
+            h = self.dropout_conv_layer(h)
         if self.use_bn:
             h = self.bn_4(h)
         h = self.activ(h)
