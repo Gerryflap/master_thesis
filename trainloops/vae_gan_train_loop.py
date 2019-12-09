@@ -44,11 +44,15 @@ class VAEGANTrainLoop(TrainLoop):
         self.cuda = cuda
         self.max_steps_per_epoch = max_steps_per_epoch
 
-        self.gan_labels = torch.zeros((self.batch_size*3, 1))
-        self.gan_labels[:self.batch_size] = real_label_value
-        self.gan_labels.requires_grad = False
+        self.label_real = torch.ones((self.batch_size, 1))
+        self.label_real_d = torch.ones((self.batch_size, 1)) * real_label_value
+        self.label_fake = torch.zeros((self.batch_size, 1))
+
         if self.cuda:
-            self.gan_labels = self.gan_labels.cuda()
+            self.label_real = self.label_real.cuda()
+            self.label_real_d = self.label_real_d.cuda()
+            self.label_fake = self.label_fake.cuda()
+        self.loss_fn = torch.nn.BCEWithLogitsLoss()
 
         self.gamma = gamma
 
@@ -84,25 +88,26 @@ class VAEGANTrainLoop(TrainLoop):
             # X_p <- Dec(Z_p)
             x_p = self.Gx(z_p)
 
-            # Compute the activations for all Dis() computations in one go since it's more efficient and
-            #   works better with batch normalization
-            discriminator_inputs = torch.cat([x, x_tilde, x_p], dim=0)
+            dis_x, disl_x = self.D(x)
+            dis_x_tilde, disl_x_tilde = self.D(x_tilde)
+            dis_xp, disl_xp = self.D(x_p)
 
-            dis_preds, disl_activations = self.D(discriminator_inputs)
-
-            disl_x = disl_activations[:self.batch_size]
-            disl_x_tilde = disl_activations[self.batch_size:self.batch_size * 2]
 
             # Compute L_disl_llike
             L_disl_llike = self.compute_disl_llike(disl_x_tilde, disl_x)
 
             # Compute L_GAN
-            L_GAN = torch.nn.functional.binary_cross_entropy_with_logits(dis_preds, self.gan_labels)
+            L_GAN_generated = 0.5*(self.loss_fn(dis_x_tilde, self.label_fake) + self.loss_fn(dis_xp, self.label_fake))
+
+            # The GAN loss for G is different when label smoothing is used.
+            # The labels are not inverted since -1*L_GAN is still used for Gx
+            L_GAN_d = self.loss_fn(dis_x, self.label_real_d) + L_GAN_generated
+            L_GAN_g = self.loss_fn(dis_x, self.label_real) + L_GAN_generated
 
             # Define losses
             L_Gz = L_prior + L_disl_llike
-            L_Gx = self.gamma * L_disl_llike - L_GAN
-            L_D = L_GAN
+            L_Gx = self.gamma * L_disl_llike - L_GAN_g
+            L_D = L_GAN_d
 
             # Compute Gradients and perform updates
             self.optim_Gz.zero_grad()
@@ -126,7 +131,7 @@ class VAEGANTrainLoop(TrainLoop):
             "losses": {
                 "L_prior": L_prior.detach().item(),
                 "L_disl_llike": L_disl_llike.detach().item(),
-                "L_GAN": L_GAN.detach().item(),
+                "L_GAN": L_GAN_g.detach().item(),
                 "L_Gz": L_Gz.detach().item(),
                 "L_Gx": L_Gx.detach().item(),
                 "L_D": L_D.detach().item(),

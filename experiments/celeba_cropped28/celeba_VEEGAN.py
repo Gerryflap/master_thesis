@@ -14,18 +14,18 @@ import argparse
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
-from trainloops.veegan_train_loop_single_step import VEEGANTrainLoop
+from trainloops.veegan_train_loop_single_step import VEEGANTrainLoop as VEEGANTrainLoopSingleStep
 
 parser = argparse.ArgumentParser(description="Celeba VEEGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
-parser.add_argument("--h_size", action="store", type=int, default=16,
+parser.add_argument("--h_size", action="store", type=int, default=32,
                     help="Sets the h_size, which changes the size of the network")
 parser.add_argument("--fc_h_size", action="store", type=int, default=None,
                     help="Sets the fc_h_size, which changes the size of the fully connected layers in D")
 parser.add_argument("--epochs", action="store", type=int, default=100, help="Sets the number of training epochs")
-parser.add_argument("--l_size", action="store", type=int, default=12, help="Size of the latent space")
+parser.add_argument("--l_size", action="store", type=int, default=256, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
@@ -33,7 +33,7 @@ parser.add_argument("--use_mish", action="store_true", default=False,
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D")
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
-                    help="Sets the dropout rate on the input of the first fully connected layer of D")
+                    help="Sets the dropout rate in D")
 parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
                     help="Sets the standard deviation for instance noise (noise added to inputs of D)")
 parser.add_argument("--pre_train_steps", action="store", type=int, default=0, help="Number of pre training steps for Gz")
@@ -60,7 +60,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, deterministic=True)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, deterministic=False)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 
@@ -87,7 +87,7 @@ listeners = [
 ]
 
 if args.single_step:
-    train_loop = VEEGANTrainLoop(
+    train_loop = VEEGANTrainLoopSingleStep(
         listeners=listeners,
         Gz=Gz,
         Gx=Gx,
@@ -98,6 +98,7 @@ if args.single_step:
         cuda=args.cuda,
         epochs=args.epochs,
         d_img_noise_std=args.instance_noise_std,
+        decrease_noise=True,
         pre_training_steps=args.pre_train_steps,
         extended_reproduction_step=args.extended_reproduction_step
     )
@@ -113,6 +114,7 @@ else:
         cuda=args.cuda,
         epochs=args.epochs,
         d_img_noise_std=args.instance_noise_std,
+        decrease_noise=True,
         pre_training_steps=args.pre_train_steps,
         extended_reproduction_step=args.extended_reproduction_step
     )

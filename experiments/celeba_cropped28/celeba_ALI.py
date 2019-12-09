@@ -32,7 +32,7 @@ parser.add_argument("--use_mish", action="store_true", default=False,
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
-                    help="Sets the dropout rate on the input of the first fully connected layer of D")
+                    help="Sets the dropout rate in D")
 
 args = parser.parse_args()
 

@@ -1,3 +1,5 @@
+from torch.optim import RMSprop
+
 from models.conv28_vaegan.encoder import VAEGANEncoder28
 from models.conv28_vaegan.discriminator import VAEGANDiscriminator28
 from models.conv28_vaegan.generator import VAEGANGenerator28
@@ -29,7 +31,7 @@ parser.add_argument("--use_mish", action="store_true", default=False,
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
-                    help="Sets the dropout rate on the input of the first fully connected layer of D")
+                    help="Sets the dropout rate in D")
 parser.add_argument("--gamma", action="store", type=float, default=1e-3, help="Changes the gamma used by VAE/GAN")
 parser.add_argument("--real_label_value", action="store", type=float, default=1.0, help="Changes the target label for real samples")
 
@@ -53,11 +55,11 @@ valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filterin
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 Gz = VAEGANEncoder28(args.l_size, args.h_size,  n_channels=3)
-Gx = VAEGANGenerator28(args.l_size, args.h_size, n_channels=3)
+Gx = VAEGANGenerator28(args.l_size, args.h_size, n_channels=3, bias=True)
 D = VAEGANDiscriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, n_channels=3, dropout=args.dropout_rate)
-Gz_optimizer = torch.optim.Adam(Gz.parameters(), lr=args.lr, betas=(0.5, 0.999))
-Gx_optimizer = torch.optim.Adam(Gx.parameters(), lr=args.lr, betas=(0.5, 0.999))
-D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
+Gz_optimizer = RMSprop(Gz.parameters(), lr=args.lr)
+Gx_optimizer = RMSprop(Gx.parameters(), lr=args.lr)
+D_optimizer = RMSprop(D.parameters(), lr=args.lr)
 
 if args.cuda:
     Gz = Gz.cuda()

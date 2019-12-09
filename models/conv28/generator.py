@@ -25,7 +25,7 @@ class Generator28(torch.nn.Module):
         self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size , kernel_size=5, stride=2, bias=False)
         self.conv_4 = torch.nn.ConvTranspose2d(self.h_size , self.n_channels, kernel_size=4, stride=1, bias=False)
 
-        self.output_bias = torch.nn.Parameter(torch.zeros((3, 28, 28)), requires_grad=True)
+        self.output_bias = torch.nn.Parameter(torch.zeros((n_channels, 28, 28)), requires_grad=True)
 
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)

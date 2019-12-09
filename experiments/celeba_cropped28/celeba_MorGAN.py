@@ -34,7 +34,7 @@ parser.add_argument("--use_mish", action="store_true", default=False,
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D")
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
-                    help="Sets the dropout rate on the input of the first fully connected layer of D")
+                    help="Sets the dropout rate in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha parameter of MorGAN")
 parser.add_argument("--instance_noise_std", action="store", default=0.1, type=float,

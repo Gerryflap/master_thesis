@@ -76,7 +76,7 @@ class VEEGANTrainLoop(TrainLoop):
             L_gx_gan = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
             L_gz_gan = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q))
             z_recon, _, _ = self.Gz(x_tilde_no_noise)
-            z_recon_loss = self.l2_loss(z_recon, z, mean=True)
+            z_recon_loss = self.l2_loss(z_recon, z, mean=False)
             L_gan = L_gx_gan + L_gz_gan
 
             L_g = L_gx_gan + z_recon_loss

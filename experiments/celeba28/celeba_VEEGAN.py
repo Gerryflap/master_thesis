@@ -32,7 +32,7 @@ parser.add_argument("--use_mish", action="store_true", default=False,
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D")
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
-                    help="Sets the dropout rate on the input of the first fully connected layer of D")
+                    help="Sets the dropout rate in D")
 parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
                     help="Sets the standard deviation for instance noise (noise added to inputs of D)")
 parser.add_argument("--pre_train_steps", action="store", type=int, default=0, help="Number of pre training steps for Gz")

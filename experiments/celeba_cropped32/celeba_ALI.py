@@ -20,7 +20,7 @@ parser.add_argument("--l_size", action="store", type=int, default=256, help="Siz
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
-                    help="Sets the dropout rate on the input of the first fully connected layer of D")
+                    help="Sets the dropout rate in D")
 
 args = parser.parse_args()
 
