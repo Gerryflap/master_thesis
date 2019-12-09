@@ -2,6 +2,7 @@ from models.conv64_ali.encoder import Encoder64
 from trainloops.ali_train_loop import ALITrainLoop
 from models.conv64_ali.ali_discriminator import ALIDiscriminator64
 from models.conv64_ali.generator import Generator64
+import models.conv64_stable.models64 as m64
 
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.cluster_killswitch import KillSwitchListener
@@ -35,6 +36,8 @@ parser.add_argument("--disable_batchnorm_in_D", action="store_true", default=Fal
                     help="Disables batch normalization in D")
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate in D")
+parser.add_argument("--use_stable_models", action="store_true", default=False,
+                    help="Uses the \"stable\" models. It is yet to be determined whether they are stable.")
 
 args = parser.parse_args()
 
@@ -50,10 +53,15 @@ valid_dataset = CelebaCropped(split="valid", download=True, transform=transforms
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
-Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
-D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
-                       n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+if args.use_stable_models:
+    Gz = m64.Encoder(args.l_size, True)
+    Gx = m64.Generator(args.l_size)
+    D = m64.Discriminator(args.l_size, args.dropout_rate, 1)
+else:
+    Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
+    Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
+    D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
+                           n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
