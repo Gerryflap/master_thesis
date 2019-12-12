@@ -4,6 +4,8 @@
 
 import argparse
 import os
+
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
@@ -11,7 +13,8 @@ from torchvision.utils import make_grid, save_image
 
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
 from models.morphing_encoder import MorphingEncoder
-from util.output import make_result_dirs, init_experiment_output_dir
+from util.interpollation import slerp
+from util.output import init_experiment_output_dir
 
 parser = argparse.ArgumentParser(description="Morph inspection tool.")
 parser.add_argument("--batch_size", action="store", type=int, default=24,
@@ -38,6 +41,13 @@ parser.add_argument("--use_z_mean", action="store_true", default=False,
                     help="Uses z = z_mean instead of sampling from q(z|x)"
                     )
 parser.add_argument("--cuda", action="store_true", default=False, help="When this flag is present, cuda is used")
+parser.add_argument("--eval", action="store_true", default=False,
+                    help="When this flag is present, the models are put in evaluation mode. This affects BatchNorm")
+parser.add_argument("--train", action="store_true", default=False,
+                    help="When this flag is present, the models are put in train mode. This affects BatchNorm")
+parser.add_argument("--slerp", action="store_true", default=False,
+                    help="When this flag is present, slerp interpolation will be used. "
+                         "This overrides any other morphing method")
 args = parser.parse_args()
 
 output_dir = init_experiment_output_dir("celeba64", "morphing_evaluation", args)
@@ -65,6 +75,13 @@ if not isinstance(Gz, MorphingEncoder):
     manual_morph = True
 else:
     manual_morph = False
+if args.eval:
+    Gx.eval()
+    Gz.eval()
+
+if args.train:
+    Gx.train()
+    Gz.train()
 
 dataset = CelebaCroppedPairsLookAlike(split="test" if args.test else "valid", transform=transforms.Compose([
     transforms.ToTensor(),
@@ -86,16 +103,32 @@ for i, batch in enumerate(loader):
         x1 = x1.cuda()
         x2 = x2.cuda()
 
-    if manual_morph:
+    if args.slerp:
         z1, z1m, _ = Gz(x1)
         z2, z2m, _ = Gz(x2)
 
         if args.use_z_mean:
             z1, z2 = z1m, z2m
 
-        z_morph = 0.5*(z1 + z2)
+        z1 = z1.cpu().detach().numpy()
+        z2 = z2.cpu().detach().numpy()
+        z_morph = np.zeros(z1.shape, dtype=np.float32)
+        for j in range(z1.shape[0]):
+            z_morph[j] = slerp(0.5, z1[j], z2[j])
+        z_morph = torch.from_numpy(z_morph)
+        if args.cuda:
+            z_morph = z_morph.cuda()
     else:
-        z_morph = Gz.morph(x1, x2, use_mean=args.use_z_mean)
+        if manual_morph:
+            z1, z1m, _ = Gz(x1)
+            z2, z2m, _ = Gz(x2)
+
+            if args.use_z_mean:
+                z1, z2 = z1m, z2m
+
+            z_morph = 0.5*(z1 + z2)
+        else:
+            z_morph = Gz.morph(x1, x2, use_mean=args.use_z_mean)
     x_morph = Gx(z_morph)
 
     if args.cuda:

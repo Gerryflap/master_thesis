@@ -80,3 +80,4 @@ if __name__ == "__main__":
     G = Generator64(256, 64)
     G(torch.normal(0, 1, (1, 256)))
     print(list([param.size() for param in G.parameters()]))
+    

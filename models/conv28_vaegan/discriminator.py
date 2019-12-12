@@ -23,6 +23,7 @@ class VAEGANDiscriminator28(torch.nn.Module):
 
         if dropout != 0:
             self.dropout_layer = torch.nn.Dropout(dropout, True)
+            self.dropout_conv_layer = torch.nn.Dropout2d(dropout, True)
 
         self.lin_1 = torch.nn.Linear(7*7*h_size * 4, h_size*8)
         self.lin_2 = torch.nn.Linear(h_size * 8, 1)
@@ -35,14 +36,20 @@ class VAEGANDiscriminator28(torch.nn.Module):
 
     def forward(self, inp):
         x = self.conv_1(inp)
+        if self.dropout != 0:
+            x = self.dropout_conv_layer(x)
         x = self.activ(x)
 
         x = self.conv_2(x)
+        if self.dropout != 0:
+            x = self.dropout_conv_layer(x)
         if self.use_bn:
             x = self.bn_2(x)
         x = self.activ(x)
 
         x = self.conv_3(x)
+        if self.dropout != 0:
+            x = self.dropout_conv_layer(x)
         if self.use_bn:
             x = self.bn_3(x)
         x = self.activ(x)

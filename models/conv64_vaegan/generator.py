@@ -57,6 +57,9 @@ class VAEGANGenerator64(torch.nn.Module):
 
         return x
 
+    def init_weights(self):
+        self.apply(weights_init)
+
 
 if __name__ == "__main__":
     gen = VAEGANGenerator64(10, 32)

@@ -1,6 +1,7 @@
 """
-    Models the VAE/GAN trainloop. It has been reordered in some places to allow for more efficient computation and to
-    fix batch normalization in D
+    An experimental trainloop that borrows ideas from VAE/GAN,
+    but lets go of the constraint that the Generator should be able to generate a face from
+    any point in the latent space.
 """
 import math
 
@@ -9,11 +10,11 @@ import torch
 from trainloops.train_loop import TrainLoop
 
 
-class VAEGANTrainLoop(TrainLoop):
+class MorphAETrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_Gz, optim_Gx, optim_D, dataloader, cuda=False, epochs=1,
-                 gamma=1e-3, max_steps_per_epoch=None, real_label_value=1.0, beta=1.0):
+                max_steps_per_epoch=None, real_label_value=1.0):
         """
-        Initializes the VAE/GAN Trainloop
+        Initializes the Morph AE Trainloop
         :param listeners: A list of listeners
         :param Gz: The encoder model (forward should output z, z_mean, z_logvar)
         :param Gx: The decoder model (forward should output x)
@@ -24,7 +25,6 @@ class VAEGANTrainLoop(TrainLoop):
         :param dataloader: The dataloader used
         :param cuda: Whether cuda should be used
         :param epochs: The number of epochs to run for
-        :param gamma: The gamma parameter used in VAE/GAN, scales L_disl_llike in the decoder
         :param max_steps_per_epoch: Ends an epoch at this amount of steps, instead of when the dataloader is done.
             The dataloader is NOT reset, so it might continue in the next epoch which could result in the epoch ending
             when the dataloader is done instead of when the max_steps is reached.
@@ -54,69 +54,69 @@ class VAEGANTrainLoop(TrainLoop):
             self.label_fake = self.label_fake.cuda()
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
 
-        self.gamma = gamma
-        self.beta = beta
 
     def epoch(self):
         self.Gx.train()
         self.Gz.train()
         self.D.train()
 
-        for i, (x, _) in enumerate(self.dataloader):
+        for i, (x1, x2) in enumerate(self.dataloader):
             if self.max_steps_per_epoch is not None and i >= self.max_steps_per_epoch:
                 break
 
-            if x.size()[0] != self.batch_size:
+            if x1.size()[0] != self.batch_size:
                 continue
             # Draw M (= batch_size) samples from dataset and prior. x samples are already loaded by dataloader
             if self.cuda:
-                x = x.cuda()
+                x1 = x1.cuda()
+                x2 = x2.cuda()
 
             # Z <- Enc(X)
-            z, z_mean, z_logvar = self.Gz(x)
+            z_morph, z1, z2 = self.Gz.morph(x1, x2, return_all=True)
 
-            # L_prior <- Dkl(q(Z|X)||p(Z))
-            # We're already using log variance instead of the standard deviation,
-            #   so the equation might not look like the one in the thesis. They should be equivalent.
-            L_prior = self.beta * 0.5 * torch.sum(torch.exp(z_logvar) + torch.pow(z_mean, 2) - z_logvar - 1, dim=[0, 1])
+            z_batch = torch.cat([z1, z2], dim=0)
 
-            # X_tilde <- Dec(Z)
-            x_tilde = self.Gx(z)
+            z_batch_mean, z_batch_var = z_batch.mean(dim=0), z_batch.var(dim=0)
 
-            # Sample random Z_p values
-            z_p = self.generate_z_batch(self.batch_size)
+            x1_rec = self.Gx(z1)
+            x2_rec = self.Gx(z2)
+            x_morph = self.Gx(z_morph)
 
-            # X_p <- Dec(Z_p)
-            x_p = self.Gx(z_p)
-
-            dis_x, disl_x = self.D(x)
-            dis_x_tilde, disl_x_tilde = self.D(x_tilde)
-            dis_xp, disl_xp = self.D(x_p)
-
-
-            # Compute L_disl_llike
-            L_disl_llike = self.compute_disl_llike(disl_x_tilde, disl_x)
+            dis_x1, disl_x1 = self.D(x1)
+            dis_x2, disl_x2 = self.D(x2)
+            dis_x1r, disl_x1r = self.D(x1_rec)
+            dis_x2r, disl_x2r = self.D(x2_rec)
+            dis_xm, disl_xm = self.D(x_morph)
 
             # Compute L_GAN
-            L_GAN_generated = 0.5*(self.loss_fn(dis_x_tilde, self.label_fake) + self.loss_fn(dis_xp, self.label_fake))
+            L_GAN_generated = (
+                                  self.loss_fn(dis_x1r, self.label_fake) +
+                                  self.loss_fn(dis_x2r, self.label_fake) +
+                                  self.loss_fn(dis_xm, self.label_fake)
+                              )/3
 
             # The GAN loss for G is different when label smoothing is used.
             # The labels are not inverted since -1*L_GAN is still used for Gx
-            L_GAN_d = self.loss_fn(dis_x, self.label_real_d) + L_GAN_generated
-            L_GAN_g = self.loss_fn(dis_x, self.label_real) + L_GAN_generated
+            L_GAN_real = 0.5 * (self.loss_fn(dis_x1, self.label_real_d) + self.loss_fn(dis_x2, self.label_real_d))
+            L_D = L_GAN_generated + L_GAN_real
 
-            # Define losses
-            L_Gz = L_prior + L_disl_llike
-            L_Gx = self.gamma * L_disl_llike - L_GAN_g
-            L_D = L_GAN_d
+            L_dis_x1 = self.disl_loss_fn(disl_x1r, disl_x1)
+            L_dis_x2 = self.disl_loss_fn(disl_x2r, disl_x2)
+            L_dis_x = L_dis_x1 + L_dis_x2
+            L_dis_morph = self.disl_loss_fn(disl_xm, disl_x1) + self.disl_loss_fn(disl_xm, disl_x2)
+
+            L_latent = torch.nn.functional.mse_loss(z_batch_mean, torch.zeros_like(z_batch_mean)) +\
+                torch.nn.functional.mse_loss(z_batch_var, torch.ones_like(z_batch_mean))
+
+            L_g = L_dis_x1 + L_dis_x2 + L_dis_morph + L_latent
 
             # Compute Gradients and perform updates
             self.optim_Gz.zero_grad()
-            L_Gz.backward(retain_graph=True)
+            L_g.backward(retain_graph=True)
             self.optim_Gz.step()
 
             self.optim_Gx.zero_grad()
-            L_Gx.backward(retain_graph=True)
+            L_g.backward(retain_graph=True)
             self.optim_Gx.step()
 
             self.optim_D.zero_grad()
@@ -130,11 +130,10 @@ class VAEGANTrainLoop(TrainLoop):
         return {
             "epoch": self.current_epoch,
             "losses": {
-                "L_prior": L_prior.detach().item(),
-                "L_disl_llike": L_disl_llike.detach().item(),
-                "L_GAN": L_GAN_g.detach().item(),
-                "L_Gz": L_Gz.detach().item(),
-                "L_Gx": L_Gx.detach().item(),
+                "L_latent": L_latent.detach().item(),
+                "L_dis_x": L_dis_x.detach().item(),
+                "L_dis_morph": L_dis_morph.detach().item(),
+                "L_G": L_g.detach().item(),
                 "L_D": L_D.detach().item(),
             },
             "networks": {
@@ -161,6 +160,10 @@ class VAEGANTrainLoop(TrainLoop):
 
         # Return outputs
         return self.Gx(z)
+
+    @staticmethod
+    def disl_loss_fn(pred, target):
+        return torch.nn.functional.mse_loss(pred, target)
 
     @staticmethod
     def compute_disl_llike(pred, target):

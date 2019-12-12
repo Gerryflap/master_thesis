@@ -36,7 +36,7 @@ class CelebaCroppedPairs(VisionDataset):
 
         with open("data/celeba_cropped/list_eval_partition_morphing.txt", "r") as f:
             tuples = map(lambda s: tuple(s.split()), f.readlines())
-            fnames = [fname for fname, fsplit in tuples if split is None or split == fsplit]
+            fnames = [fname for fname, fsplit in tuples if split is None or split == int(fsplit)]
             fnames = set(fnames)
 
         with open("data/celeba/identity_CelebA.txt", "r") as f:

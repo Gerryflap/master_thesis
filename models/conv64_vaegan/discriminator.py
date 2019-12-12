@@ -74,3 +74,6 @@ class VAEGANDiscriminator64(torch.nn.Module):
         # For numerical stability, logits are used as output instead.
         # This means that the sigmoid function "is embedded" in the loss function directly
         return x, dis_l
+
+    def init_weights(self):
+        self.apply(weights_init)
