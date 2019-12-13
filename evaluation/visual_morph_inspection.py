@@ -13,7 +13,7 @@ from torchvision.utils import make_grid, save_image
 
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
 from models.morphing_encoder import MorphingEncoder
-from util.interpollation import slerp
+from util.interpolation import slerp
 from util.output import init_experiment_output_dir
 
 parser = argparse.ArgumentParser(description="Morph inspection tool.")
@@ -29,6 +29,10 @@ parser.add_argument("--parameter_path", action="store", type=str,
                          "With this option you can select the epoch yourself instead of auto-picking all_epochs")
 parser.add_argument("--max_output_batches", action="store", type=int, default=None,
                     help="If defined, limits the amount of rows in the output image")
+parser.add_argument("--res", action="store", type=int, default=64,
+                    help="Image resolution. 64 (for 64x64) by default. 28 if you're loading a 28x28 model")
+parser.add_argument("--tanh", action="store", type=int, default=64,
+                    help="Has to be used if the model is a tanh model instead of sigmoid")
 parser.add_argument("--test", action="store_true", default=False, help="Switches to the test set")
 parser.add_argument("--decoder_filename", action="store", type=str, default="Gx.pt",
                     help="Filename of the decoder/generator/Gx network. "
@@ -83,9 +87,11 @@ if args.train:
     Gx.train()
     Gz.train()
 
-dataset = CelebaCroppedPairsLookAlike(split="test" if args.test else "valid", transform=transforms.Compose([
-    transforms.ToTensor(),
-]))
+trans = [transforms.ToTensor()]
+if args.res != 64:
+    trans.append(transforms.Resize(args.res))
+
+dataset = CelebaCroppedPairsLookAlike(split="test" if args.test else "valid", transform=transforms.Compose(trans))
 loader = DataLoader(dataset, args.batch_size, shuffle=args.shuffle)
 
 x1_list = []
