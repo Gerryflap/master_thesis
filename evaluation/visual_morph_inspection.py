@@ -31,7 +31,7 @@ parser.add_argument("--max_output_batches", action="store", type=int, default=No
                     help="If defined, limits the amount of rows in the output image")
 parser.add_argument("--res", action="store", type=int, default=64,
                     help="Image resolution. 64 (for 64x64) by default. 28 if you're loading a 28x28 model")
-parser.add_argument("--tanh", action="store", type=int, default=64,
+parser.add_argument("--tanh", action="store_true",  default=False,
                     help="Has to be used if the model is a tanh model instead of sigmoid")
 parser.add_argument("--test", action="store_true", default=False, help="Switches to the test set")
 parser.add_argument("--decoder_filename", action="store", type=str, default="Gx.pt",
@@ -54,7 +54,7 @@ parser.add_argument("--slerp", action="store_true", default=False,
                          "This overrides any other morphing method")
 args = parser.parse_args()
 
-output_dir = init_experiment_output_dir("celeba64", "morphing_evaluation", args)
+output_dir = init_experiment_output_dir("morphing_evaluation", "morphing_evaluation", args)
 
 if args.test:
     print("WARNING! Test set is enabled. This is only allowed when evaluating the model!")
@@ -87,9 +87,14 @@ if args.train:
     Gx.train()
     Gz.train()
 
-trans = [transforms.ToTensor()]
+trans = []
 if args.res != 64:
     trans.append(transforms.Resize(args.res))
+
+trans.append(transforms.ToTensor())
+
+if args.tanh:
+    trans.append(transforms.Lambda(lambda img: img*2.0 - 1.0))
 
 dataset = CelebaCroppedPairsLookAlike(split="test" if args.test else "valid", transform=transforms.Compose(trans))
 loader = DataLoader(dataset, args.batch_size, shuffle=args.shuffle)
@@ -149,7 +154,10 @@ x1_column = make_grid(x1_list, nrow=1)
 x2_column = make_grid(x2_list, nrow=1)
 morph_column = make_grid(morph_list, nrow=1)
 
-out_img = make_grid(torch.stack([x1_column, morph_column, x2_column], dim=0), nrow=3)
+if args.tanh:
+    out_img = make_grid(torch.stack([x1_column, morph_column, x2_column], dim=0), nrow=3, range=(-1, 1), normalize=True)
+else:
+    out_img = make_grid(torch.stack([x1_column, morph_column, x2_column], dim=0), nrow=3)
 print(out_img.size())
 print(os.path.join(output_dir, "morphs.png"))
 
