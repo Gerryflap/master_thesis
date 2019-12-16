@@ -78,7 +78,8 @@ class VAEGANTrainLoop(TrainLoop):
             # L_prior <- Dkl(q(Z|X)||p(Z))
             # We're already using log variance instead of the standard deviation,
             #   so the equation might not look like the one in the thesis. They should be equivalent.
-            L_prior = self.beta * 0.5 * torch.sum(torch.exp(z_logvar) + torch.pow(z_mean, 2) - z_logvar - 1, dim=[0, 1])
+            L_prior = self.beta * 0.5 * torch.sum(torch.exp(z_logvar) + torch.pow(z_mean, 2) - z_logvar - 1, dim=[0, 1]) \
+                      / self.batch_size
 
             # X_tilde <- Dec(Z)
             x_tilde = self.Gx(z)
@@ -93,17 +94,16 @@ class VAEGANTrainLoop(TrainLoop):
             dis_x_tilde, disl_x_tilde = self.D(x_tilde)
             dis_xp, disl_xp = self.D(x_p)
 
-
             # Compute L_disl_llike
-            L_disl_llike = self.compute_disl_llike(disl_x_tilde, disl_x)
+            L_disl_llike = self.compute_disl_llike(disl_x_tilde, disl_x) / self.batch_size
 
             # Compute L_GAN
-            L_GAN_generated = 0.5*(self.loss_fn(dis_x_tilde, self.label_fake) + self.loss_fn(dis_xp, self.label_fake))
+            L_GAN_generated = 0.5 * (self.loss_fn(dis_x_tilde, self.label_fake) + self.loss_fn(dis_xp, self.label_fake))
 
             # The GAN loss for G is different when label smoothing is used.
             # The labels are not inverted since -1*L_GAN is still used for Gx
-            L_GAN_d = self.loss_fn(dis_x, self.label_real_d) + L_GAN_generated
-            L_GAN_g = self.loss_fn(dis_x, self.label_real) + L_GAN_generated
+            L_GAN_d = (self.loss_fn(dis_x, self.label_real_d) + L_GAN_generated)/self.batch_size
+            L_GAN_g = (self.loss_fn(dis_x, self.label_real) + L_GAN_generated)/self.batch_size
 
             # Define losses
             L_Gz = L_prior + L_disl_llike
@@ -164,6 +164,6 @@ class VAEGANTrainLoop(TrainLoop):
 
     @staticmethod
     def compute_disl_llike(pred, target):
-        const = -0.5*math.log(2*math.pi, math.e)
+        const = -0.5 * math.log(2 * math.pi, math.e)
         loss = 0.5 * (pred - target).pow(2) - const
         return loss.sum()
