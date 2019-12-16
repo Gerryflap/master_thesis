@@ -82,10 +82,10 @@ if args.cuda:
     Gz = Gz.cuda()
     Gx = Gx.cuda()
     D = D.cuda()
-
-Gz.init_weights()
-Gx.init_weights()
-D.init_weights()
+if args.continue_with is None:
+    Gz.init_weights()
+    Gx.init_weights()
+    D.init_weights()
 
 listeners = [
     LossReporter(),
