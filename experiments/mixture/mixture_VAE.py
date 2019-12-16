@@ -58,7 +58,8 @@ listeners = [
         discriminator_output=False,
         cuda=args.cuda,
         sample_reconstructions=True,
-        every_n_epochs=10
+        every_n_epochs=10,
+        output_latent=True
     )
 ]
 

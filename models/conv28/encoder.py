@@ -6,12 +6,13 @@ from util.torch.initialization import weights_init
 
 
 class Encoder28(MorphingEncoder):
-    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False, cap_variance=True):
+    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False, cap_variance=True, no_bn_in_first_layer=False):
         super().__init__()
 
         self.n_channels = n_channels
         self.deterministic = deterministic
         self.cap_variance = cap_variance
+        self.no_bn_in_first_layer = no_bn_in_first_layer
 
         if use_mish:
             self.activ = mish
@@ -25,7 +26,8 @@ class Encoder28(MorphingEncoder):
         self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
         self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=4, stride=1, bias=False)
 
-        self.bn_1 = torch.nn.BatchNorm2d(self.h_size)
+        if not no_bn_in_first_layer:
+            self.bn_1 = torch.nn.BatchNorm2d(self.h_size)
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
@@ -42,7 +44,8 @@ class Encoder28(MorphingEncoder):
 
     def forward(self, inp):
         x = self.conv_1(inp)
-        x = self.bn_1(x)
+        if not self.no_bn_in_first_layer:
+            x = self.bn_1(x)
         x = self.activ(x)
 
         x = self.conv_2(x)

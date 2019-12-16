@@ -6,12 +6,14 @@ def weights_init(m):
     # The value for stddev has been altered to be equal to the ALI value
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
+        # nn.init.normal_(m.weight.data, 0.0, 0.02)
+        nn.init.orthogonal_(m.weight.data)
         if m.bias is not None:
             nn.init.constant_(m.bias.data, 0)
 
     if classname.find('Linear') != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
+        # nn.init.normal_(m.weight.data, 0.0, 0.02)
+        nn.init.orthogonal_(m.weight.data)
         if m.bias is not None:
             nn.init.constant_(m.bias.data, 0)
 

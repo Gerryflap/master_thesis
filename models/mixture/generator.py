@@ -18,6 +18,10 @@ class Generator(torch.nn.Module):
             torch.nn.BatchNorm1d(h_size),
             torch.nn.LeakyReLU(0.02),
 
+            torch.nn.Linear(h_size, h_size),
+            torch.nn.BatchNorm1d(h_size),
+            torch.nn.LeakyReLU(0.02),
+
             torch.nn.Linear(h_size, 2),
             torch.nn.Tanh()
         )
