@@ -59,14 +59,15 @@ Gz = VAEGANEncoder64(args.l_size, args.h_size,  n_channels=3)
 Gx = VAEGANGenerator64(args.l_size, args.h_size, n_channels=3)
 D = VAEGANDiscriminator64(args.h_size, use_bn=not args.disable_batchnorm_in_D,
                        n_channels=3, dropout=args.dropout_rate)
-Gz_optimizer = torch.optim.Adam(Gz.parameters(), lr=args.lr, betas=(0.5, 0.999))
-Gx_optimizer = torch.optim.Adam(Gx.parameters(), lr=args.lr, betas=(0.5, 0.999))
-D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
 if args.cuda:
     Gz = Gz.cuda()
     Gx = Gx.cuda()
     D = D.cuda()
+
+Gz_optimizer = torch.optim.Adam(Gz.parameters(), lr=args.lr, betas=(0.5, 0.999))
+Gx_optimizer = torch.optim.Adam(Gx.parameters(), lr=args.lr, betas=(0.5, 0.999))
+D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
 Gz.init_weights()
 Gx.init_weights()
