@@ -37,6 +37,7 @@ def randomize():
         slider.set(np.random.normal(0, 1))
 
 
+
 def reset():
     global should_update
     should_update = False
@@ -121,6 +122,7 @@ scrollbar.config(command=subcanvas.yview)
 subframe_id = subcanvas.create_window((0, 0), window=subframe, anchor='nw')
 sliders = [tk.Scale(subframe, from_=-5.0, to_=5.0, resolution=0.05, length=290, orient=tk.HORIZONTAL,
                     command=update_canvas if i != z_shape - 1 else update_and_enable_updates) for i in range(z_shape)]
+sliders = list(sliders)
 list(map(lambda s: s.pack(), sliders))
 
 

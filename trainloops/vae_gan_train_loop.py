@@ -52,7 +52,7 @@ class VAEGANTrainLoop(TrainLoop):
             self.label_real = self.label_real.cuda()
             self.label_real_d = self.label_real_d.cuda()
             self.label_fake = self.label_fake.cuda()
-        self.loss_fn = torch.nn.BCEWithLogitsLoss()
+        self.loss_fn = torch.nn.BCEWithLogitsLoss(reduction="sum")
 
         self.gamma = gamma
         self.beta = beta
@@ -165,5 +165,5 @@ class VAEGANTrainLoop(TrainLoop):
     @staticmethod
     def compute_disl_llike(pred, target):
         const = -0.5*math.log(2*math.pi, math.e)
-        loss = 0.5 * (pred - target).pow(2) + const
+        loss = 0.5 * (pred - target).pow(2) - const
         return loss.sum()
