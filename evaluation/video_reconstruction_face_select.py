@@ -13,8 +13,8 @@ import dlib
 
 # 0 = No random, 1 = Every frame a new random
 load_z = False
-random_mode = 1
-crop_region_size = 10
+random_mode = 0
+crop_region_size = 0
 
 if random_mode == 0:
     rand_vec = 0
@@ -40,6 +40,9 @@ root.destroy()
 
 Gz = torch.load(filename_enc, map_location=torch.device('cpu'))
 Gx = torch.load(filename_dec, map_location=torch.device('cpu'))
+
+Gz.eval()
+Gx.eval()
 
 cap = cv2.VideoCapture(0)
 predictor_path = "data/data_prep/shape_predictor_5_face_landmarks.dat"
@@ -67,6 +70,7 @@ def update():
     global rand_vec
     # Capture frame-by-frame
     ret, frame = cap.read()
+    print(frame.shape)
     frame = frame[:, ::-1, ::-1]
 
     dets = detector(frame, 1)
@@ -82,11 +86,13 @@ def update():
     for detection in dets:
         faces.append(sp(frame, detection))
 
-    frame = dlib.get_face_chip(frame, faces[0], size=(64 + crop_region_size*2))
+    frame = dlib.get_face_chip(frame, faces[0], size=(64 + crop_region_size*2)*2)
+    frame = frame[::2, ::2]
 
 
     # frame = frame[::8, ::8]
-    frame = frame[crop_region_size:-crop_region_size, crop_region_size:-crop_region_size]
+    if crop_region_size != 0:
+        frame = frame[crop_region_size:-crop_region_size, crop_region_size:-crop_region_size]
     # input_frame = np.expand_dims(frame, axis=0)
     # input_frame = input_frame/255.0
     # # input_frame *= 5.0
@@ -112,6 +118,7 @@ def update():
 
     if not sigmoid_model:
         input_frame = input_frame * 2 - 1
+    print(input_frame.min(), input_frame.max())
     z, z_mean, z_logvar = Gz(input_frame)
     if random_mode == 0:
         z = z_mean

@@ -20,6 +20,7 @@ filename = tk.filedialog.askopenfilename(initialdir="./saved_models", title="Sel
                                            filetypes=(("Pytorch model", "*.pt"), ("all files", "*.*")))
 root.destroy()
 generator = torch.load(filename, map_location=torch.device('cpu'))
+generator.eval()
 
 z_shape = int(generator.latent_size)
 z = np.zeros((1, z_shape), dtype=np.float32)
