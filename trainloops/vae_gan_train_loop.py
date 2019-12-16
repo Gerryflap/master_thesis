@@ -78,7 +78,7 @@ class VAEGANTrainLoop(TrainLoop):
             # L_prior <- Dkl(q(Z|X)||p(Z))
             # We're already using log variance instead of the standard deviation,
             #   so the equation might not look like the one in the thesis. They should be equivalent.
-            L_prior = self.beta * 0.5 * torch.sum(torch.exp(z_logvar) + torch.pow(z_mean, 2) - z_logvar - 1, dim=[0, 1]) \
+            L_prior = 0.5 * torch.sum(torch.exp(z_logvar) + torch.pow(z_mean, 2) - z_logvar - 1, dim=[0, 1]) \
                       / self.batch_size
 
             # X_tilde <- Dec(Z)
@@ -106,7 +106,7 @@ class VAEGANTrainLoop(TrainLoop):
             L_GAN_g = (self.loss_fn(dis_x, self.label_real) + L_GAN_generated)/self.batch_size
 
             # Define losses
-            L_Gz = L_prior + L_disl_llike
+            L_Gz = self.beta * L_prior + L_disl_llike
             L_Gx = self.gamma * L_disl_llike - L_GAN_g
             L_D = L_GAN_d
 
