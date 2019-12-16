@@ -21,8 +21,11 @@ assert os.path.isdir("data")
 class CelebaCropped(VisionDataset):
     cropped_base_folder = "celeba_cropped/img_align/"
 
-    def __init__(self, split="train", transform=None, target_transform=None, download=False, morgan_like_filtering=False, validate_files=False):
+    def __init__(self, split="train", transform=None, target_transform=None, download=False, morgan_like_filtering=False, validate_files=False, use_pair_split=True):
         super().__init__("data", transforms=None, transform=transform, target_transform=target_transform)
+
+        # This option enables the train/valid/test splits used for the thesis
+        self.use_pair_split = use_pair_split
 
         if not os.path.isdir("data/celeba"):
             # try to download celeba
@@ -49,7 +52,7 @@ class CelebaCropped(VisionDataset):
             with open("data/celeba_cropped/list_eval_partition.txt", "w") as f:
                 f.writelines(outlines)
 
-        if morgan_like_filtering and not os.path.isfile("data/celeba_cropped/list_eval_partition_filtered.txt"):
+        if not use_pair_split and morgan_like_filtering and not os.path.isfile("data/celeba_cropped/list_eval_partition_filtered.txt"):
             # Get all aligned faces
             aligned = gen_aligned_faces()
 
@@ -76,8 +79,11 @@ class CelebaCropped(VisionDataset):
                                          ("train", "valid", "test", "all"))]
 
         fn = partial(os.path.join, self.root)
-        partition_file = "celeba_cropped/list_eval_partition.txt" if not morgan_like_filtering else \
-            "celeba_cropped/list_eval_partition_filtered.txt"
+        if use_pair_split:
+            partition_file = "celeba_cropped/list_eval_partition_morphing.txt"
+        else:
+            partition_file = "celeba_cropped/list_eval_partition.txt" if not morgan_like_filtering else \
+                "celeba_cropped/list_eval_partition_filtered.txt"
         splits = pandas.read_csv(fn(partition_file), delim_whitespace=True, header=None,
                                  index_col=0)
 
