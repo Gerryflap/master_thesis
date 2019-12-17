@@ -1,3 +1,5 @@
+from torch.optim import RMSprop
+
 from models.conv64_vaegan.discriminator import VAEGANDiscriminator64
 from models.conv64_vaegan.encoder import VAEGANEncoder64
 from models.conv64_vaegan.generator import VAEGANGenerator64
@@ -56,17 +58,18 @@ valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filterin
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 Gz = VAEGANEncoder64(args.l_size, args.h_size,  n_channels=3)
-Gx = VAEGANGenerator64(args.l_size, args.h_size, n_channels=3)
+Gx = VAEGANGenerator64(args.l_size, args.h_size, n_channels=3, bias=True)
 D = VAEGANDiscriminator64(args.h_size, use_bn=not args.disable_batchnorm_in_D,
                        n_channels=3, dropout=args.dropout_rate)
-Gz_optimizer = torch.optim.Adam(Gz.parameters(), lr=args.lr, betas=(0.5, 0.999))
-Gx_optimizer = torch.optim.Adam(Gx.parameters(), lr=args.lr, betas=(0.5, 0.999))
-D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
 if args.cuda:
     Gz = Gz.cuda()
     Gx = Gx.cuda()
     D = D.cuda()
+
+Gz_optimizer = RMSprop(Gz.parameters(), lr=args.lr)
+Gx_optimizer = RMSprop(Gx.parameters(), lr=args.lr)
+D_optimizer = RMSprop(D.parameters(), lr=args.lr)
 
 Gz.init_weights()
 Gx.init_weights()

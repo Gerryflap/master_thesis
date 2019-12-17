@@ -3,7 +3,7 @@ from util.torch.initialization import weights_init
 
 
 class VAEGANGenerator64(torch.nn.Module):
-    def __init__(self, latent_size, h_size, bias=False, n_channels=1):
+    def __init__(self, latent_size, h_size, bias=True, n_channels=1):
         super().__init__()
 
         self.n_channels = n_channels
