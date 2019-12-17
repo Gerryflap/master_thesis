@@ -36,6 +36,7 @@ parser.add_argument("--disable_batchnorm_in_D", action="store_true", default=Fal
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--gamma", action="store", type=float, default=1e-6, help="Changes the gamma used by VAE/GAN")
+parser.add_argument("--beta", action="store", type=float, default=1.0, help="Weighs L_prior")
 parser.add_argument("--epoch_step_limit", action="store", type=int, default=None,
                     help="Cuts off epoch when step limit is reached")
 parser.add_argument("--real_label_value", action="store", type=float, default=1.0, help="Changes the target label for real samples")
@@ -96,7 +97,8 @@ train_loop = VAEGANTrainLoop(
     epochs=args.epochs,
     gamma=args.gamma,
     max_steps_per_epoch=args.epoch_step_limit,
-    real_label_value=args.real_label_value
+    real_label_value=args.real_label_value,
+    beta=args.beta
 )
 
 train_loop.train()
