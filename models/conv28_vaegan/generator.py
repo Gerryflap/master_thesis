@@ -3,14 +3,13 @@ from util.torch.initialization import weights_init
 
 
 class VAEGANGenerator28(torch.nn.Module):
-    def __init__(self, latent_size, h_size, bias=False, n_channels=1):
+    def __init__(self, latent_size, h_size,  n_channels=1):
         super().__init__()
 
         self.n_channels = n_channels
 
         self.latent_size = latent_size
         self.h_size = h_size
-        self.bias = bias
 
         # VAE/GAN uses some layers with 32 filters.
         # To keep the h_size roughly similar in overall network size between papers, this is taken to be h_size = 64.
@@ -19,10 +18,10 @@ class VAEGANGenerator28(torch.nn.Module):
 
         self.activ = torch.nn.functional.relu
 
-        self.conv_1 = torch.nn.ConvTranspose2d(self.latent_size, self.h_size * 4, 7, bias=self.bias)
-        self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size*2, kernel_size=5, stride=2, bias=self.bias, padding=2, output_padding=1)
-        self.conv_4 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size//2, kernel_size=5, stride=2, bias=self.bias,padding=2, output_padding=1)
-        self.conv_5 = torch.nn.ConvTranspose2d(self.h_size//2, n_channels, kernel_size=5, stride=1, bias=self.bias, padding=2)
+        self.conv_1 = torch.nn.ConvTranspose2d(self.latent_size, self.h_size * 4, 7, bias=False)
+        self.conv_3 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size*2, kernel_size=5, stride=2, bias=False, padding=2, output_padding=1)
+        self.conv_4 = torch.nn.ConvTranspose2d(self.h_size * 2, self.h_size//2, kernel_size=5, stride=2, bias=False, padding=2, output_padding=1)
+        self.conv_5 = torch.nn.ConvTranspose2d(self.h_size//2, n_channels, kernel_size=5, stride=1, bias=True, padding=2)
 
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 2)

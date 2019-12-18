@@ -20,22 +20,12 @@ parser.add_argument("--lr", action="store", type=float, default=0.0001,
 parser.add_argument("--h_size", action="store", type=int, default=16,
                     help="Sets the h_size, which changes the size of the network")
 parser.add_argument("--epochs", action="store", type=int, default=100, help="Sets the number of training epochs")
-parser.add_argument("--d_steps", action="store", type=int, default=2,
-                    help="Amount of discriminator steps per generator step")
 parser.add_argument("--l_size", action="store", type=int, default=12, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
 parser.add_argument("--no_bias_in_dec", action="store_true", default=False, help="Disables biases in the decoder")
-# parser.add_argument("--load_path", action="store", type=str, default=None,
-#                     help="When given, loads models from LOAD_PATH folder")
-# parser.add_argument("--save_path", action="store", type=str, default=None,
-#                     help="When given, saves models to LOAD_PATH folder after all epochs (or every epoch)")
-# parser.add_argument("--save_every_epoch", action="store_true", default=False,
-#                     help="When a save path is given, store the model after every epoch instead of only the last")
-# parser.add_argument("--img_path", action="store", type=str, default=None,
-#                     help="When given, saves samples to the given directory")
 
 args = parser.parse_args()
 
@@ -51,12 +41,14 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 enc = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)
 dec = Generator64(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_dec, n_channels=3)
-enc_optimizer = torch.optim.Adam(enc.parameters(), lr=args.lr, betas=(0.5, 0.999))
-dec_optimizer = torch.optim.Adam(dec.parameters(), lr=args.lr, betas=(0.5, 0.999))
+
 
 if args.cuda:
     enc = enc.cuda()
     dec = dec.cuda()
+
+enc_optimizer = torch.optim.Adam(enc.parameters(), lr=args.lr, betas=(0.5, 0.999))
+dec_optimizer = torch.optim.Adam(dec.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
 enc.init_weights()
 dec.init_weights()

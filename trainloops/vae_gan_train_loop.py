@@ -5,6 +5,7 @@
 import math
 
 import torch
+from torch.distributions import Normal, MultivariateNormal
 
 from trainloops.train_loop import TrainLoop
 
@@ -78,8 +79,10 @@ class VAEGANTrainLoop(TrainLoop):
             # L_prior <- Dkl(q(Z|X)||p(Z))
             # We're already using log variance instead of the standard deviation,
             #   so the equation might not look like the one in the thesis. They should be equivalent.
-            L_prior = 0.5 * torch.sum(torch.exp(z_logvar) + torch.pow(z_mean, 2) - z_logvar - 1, dim=[0, 1]) \
-                      / self.batch_size
+            # L_prior = 0.5 * torch.sum(torch.exp(z_logvar) + torch.pow(z_mean, 2) - z_logvar - 1, dim=[0, 1]) \
+            #         / self.batch_size
+
+            L_prior = -0.5 * torch.sum(1 + z_logvar - z_mean.pow(2) - z_logvar.exp())/self.batch_size
 
             # X_tilde <- Dec(Z)
             x_tilde = self.Gx(z)
@@ -163,7 +166,13 @@ class VAEGANTrainLoop(TrainLoop):
         return self.Gx(z)
 
     @staticmethod
-    def compute_disl_llike(pred, target):
+    def compute_disl_llike_old(pred, target):
         const = -0.5 * math.log(2 * math.pi, math.e)
         loss = 0.5 * (pred - target).pow(2) - const
         return loss.sum()
+
+    @staticmethod
+    def compute_disl_llike(pred, target):
+        distribution = Normal(pred, 1.0)
+        loss = distribution.log_prob(target)
+        return -loss.sum()
