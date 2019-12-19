@@ -175,4 +175,4 @@ class VAEGANTrainLoop(TrainLoop):
     def compute_disl_llike(pred, target):
         distribution = Normal(pred, 1.0)
         loss = distribution.log_prob(target)
-        return -loss.sum()
+        return loss.sum()
