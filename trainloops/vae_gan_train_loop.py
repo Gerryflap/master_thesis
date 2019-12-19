@@ -6,13 +6,14 @@ import math
 
 import torch
 from torch.distributions import Normal, MultivariateNormal
+from torch.optim.lr_scheduler import ExponentialLR
 
 from trainloops.train_loop import TrainLoop
 
 
 class VAEGANTrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_Gz, optim_Gx, optim_D, dataloader, cuda=False, epochs=1,
-                 gamma=1e-3, max_steps_per_epoch=None, real_label_value=1.0, beta=1.0):
+                 gamma=1e-3, max_steps_per_epoch=None, real_label_value=1.0, beta=1.0, lr_decay=1.0, feed_reconstructions_into_D=True):
         """
         Initializes the VAE/GAN Trainloop
         :param listeners: A list of listeners
@@ -31,16 +32,29 @@ class VAEGANTrainLoop(TrainLoop):
             when the dataloader is done instead of when the max_steps is reached.
         :param real_label_value: Gives a value to the "real" label of the discriminator.
             Using  0.9 might aide convergence according to https://towardsdatascience.com/gan-ways-to-improve-gan-performance-acf37f9f59b
+        :param beta: Scales L_prior
+        :param lr_decay: The lr decay used in the exponential decay.
+        :param feed_reconstructions_into_D: When true, feed x_tilde into D.
         """
         super().__init__(listeners, epochs)
+        self.feed_reconstructions_into_D = feed_reconstructions_into_D
         self.real_label_value = real_label_value
         self.batch_size = dataloader.batch_size
         self.Gz = Gz
         self.Gx = Gx
         self.D = D
+
+        self.lr_decay = lr_decay
         self.optim_Gx = optim_Gx
         self.optim_Gz = optim_Gz
         self.optim_D = optim_D
+
+        if self.lr_decay != 1.0:
+            self.lr_Gz = ExponentialLR(self.optim_Gz, gamma=self.lr_decay)
+            self.lr_Gx = ExponentialLR(self.optim_Gx, gamma=self.lr_decay)
+            self.lr_D = ExponentialLR(self.optim_D, gamma=self.lr_decay)
+
+
         self.dataloader = dataloader
         self.cuda = cuda
         self.max_steps_per_epoch = max_steps_per_epoch
@@ -57,6 +71,9 @@ class VAEGANTrainLoop(TrainLoop):
 
         self.gamma = gamma
         self.beta = beta
+
+        self.margin = 0.35
+        self.equilibrium = 0.68
 
     def epoch(self):
         self.Gx.train()
@@ -93,15 +110,29 @@ class VAEGANTrainLoop(TrainLoop):
             # X_p <- Dec(Z_p)
             x_p = self.Gx(z_p)
 
-            dis_x, disl_x = self.D(x)
-            dis_x_tilde, disl_x_tilde = self.D(x_tilde)
-            dis_xp, disl_xp = self.D(x_p)
+            # Combine the D inputs (this is not advisable in normal GANs, but the official VAE/GAN implementation seems to do this)
+            d_inputs = torch.cat([x, x_tilde, x_p])
+            d_outputs, _ = self.D(d_inputs)
+
+            dis_x = d_outputs[:self.batch_size]
+            dis_x_tilde = d_outputs[self.batch_size:self.batch_size*2]
+            dis_xp = d_outputs[self.batch_size*2:]
+
+            # Combine x_tilde and x into one batch and compute dis_l for both
+            d_inputs = torch.cat([x, x_tilde])
+            _, d_outputs = self.D(d_inputs)
+            disl_x, disl_x_tilde = d_outputs[:self.batch_size], d_outputs[self.batch_size:]
 
             # Compute L_disl_llike
             L_disl_llike = self.compute_disl_llike(disl_x_tilde, disl_x) / self.batch_size
 
             # Compute L_GAN
-            L_GAN_generated = 0.5 * (self.loss_fn(dis_x_tilde, self.label_fake) + self.loss_fn(dis_xp, self.label_fake))
+            L_GAN_x_p = self.loss_fn(dis_xp, self.label_fake)
+            if self.feed_reconstructions_into_D:
+                L_GAN_x_tilde = self.loss_fn(dis_x_tilde, self.label_fake)
+                L_GAN_generated = (L_GAN_x_tilde + L_GAN_x_p) * 0.5
+            else:
+                L_GAN_generated = L_GAN_x_p
 
             # The GAN loss for G is different when label smoothing is used.
             # The labels are not inverted since -1*L_GAN is still used for Gx
@@ -109,22 +140,39 @@ class VAEGANTrainLoop(TrainLoop):
             L_GAN_g = (self.loss_fn(dis_x, self.label_real) + L_GAN_generated)/self.batch_size
 
             # Define losses
-            L_Gz = self.beta * L_prior + L_disl_llike
+            L_Gz = L_prior + L_disl_llike/self.beta
             L_Gx = self.gamma * L_disl_llike - L_GAN_g
             L_D = L_GAN_d
+
+            train_d = True
+            train_gx = True
+            if self.equilibrium - self.margin > L_GAN_g.cpu().detach().item():
+                train_d = False
+            if self.equilibrium + self.margin < L_GAN_g.cpu().detach().item():
+                train_gx = False
+            if not (train_d or train_gx):
+                train_gx = True
+                train_d = True
 
             # Compute Gradients and perform updates
             self.optim_Gz.zero_grad()
             L_Gz.backward(retain_graph=True)
             self.optim_Gz.step()
 
-            self.optim_Gx.zero_grad()
-            L_Gx.backward(retain_graph=True)
-            self.optim_Gx.step()
+            if train_gx:
+                self.optim_Gx.zero_grad()
+                L_Gx.backward(retain_graph=train_d)
+                self.optim_Gx.step()
 
-            self.optim_D.zero_grad()
-            L_D.backward()
-            self.optim_D.step()
+            if train_d:
+                self.optim_D.zero_grad()
+                L_D.backward()
+                self.optim_D.step()
+
+        if self.lr_decay != 1:
+            self.lr_Gz.step(self.current_epoch)
+            self.lr_Gx.step(self.current_epoch)
+            self.lr_D.step(self.current_epoch)
 
         self.Gz.eval()
         self.Gx.eval()

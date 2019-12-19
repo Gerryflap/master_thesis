@@ -35,6 +35,8 @@ parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
 parser.add_argument("--gamma", action="store", type=float, default=1e-3, help="Changes the gamma used by VAE/GAN")
 parser.add_argument("--beta", action="store", type=float, default=1.0, help="Scales L_prior")
 parser.add_argument("--real_label_value", action="store", type=float, default=1.0, help="Changes the target label for real samples")
+parser.add_argument("--no_reconstructions_to_D",  action="store_true", default=False,
+                    help="When this flag is used, samples from Gx(Gz(x)) will not be fed to D.")
 
 
 args = parser.parse_args()
@@ -92,7 +94,8 @@ train_loop = VAEGANTrainLoop(
     epochs=args.epochs,
     real_label_value=args.real_label_value,
     beta=args.beta,
-    gamma=args.gamma
+    gamma=args.gamma,
+    feed_reconstructions_into_D=not args.no_reconstructions_to_D
 
 )
 

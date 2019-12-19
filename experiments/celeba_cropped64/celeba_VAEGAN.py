@@ -40,6 +40,8 @@ parser.add_argument("--beta", action="store", type=float, default=1.0, help="Wei
 parser.add_argument("--epoch_step_limit", action="store", type=int, default=None,
                     help="Cuts off epoch when step limit is reached")
 parser.add_argument("--real_label_value", action="store", type=float, default=1.0, help="Changes the target label for real samples")
+parser.add_argument("--no_reconstructions_to_D",  action="store_true", default=False,
+                    help="When this flag is used, samples from Gx(Gz(x)) will not be fed to D.")
 
 
 args = parser.parse_args()
@@ -98,7 +100,8 @@ train_loop = VAEGANTrainLoop(
     gamma=args.gamma,
     max_steps_per_epoch=args.epoch_step_limit,
     real_label_value=args.real_label_value,
-    beta=args.beta
+    beta=args.beta,
+    feed_reconstructions_into_D=not args.no_reconstructions_to_D
 )
 
 train_loop.train()

@@ -1,8 +1,8 @@
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.model_saver import ModelSaver
 from trainloops.vae_train_loop import VaeTrainLoop
-from models.conv28.encoder import Encoder28
-from models.conv28.generator import Generator28
+from models.conv28_vaegan.encoder import VAEGANEncoder28
+from models.conv28_vaegan.generator import VAEGANGenerator28
 from data.celeba_cropped import CelebaCropped
 import util.output
 from torchvision import transforms
@@ -20,22 +20,11 @@ parser.add_argument("--lr", action="store", type=float, default=0.0001,
 parser.add_argument("--h_size", action="store", type=int, default=16,
                     help="Sets the h_size, which changes the size of the network")
 parser.add_argument("--epochs", action="store", type=int, default=100, help="Sets the number of training epochs")
-parser.add_argument("--d_steps", action="store", type=int, default=2,
-                    help="Amount of discriminator steps per generator step")
 parser.add_argument("--l_size", action="store", type=int, default=12, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
-parser.add_argument("--use_mish", action="store_true", default=False,
-                    help="Changes all activations except the ouput of D and G to mish, which might work better")
-parser.add_argument("--no_bias_in_dec", action="store_true", default=False, help="Disables biases in the decoder")
-# parser.add_argument("--load_path", action="store", type=str, default=None,
-#                     help="When given, loads models from LOAD_PATH folder")
-# parser.add_argument("--save_path", action="store", type=str, default=None,
-#                     help="When given, saves models to LOAD_PATH folder after all epochs (or every epoch)")
-# parser.add_argument("--save_every_epoch", action="store_true", default=False,
-#                     help="When a save path is given, store the model after every epoch instead of only the last")
-# parser.add_argument("--img_path", action="store", type=str, default=None,
-#                     help="When given, saves samples to the given directory")
+parser.add_argument("--beta", action="store", type=float, default=1.0,
+                    help="Scales the Dkl loss part")
 
 args = parser.parse_args()
 
@@ -56,8 +45,8 @@ valid_dataset = CelebaCropped(split="valid", download=True, transform=transforms
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
 
-enc = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3)
-dec = Generator28(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_dec, n_channels=3)
+enc = VAEGANEncoder28(args.l_size, args.h_size, n_channels=3)
+dec = VAEGANGenerator28(args.l_size, args.h_size, n_channels=3)
 enc_optimizer = torch.optim.Adam(enc.parameters(), lr=args.lr, betas=(0.5, 0.999))
 dec_optimizer = torch.optim.Adam(dec.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
@@ -75,6 +64,6 @@ listeners = [
     ModelSaver(output_path, n=5, overwrite=True, print_output=True)
 ]
 train_loop = VaeTrainLoop(listeners, enc, dec, enc_optimizer, dec_optimizer, dataloader,
-                          cuda=args.cuda, epochs=args.epochs)
+                          cuda=args.cuda, epochs=args.epochs, beta=args.beta)
 
 train_loop.train()
