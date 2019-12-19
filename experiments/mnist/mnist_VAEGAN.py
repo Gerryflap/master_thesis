@@ -38,6 +38,9 @@ parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate in D")
+parser.add_argument("--no_reconstructions_to_D",  action="store_true", default=False,
+                    help="When this flag is used, samples from Gx(Gz(x)) will not be fed to D.")
+
 args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("mnist", "vaegan", args)
@@ -92,6 +95,7 @@ train_loop = VAEGANTrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     gamma=args.gamma,
+    feed_reconstructions_into_D=not args.no_reconstructions_to_D
 )
 
 train_loop.train()
