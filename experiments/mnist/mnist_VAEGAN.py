@@ -40,7 +40,7 @@ parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate in D")
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("mnist", "veegan", args)
+output_path = util.output.init_experiment_output_dir("mnist", "vaegan", args)
 
 dataset = MNIST("data/downloads/mnist", train=True, download=True, transform=transforms.Compose([
     transforms.Resize(28),
