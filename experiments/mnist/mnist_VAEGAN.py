@@ -30,6 +30,8 @@ parser.add_argument("--epochs", action="store", type=int, default=100, help="Set
 parser.add_argument("--l_size", action="store", type=int, default=12, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
+parser.add_argument("--gamma", action="store", type=float, default=1e-6,
+                    help="Gamma scales L_disl_llike in the Gx/Decoder loss")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
