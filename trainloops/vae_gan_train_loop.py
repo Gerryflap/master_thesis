@@ -136,8 +136,8 @@ class VAEGANTrainLoop(TrainLoop):
 
             # The GAN loss for G is different when label smoothing is used.
             # The labels are not inverted since -1*L_GAN is still used for Gx
-            L_GAN_d = (self.loss_fn(dis_x, self.label_real_d) + L_GAN_generated)/self.batch_size
-            L_GAN_g = (self.loss_fn(dis_x, self.label_real) + L_GAN_generated)/self.batch_size
+            L_GAN_d = (self.loss_fn(dis_x, self.label_real_d) + L_GAN_generated)/self.batch_size*2
+            L_GAN_g = (self.loss_fn(dis_x, self.label_real) + L_GAN_generated)/self.batch_size*2
 
             # Define losses
             L_Gz = L_prior + L_disl_llike/self.beta

@@ -7,8 +7,9 @@ from models.morphing_encoder import MorphingEncoder
 from util.torch.initialization import weights_init
 
 
-class Generator(torch.nn.module):
+class Generator(torch.nn.Module):
     def __init__(self, G, latent_size):
+        super().__init__()
         self.G = G
         self.latent_size = latent_size
 
@@ -29,7 +30,7 @@ class Encoder(MorphingEncoder):
         :param deterministic: Whether the encoder is deterministic or stochastic
         """
         super().__init__()
-        self.E = E
+        self.model = E
         self.latent_size = latent_size
         self.deterministic = deterministic
 
@@ -56,6 +57,43 @@ class Encoder(MorphingEncoder):
         self.apply(weights_init)
 
 
-class ALIDiscriminator(torch.nn.Module):
-    def __init__(self, Dx, Dz, Dxz):
+class Discriminator(torch.nn.Module):
+    def __init__(self, D):
         super().__init__()
+        self.D = D
+
+    def forward(self, x):
+        return self.D(x)
+
+    def init_weights(self):
+        self.apply(weights_init)
+
+
+class ALIDiscriminator(torch.nn.Module):
+    def __init__(self, latent_size, Dx, Dz, Dxz):
+        """
+        Constructs the generic ALI discriminator
+        :param latent_size: The used latent size
+        :param Dx: A module that converts input images to vectors
+        :param Dz: A module that converts incoming vectors of latent_size to outgoing vectors
+        :param Dxz: A module that takes an input the size of the output of Dx and Dy concatenated
+            and outputs prediction logits
+        """
+        super().__init__()
+        self.latent_size = latent_size
+        self.Dx = Dx
+        self.Dz = Dz
+        self.Dxz = Dxz
+
+    def forward(self, inp):
+        x, z = inp
+
+        h_x = self.Dx(x)
+        h_z = self.Dz(z)
+
+        h = torch.cat([h_x, h_z], dim=1)
+
+        return self.Dxz(h)
+
+    def init_weights(self):
+        self.apply(weights_init)

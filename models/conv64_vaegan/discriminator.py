@@ -53,8 +53,9 @@ class VAEGANDiscriminator64(torch.nn.Module):
         dis_l = x
         if self.use_bn:
             x = self.bn_4(x)
-
         x = self.activ(x)
+
+
         # Flatten to vector
         x = x.view(-1, 8 * 8 * self.h_size * 4)
 

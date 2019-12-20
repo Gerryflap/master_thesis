@@ -7,6 +7,10 @@ def mish(x):
     return x * torch.tanh(F.softplus(x))
 
 
+class Mish(torch.nn.Module):
+    def forward(self, x):
+        return mish(x)
+
 class FilterResponseNormalization2d(torch.nn.Module):
     def __init__(self, channels, eps=1e-6):
         super().__init__()

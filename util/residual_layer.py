@@ -29,12 +29,13 @@ class ResidualConvolutionLayer(torch.nn.Module):
 
         if self.downscale:
             x_carry = self.conv_down(x_carry)
-
-        x = self.bn_1(x)
+        if self.bn:
+            x = self.bn_1(x)
         x = mish(x)
         x = self.conv_1(x)
 
-        x = self.bn_2(x)
+        if self.bn:
+            x = self.bn_2(x)
         x = mish(x)
         x = self.conv_2(x)
 
@@ -44,7 +45,7 @@ class ResidualConvolutionLayer(torch.nn.Module):
 class ResidualConvolutionTransposeLayer(torch.nn.Module):
     def __init__(self, in_channels, out_channels, bn=True, upscale=False):
         super().__init__()
-        self.conv_1 = torch.nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2 if upscale else 1, padding=1, output_padding=1)
+        self.conv_1 = torch.nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2 if upscale else 1, padding=1, output_padding=1 if upscale else 0)
         self.conv_2 = torch.nn.ConvTranspose2d(out_channels, out_channels, 3, stride=1, padding=1)
 
         self.bn = bn
@@ -63,15 +64,15 @@ class ResidualConvolutionTransposeLayer(torch.nn.Module):
         if self.upscale:
             x_carry = self.conv_up(x_carry)
 
-        x = self.bn_1(x)
+        if self.bn:
+            x = self.bn_1(x)
         x = mish(x)
         x = self.conv_1(x)
 
-        x = self.bn_2(x)
+        if self.bn:
+            x = self.bn_2(x)
         x = mish(x)
         x = self.conv_2(x)
-
-        print(x_carry.size(), x.size())
 
         return x_carry + x
 
