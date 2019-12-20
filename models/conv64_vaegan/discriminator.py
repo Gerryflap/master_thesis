@@ -11,10 +11,10 @@ class VAEGANDiscriminator64(torch.nn.Module):
 
         self.dropout = dropout
         self.h_size = h_size
-        self.conv_1 = torch.nn.Conv2d(n_channels, h_size // 2, kernel_size=5, stride=1, padding=2)
-        self.conv_2 = torch.nn.Conv2d(h_size // 2, h_size * 2, kernel_size=5, stride=2, padding=2)
-        self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, padding=2)
-        self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=5, stride=2, padding=2)
+        self.conv_1 = torch.nn.Conv2d(n_channels, h_size // 2, kernel_size=5, stride=1, padding=2, bias=True)
+        self.conv_2 = torch.nn.Conv2d(h_size // 2, h_size * 2, kernel_size=5, stride=2, padding=2, bias=False)
+        self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, padding=2, bias=False)
+        self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=5, stride=2, padding=2, bias=False)
 
         self.use_bn = use_bn
         if use_bn:
@@ -26,7 +26,7 @@ class VAEGANDiscriminator64(torch.nn.Module):
         if dropout != 0:
             self.dropout_layer = torch.nn.Dropout(dropout, True)
 
-        self.lin_1 = torch.nn.Linear(8 * 8 * h_size * 4, h_size * 8)
+        self.lin_1 = torch.nn.Linear(8 * 8 * h_size * 4, h_size * 8, bias=False)
         self.lin_2 = torch.nn.Linear(h_size * 8, 1)
 
     @staticmethod
