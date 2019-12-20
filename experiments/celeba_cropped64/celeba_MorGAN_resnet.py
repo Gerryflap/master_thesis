@@ -1,6 +1,5 @@
 from torch.nn.modules import Flatten
 
-from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.generic_models import Encoder, Generator, ALIDiscriminator
 from trainloops.ali_train_loop import ALITrainLoop
 from data.celeba_cropped import CelebaCropped
@@ -12,11 +11,8 @@ import argparse
 
 # Parse commandline arguments
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
-from trainloops.listeners.discriminator_overfit_monitor import DiscriminatorOverfitMonitor
-from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
-from trainloops.listeners.parameter_value_logger import ParameterValueLogger
 from util.torch.activations import mish, Mish
 from util.torch.modules import Reshape
 
