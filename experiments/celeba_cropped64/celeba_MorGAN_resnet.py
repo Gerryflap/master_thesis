@@ -163,6 +163,7 @@ listeners = [
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     # DiscriminatorOverfitMonitor(dataset, valid_dataset, 100, args),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    ModelSaver(output_path, n=40, overwrite=False, print_output=True),
     KillSwitchListener(output_path)
 ]
 train_loop = ALITrainLoop(
