@@ -1,4 +1,6 @@
 import torch
+
+from util.torch.activations import mish
 from util.torch.initialization import weights_init
 
 
@@ -7,7 +9,7 @@ class VAEGANDiscriminator64(torch.nn.Module):
         super().__init__()
         self.n_channels = n_channels
 
-        self.activ = torch.nn.functional.relu
+        self.activ = mish
 
         self.dropout = dropout
         self.h_size = h_size
@@ -48,11 +50,11 @@ class VAEGANDiscriminator64(torch.nn.Module):
         x = self.activ(x)
 
         x = self.conv_4(x)
+        dis_l = x
         if self.use_bn:
             x = self.bn_4(x)
-        dis_l = x
-        x = self.activ(x)
 
+        x = self.activ(x)
         # Flatten to vector
         x = x.view(-1, 8 * 8 * self.h_size * 4)
 

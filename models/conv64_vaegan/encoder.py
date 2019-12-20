@@ -1,6 +1,7 @@
 import torch
 
 from models.morphing_encoder import MorphingEncoder
+from util.torch.activations import mish
 from util.torch.initialization import weights_init
 
 
@@ -11,7 +12,7 @@ class VAEGANEncoder64(MorphingEncoder):
         self.n_channels = n_channels
 
 
-        self.activ = torch.nn.functional.relu
+        self.activ = mish
 
         self.latent_size = latent_size
         self.h_size = h_size

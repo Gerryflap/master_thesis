@@ -1,4 +1,6 @@
 import torch
+
+from util.torch.activations import mish
 from util.torch.initialization import weights_init
 
 
@@ -16,7 +18,7 @@ class VAEGANGenerator64(torch.nn.Module):
         # Therefore some layers will have h_size//2 channels
         assert h_size % 2 == 0
 
-        self.activ = torch.nn.functional.relu
+        self.activ = mish
 
         self.conv_1 = torch.nn.ConvTranspose2d(self.latent_size, self.h_size * 4, 8, bias=False)
         self.conv_2 = torch.nn.ConvTranspose2d(self.h_size * 4, self.h_size * 4, kernel_size=5, stride=2, bias=False, padding=2, output_padding=1)
