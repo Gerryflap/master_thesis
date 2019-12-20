@@ -1,3 +1,5 @@
+from torch.optim import RMSprop
+
 from models.conv64_vaegan.discriminator import VAEGANDiscriminator64
 from models.conv64_vaegan.encoder import VAEGANEncoder64
 from models.conv64_vaegan.generator import VAEGANGenerator64
@@ -38,6 +40,10 @@ parser.add_argument("--beta", action="store", type=float, default=1.0, help="Wei
 parser.add_argument("--epoch_step_limit", action="store", type=int, default=None,
                     help="Cuts off epoch when step limit is reached")
 parser.add_argument("--real_label_value", action="store", type=float, default=1.0, help="Changes the target label for real samples")
+parser.add_argument("--no_reconstructions_to_D",  action="store_true", default=False,
+                    help="When this flag is used, samples from Gx(Gz(x)) will not be fed to D.")
+parser.add_argument("--lr_decay", action="store", type=float, default=1.0, help="Every epoch the learning rate is multiplied by this amount")
+
 
 
 args = parser.parse_args()
@@ -66,9 +72,9 @@ if args.cuda:
     Gx = Gx.cuda()
     D = D.cuda()
 
-Gz_optimizer = torch.optim.Adam(Gz.parameters(), lr=args.lr, betas=(0.5, 0.999))
-Gx_optimizer = torch.optim.Adam(Gx.parameters(), lr=args.lr, betas=(0.5, 0.999))
-D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
+Gz_optimizer = RMSprop(Gz.parameters(), lr=args.lr)
+Gx_optimizer = RMSprop(Gx.parameters(), lr=args.lr)
+D_optimizer = RMSprop(D.parameters(), lr=args.lr)
 
 Gz.init_weights()
 Gx.init_weights()
@@ -96,7 +102,9 @@ train_loop = VAEGANTrainLoop(
     gamma=args.gamma,
     max_steps_per_epoch=args.epoch_step_limit,
     real_label_value=args.real_label_value,
-    beta=args.beta
+    beta=args.beta,
+    feed_reconstructions_into_D=not args.no_reconstructions_to_D,
+    lr_decay=args.lr_decay
 )
 
 train_loop.train()

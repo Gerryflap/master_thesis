@@ -15,16 +15,16 @@ class VAEGANEncoder28(MorphingEncoder):
 
         self.latent_size = latent_size
         self.h_size = h_size
-        self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=5,  stride=2, padding=2)
+        self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=5,  stride=2, padding=2, bias=False)
         # 14x14
-        self.conv_3 = torch.nn.Conv2d(h_size, h_size * 4, kernel_size=5, stride=2, padding=2)
+        self.conv_3 = torch.nn.Conv2d(h_size, h_size * 4, kernel_size=5, stride=2, padding=2, bias=False)
         # 7x7x256
 
         self.bn_1 = torch.nn.BatchNorm2d(self.h_size)
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
         self.bn_fc = torch.nn.BatchNorm1d(self.h_size * 32)
 
-        self.fc = torch.nn.Linear(7*7*h_size*4, h_size*32)
+        self.fc = torch.nn.Linear(7*7*h_size*4, h_size*32, bias=False)
 
         self.mean_fc = torch.nn.Linear(h_size * 32, latent_size)
         self.std_fc = torch.nn.Linear(h_size * 32, latent_size)
