@@ -3,6 +3,7 @@ from torch.nn.modules import Flatten
 from models.generic_models import Encoder, Generator, ALIDiscriminator
 from trainloops.ali_train_loop import ALITrainLoop
 from data.celeba_cropped import CelebaCropped
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from util.residual_layer import ResidualConvolutionLayer, ResidualConvolutionTransposeLayer
 import util.output
 from torchvision import transforms
@@ -162,6 +163,7 @@ listeners = [
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     # DiscriminatorOverfitMonitor(dataset, valid_dataset, 100, args),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    KillSwitchListener(output_path)
 ]
 train_loop = ALITrainLoop(
     listeners=listeners,
