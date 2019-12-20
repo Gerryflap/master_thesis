@@ -24,6 +24,8 @@ parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--gamma", action="store", type=float, default=1e-3, help="Changes the gamma used by VAE/GAN")
 parser.add_argument("--beta", action="store", type=float, default=1.0, help="Scales L_prior")
+parser.add_argument("--no_reconstructions_to_D",  action="store_true", default=False,
+                    help="When this flag is used, samples from Gx(Gz(x)) will not be fed to D.")
 
 
 
@@ -80,7 +82,8 @@ trainloop = VAEGANTrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     gamma=args.gamma,
-    beta=args.beta
+    beta=args.beta,
+    feed_reconstructions_into_D=not args.no_reconstructions_to_D
 )
 
 trainloop.train()
