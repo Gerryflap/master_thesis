@@ -29,6 +29,8 @@ parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha parameter of MorGAN")
+parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
+                    help="Sets the dropout rate in D")
 parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
                     help="Sets the standard deviation for instance noise (noise added to inputs of D)")
 parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
@@ -111,31 +113,34 @@ Gx_net = torch.nn.Sequential(
 
 Dx_net = torch.nn.Sequential(
     torch.nn.Conv2d(3, h_size, 1),  # 64x64
-    ResidualConvolutionLayer(h_size, h_size),
-    ResidualConvolutionLayer(h_size, h_size),
-    ResidualConvolutionLayer(h_size, h_size * 2, downscale=True),  # 32x32
-    ResidualConvolutionLayer(h_size*2, h_size*2),
-    ResidualConvolutionLayer(h_size*2, h_size*2),
-    ResidualConvolutionLayer(h_size*2, h_size * 4, downscale=True),  # 16x16
-    ResidualConvolutionLayer(h_size * 4, h_size * 4),
-    ResidualConvolutionLayer(h_size * 4, h_size * 4),
-    ResidualConvolutionLayer(h_size * 4, h_size * 8, downscale=True),  # 8x8
-    ResidualConvolutionLayer(h_size * 8, h_size * 8),
-    ResidualConvolutionLayer(h_size * 8, h_size * 8),
-    ResidualConvolutionLayer(h_size * 8, h_size * 16, downscale=True),  # 4x4
+    ResidualConvolutionLayer(h_size, h_size, dropout_rate=args.dropout_rate),
+    ResidualConvolutionLayer(h_size, h_size, dropout_rate=args.dropout_rate),
+    ResidualConvolutionLayer(h_size, h_size * 2, downscale=True, dropout_rate=args.dropout_rate),  # 32x32
+    ResidualConvolutionLayer(h_size*2, h_size*2, dropout_rate=args.dropout_rate),
+    ResidualConvolutionLayer(h_size*2, h_size*2, dropout_rate=args.dropout_rate),
+    ResidualConvolutionLayer(h_size*2, h_size * 4, downscale=True, dropout_rate=args.dropout_rate),  # 16x16
+    ResidualConvolutionLayer(h_size * 4, h_size * 4, dropout_rate=args.dropout_rate),
+    ResidualConvolutionLayer(h_size * 4, h_size * 4, dropout_rate=args.dropout_rate),
+    ResidualConvolutionLayer(h_size * 4, h_size * 8, downscale=True, dropout_rate=args.dropout_rate),  # 8x8
+    ResidualConvolutionLayer(h_size * 8, h_size * 8, dropout_rate=args.dropout_rate),
+    ResidualConvolutionLayer(h_size * 8, h_size * 8, dropout_rate=args.dropout_rate),
+    ResidualConvolutionLayer(h_size * 8, h_size * 16, downscale=True, dropout_rate=args.dropout_rate),  # 4x4
     Flatten(),
 )
 
 Dz_net = torch.nn.Sequential(
     torch.nn.Linear(latent_size, h_size * 16),
+    torch.nn.Dropout(args.dropout_rate),
     Mish(),
 
     torch.nn.Linear(h_size * 16, h_size * 16),
+    torch.nn.Dropout(args.dropout_rate),
     Mish(),
 )
 
 Dxz_net = torch.nn.Sequential(
     torch.nn.Linear(4*4*h_size*16 + h_size*16, h_size * 32),
+    torch.nn.Dropout(args.dropout_rate),
     Mish(),
 
     torch.nn.Linear(h_size * 32, 1),
