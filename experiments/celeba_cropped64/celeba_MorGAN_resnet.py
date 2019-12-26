@@ -74,7 +74,7 @@ Gz_net = torch.nn.Sequential(
     ResidualConvolutionLayer(h_size * 8, h_size * 16, downscale=True),  # 4x4
     Flatten(),
 
-    torch.nn.Linear(4*4*h_size*16, h_size*16),
+    torch.nn.Linear(4*4*h_size*16, h_size*16, bias=False),
     torch.nn.BatchNorm1d(h_size*16),
     Mish(),
 
@@ -82,7 +82,7 @@ Gz_net = torch.nn.Sequential(
 )
 
 Gx_net = torch.nn.Sequential(
-    torch.nn.Linear(latent_size, 4*4*h_size*16),
+    torch.nn.Linear(latent_size, 4*4*h_size*16, bias=False),
     Reshape(-1, h_size*16, 4, 4),
 
     ResidualConvolutionTransposeLayer(h_size * 16, h_size * 16),
@@ -108,7 +108,6 @@ Gx_net = torch.nn.Sequential(
     Mish(),
 
     torch.nn.Conv2d(h_size, 3, 1),
-    torch.nn.Sigmoid()
 )
 
 Dx_net = torch.nn.Sequential(
@@ -129,11 +128,11 @@ Dx_net = torch.nn.Sequential(
 )
 
 Dz_net = torch.nn.Sequential(
-    torch.nn.Linear(latent_size, h_size * 16),
+    torch.nn.Linear(latent_size, h_size * 16, bias=False),
     torch.nn.Dropout(args.dropout_rate),
     Mish(),
 
-    torch.nn.Linear(h_size * 16, h_size * 16),
+    torch.nn.Linear(h_size * 16, h_size * 16, bias=False),
     torch.nn.Dropout(args.dropout_rate),
     Mish(),
 )
@@ -148,7 +147,7 @@ Dxz_net = torch.nn.Sequential(
 
 
 Gz = Encoder(Gz_net, args.l_size)
-Gx = Generator(Gx_net, args.l_size)
+Gx = Generator(Gx_net, args.l_size, output_activation=torch.nn.Sigmoid(), untied_bias_size=(3, 64, 64))
 D = ALIDiscriminator(args.l_size, Dx_net, Dz_net, Dxz_net)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))

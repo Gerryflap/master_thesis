@@ -9,10 +9,15 @@ from util.torch.activations import mish
 
 
 class ResidualConvolutionLayer(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, bn=True, downscale=False, dropout_rate=0.0):
+    def __init__(self, in_channels, out_channels, bn=True, downscale=False, dropout_rate=0.0, bias=None):
         super().__init__()
-        self.conv_1 = torch.nn.Conv2d(in_channels, out_channels, 3, stride=2 if downscale else 1, padding=1)
-        self.conv_2 = torch.nn.Conv2d(out_channels, out_channels, 3, stride=1, padding=1)
+
+        if bias is None:
+            bias = not bn
+
+        self.conv_1 = torch.nn.Conv2d(in_channels, out_channels, 3, stride=2 if downscale else 1, padding=1, bias=bias)
+        self.conv_2 = torch.nn.Conv2d(out_channels, out_channels, 3, stride=1, padding=1, bias=bias)
+
 
         self.bn = bn
         self.downscale = downscale
@@ -52,10 +57,14 @@ class ResidualConvolutionLayer(torch.nn.Module):
 
 
 class ResidualConvolutionTransposeLayer(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, bn=True, upscale=False, dropout_rate=0.0):
+    def __init__(self, in_channels, out_channels, bn=True, upscale=False, dropout_rate=0.0, bias=None):
         super().__init__()
-        self.conv_1 = torch.nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2 if upscale else 1, padding=1, output_padding=1 if upscale else 0)
-        self.conv_2 = torch.nn.ConvTranspose2d(out_channels, out_channels, 3, stride=1, padding=1)
+
+        if bias is None:
+            bias = not bn
+
+        self.conv_1 = torch.nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2 if upscale else 1, padding=1, output_padding=1 if upscale else 0, bias=bias)
+        self.conv_2 = torch.nn.ConvTranspose2d(out_channels, out_channels, 3, stride=1, padding=1, bias=bias)
 
         self.bn = bn
         self.upscale = upscale

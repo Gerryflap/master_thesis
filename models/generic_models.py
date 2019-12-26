@@ -8,13 +8,32 @@ from util.torch.initialization import weights_init
 
 
 class Generator(torch.nn.Module):
-    def __init__(self, G, latent_size):
+    def __init__(self, G, latent_size, untied_bias_size=None, output_activation=None):
+        """
+
+        :param G: The generator network/module
+        :param latent_size: Size of the latent space
+        :param untied_bias_size: Size of the added untied biases
+        """
         super().__init__()
         self.G = G
         self.latent_size = latent_size
+        if untied_bias_size is not None:
+            self.output_bias = torch.nn.Parameter(torch.zeros((3, 64, 64)), requires_grad=True)
+        else:
+            self.output_bias = None
+
+        self.output_activ = output_activation
 
     def forward(self, x):
-        return self.G(x)
+        if self.output_bias is not None:
+            outp = self.G(x) + self.output_bias
+        else:
+            outp = self.G(x)
+        if self.output_activ is not None:
+            return self.output_activ(outp)
+        else:
+            return outp
 
     def init_weights(self):
         self.apply(weights_init)
