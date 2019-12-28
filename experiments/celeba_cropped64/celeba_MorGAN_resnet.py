@@ -24,7 +24,7 @@ parser.add_argument("--lr", action="store", type=float, default=0.0001,
 parser.add_argument("--h_size", action="store", type=int, default=64,
                     help="Sets the h_size, which changes the size of the network")
 parser.add_argument("--epochs", action="store", type=int, default=123, help="Sets the number of training epochs")
-parser.add_argument("--l_size", action="store", type=int, default=64, help="Size of the latent space")
+parser.add_argument("--l_size", action="store", type=int, default=256, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
@@ -60,6 +60,9 @@ latent_size = args.l_size
 # Define the Gz network architecture
 Gz_net = torch.nn.Sequential(
     torch.nn.Conv2d(3, h_size, 1),  # 64x64
+    Mish(),
+
+    torch.nn.Conv2d(h_size, h_size, 1),  # 64x64
     ResidualConvolutionLayer(h_size, h_size),
     ResidualConvolutionLayer(h_size, h_size),
     ResidualConvolutionLayer(h_size, h_size * 2, downscale=True),  # 32x32
@@ -72,7 +75,10 @@ Gz_net = torch.nn.Sequential(
     ResidualConvolutionLayer(h_size * 8, h_size * 8),
     ResidualConvolutionLayer(h_size * 8, h_size * 8),
     ResidualConvolutionLayer(h_size * 8, h_size * 16, downscale=True),  # 4x4
+
+    torch.nn.BatchNorm2d(h_size * 16),
     Flatten(),
+    Mish(),
 
     torch.nn.Linear(4*4*h_size*16, h_size*16, bias=False),
     torch.nn.BatchNorm1d(h_size*16),
@@ -82,7 +88,10 @@ Gz_net = torch.nn.Sequential(
 )
 
 Gx_net = torch.nn.Sequential(
-    torch.nn.Linear(latent_size, 4*4*h_size*16, bias=False),
+    torch.nn.Linear(latent_size, h_size * 16),
+    Mish(),
+
+    torch.nn.Linear(h_size * 16, 4*4*h_size*16, bias=False),
     Reshape(-1, h_size*16, 4, 4),
 
     ResidualConvolutionTransposeLayer(h_size * 16, h_size * 16),
@@ -112,6 +121,9 @@ Gx_net = torch.nn.Sequential(
 
 Dx_net = torch.nn.Sequential(
     torch.nn.Conv2d(3, h_size, 1),  # 64x64
+    Mish(),
+
+    torch.nn.Conv2d(h_size, h_size, 1),  # 64x64
     ResidualConvolutionLayer(h_size, h_size, dropout_rate=args.dropout_rate),
     ResidualConvolutionLayer(h_size, h_size, dropout_rate=args.dropout_rate),
     ResidualConvolutionLayer(h_size, h_size * 2, downscale=True, dropout_rate=args.dropout_rate),  # 32x32
@@ -124,7 +136,10 @@ Dx_net = torch.nn.Sequential(
     ResidualConvolutionLayer(h_size * 8, h_size * 8, dropout_rate=args.dropout_rate),
     ResidualConvolutionLayer(h_size * 8, h_size * 8, dropout_rate=args.dropout_rate),
     ResidualConvolutionLayer(h_size * 8, h_size * 16, downscale=True, dropout_rate=args.dropout_rate),  # 4x4
+    torch.nn.Dropout2d(args.dropout_rate),
+    torch.nn.BatchNorm2d(h_size * 16),
     Flatten(),
+    Mish(),
 )
 
 Dz_net = torch.nn.Sequential(
