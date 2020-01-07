@@ -12,7 +12,7 @@ from torchvision.transforms import transforms
 from torchvision.utils import make_grid, save_image
 
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
-from evaluation.metrics.evaluation_metrics import mmpmr
+from evaluation.metrics.evaluation_metrics import mmpmr, relative_morph_distance
 from models.morphing_encoder import MorphingEncoder
 import face_recognition
 from util.output import init_experiment_output_dir
@@ -155,25 +155,50 @@ for face, face_location in zip(faces_list, face_locations):
         face_enc = face_recognition.face_encodings(face, face_location)[0]
         face_encodings.append(face_enc)
 
+x1_list = np.stack(x1_list, axis=0)
+x2_list = np.stack(x2_list, axis=0)
+morph_list = np.stack(morph_list, axis=0)
+
 x1_enc = np.stack(face_encodings[:n_morphs], axis=0)
 x2_enc = np.stack(face_encodings[n_morphs:2*n_morphs], axis=0)
 morphs_enc = np.stack(face_encodings[2*n_morphs:], axis=0)
 
+# Filter any rows with nan embeddings in the x1 and x2
+# TODO: Find a better solution to this!
+not_nan_indices = ~(np.isnan(np.sum(x1_enc, axis=1)) + np.isnan(np.sum(x2_enc, axis=1)))
+
+print("WARNING! Due to undetectable faces in the dataset, %d images have been dropped!"%int(np.sum(~not_nan_indices)))
+
+x1_list = x1_list[not_nan_indices]
+x2_list = x2_list[not_nan_indices]
+morph_list = morph_list[not_nan_indices]
+
+x1_enc = x1_enc[not_nan_indices]
+x2_enc = x2_enc[not_nan_indices]
+morphs_enc = morphs_enc[not_nan_indices]
+
+
 # Assert that there are no nans in the comparison faces
 # assert not (np.isnan(x1_enc).any() or np.isnan(x2_enc).any())
 
-print(x1_enc, x2_enc, morphs_enc)
 
 # Compute euclidean distances between x1 and the morph and x2 and the morph
 dist_x1 = np.sqrt(np.sum(np.square(x1_enc - morphs_enc), axis=1))
 dist_x2 = np.sqrt(np.sum(np.square(x2_enc - morphs_enc), axis=1))
+dist_x1_x2 = np.sqrt(np.sum(np.square(x1_enc - x2_enc), axis=1))
 
-print(dist_x1)
 
 s = np.stack([dist_x1, dist_x2], axis=1)
 
 mmpmr_value = mmpmr(s, threshold=0.6)
+rmd, rmd_values = relative_morph_distance(dist_x1, dist_x2, dist_x1_x2)
+
+print("===== RESULTS =====")
+print()
 print("Computed MMPMR: ", mmpmr_value)
+print("Computed Mean RMD: ", rmd)
+print()
+print("===================")
 
 if args.visualize:
     import matplotlib.pyplot as plt
@@ -203,6 +228,10 @@ if args.visualize:
     plt.subplots_adjust(hspace=1.0)
     plt.show()
 
-    plt.hist(max_distances)
+    plt.hist(max_distances, bins=60, range=(0.0, 1.2))
     plt.title("Max euclidean distances")
+    plt.show()
+
+    plt.hist(rmd_values, bins=60)
+    plt.title("RMD Values")
     plt.show()

@@ -24,3 +24,18 @@ def mmpmr(s, threshold=0.6):
     return np.sum(successful_morphs)/successful_morphs.shape[0]
 
 
+def relative_morph_distance(dist_x1_morph, dist_x2_morph, dist_x1_x2):
+    """
+    As far as I am aware, this is a metric thought of.
+    If a morph is perfectly in-between x1 and x2, then the max(dist_x1_morph, dist_x2_morph) == dist_x1_x2.
+        Based on this idea, this metric measures the how big max(dist_x1_morph, dist_x2_morph) is relative to dist_x1_x2
+        In the best case this value is 1.
+        This metric does not like NaN values
+    :param dist_x1_morph: Euclidean distances from the x1s to the morphs
+    :param dist_x2_morph: Euclidean distances from the x2s to the morphs
+    :param dist_x1_x2: Euclidean distances from the x1s to the x2s
+    :return: (Mean RMD, RMD values for indices)
+    """
+
+    rmd_values = np.maximum(dist_x1_morph, dist_x2_morph)/(0.5*dist_x1_x2)
+    return rmd_values.mean(), rmd_values
