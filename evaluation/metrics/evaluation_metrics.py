@@ -27,6 +27,11 @@ def mmpmr(s, threshold=0.6):
 def relative_morph_distance(dist_x1_morph, dist_x2_morph, dist_x1_x2):
     """
     As far as I am aware, this is a metric thought of.
+
+    WARNING: Consider that this metric is used mostly on embeddings from models that use a hypersphere as embedding space!
+    This means that even the best model will not be able to acquire a score of 1 since the space is curved and
+    therefore the morph can never lie exactly on a direct line between x1 and x2, unless x1 == x2.
+
     If a morph is perfectly in-between x1 and x2, then the max(dist_x1_morph, dist_x2_morph) == dist_x1_x2.
         Based on this idea, this metric measures the how big max(dist_x1_morph, dist_x2_morph) is relative to dist_x1_x2
         In the best case this value is 1.

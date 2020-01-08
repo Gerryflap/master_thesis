@@ -110,7 +110,11 @@ class MorphingGANTrainLoop(TrainLoop):
             x_morph = self.Gx(z_morph)
 
             L_recon = self.reconstruction_loss(x_recon, x_no_noise)
-            L_morph = self.morph_loss(x_morph, x1, x2)
+            if self.morph_loss_factor != 0.0:
+                L_morph = self.morph_loss(x_morph, x1, x2)
+            else:
+                # Do not compute L_morph if it is no needed
+                L_morph = 0.0
             L_syn = L_g + self.morgan_alpha * L_recon + self.morph_loss_factor * L_morph
 
             # ========== Back propagation and updates ==========
