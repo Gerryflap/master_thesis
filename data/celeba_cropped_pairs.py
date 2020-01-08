@@ -51,7 +51,7 @@ class CelebaCroppedPairs(VisionDataset):
                     self.fname_to_ident[fname] = ident
         self.idents = idents
         self.ident_list = list(self.idents.keys())
-        self.ident_indices = {i: ident for i, ident in enumerate(self.ident_list)}
+        self.ident_indices = {ident: i for i, ident in enumerate(self.ident_list)}
 
     def generate_random_different_index(self, index):
         # Generate a random number between 0 and len(ident_list) - 2
