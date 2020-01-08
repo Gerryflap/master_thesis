@@ -53,7 +53,7 @@ class MorphingGANTrainLoop(TrainLoop):
         self.D.train()
 
         for i, (x1, x2) in enumerate(self.dataloader):
-            if (x1.size(0) + x2.size(0)) != self.batch_size:
+            if x1.size(0) != self.batch_size:
                 continue
 
             # Train D
