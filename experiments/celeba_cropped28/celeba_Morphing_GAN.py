@@ -1,3 +1,4 @@
+from data.celeba_cropped_pairs import CelebaCroppedPairs
 from models.conv28.encoder import Encoder28
 from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
@@ -13,7 +14,7 @@ from trainloops.listeners.model_saver import ModelSaver
 
 # Parse commandline arguments
 parser = argparse.ArgumentParser(description="Celeba Morphing GAN experiment.")
-parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
+parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
 parser.add_argument("--h_size", action="store", type=int, default=16,
@@ -49,17 +50,21 @@ args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("celeba28", "Morphing_GAN", args)
 
-dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
+dataset = CelebaCroppedPairs(split="train", download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
 ]))
 
-valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filtering=True, transform=transforms.Compose([
+valid_dataset = CelebaCroppedPairs(split="valid", download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
 ]))
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+# Make sure that the batch size can be halved, since we're going to use take half size batches to ensure that the
+# total batch size is equal to the given batch size. This is necessary since the dataset gives 2 images instead of one for each index
+assert (args.batch_size//2)*2 == args.batch_size
+
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size//2, shuffle=True, num_workers=4)
 
 print("Dataset length: ", len(dataset))
 
@@ -82,7 +87,6 @@ listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
-    # DiscriminatorOverfitMonitor(dataset, valid_dataset, 100, args),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
 ]
 train_loop = MorphingGANTrainLoop(
