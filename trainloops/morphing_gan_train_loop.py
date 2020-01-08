@@ -83,7 +83,7 @@ class MorphingGANTrainLoop(TrainLoop):
 
             # ========== Computations for Dis(x_tilde, z) ==========
 
-            z = self.generate_z_batch(self.batch_size)
+            z = self.generate_z_batch(self.batch_size*2)
             x_tilde = self.Gx(z)
             # Add noise to the inputs of D if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
