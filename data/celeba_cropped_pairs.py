@@ -37,17 +37,21 @@ class CelebaCroppedPairs(VisionDataset):
         with open("data/celeba_cropped/list_eval_partition_morphing.txt", "r") as f:
             tuples = map(lambda s: tuple(s.split()), f.readlines())
             fnames = [fname for fname, fsplit in tuples if split is None or split == int(fsplit)]
-            fnames = set(fnames)
+            self.fnames = list(fnames)
+            fnames = set(self.fnames)
 
         with open("data/celeba/identity_CelebA.txt", "r") as f:
             tuples = map(lambda s: tuple(s.split()), f.readlines())
             idents = defaultdict(lambda :[])
+            self.fname_to_ident = dict()
             for fname, ident in tuples:
                 ident = int(ident)
                 if fname in fnames:
                     idents[ident].append(fname)
+                    self.fname_to_ident[fname] = ident
         self.idents = idents
         self.ident_list = list(self.idents.keys())
+        self.ident_indices = {i: ident for i, ident in enumerate(self.ident_list)}
 
     def generate_random_different_index(self, index):
         # Generate a random number between 0 and len(ident_list) - 2
@@ -61,12 +65,14 @@ class CelebaCroppedPairs(VisionDataset):
         return rand_index
 
     def __getitem__(self, index):
-        index2 = self.generate_random_different_index(index)
+        fname = self.fnames[index]
+        ident1 = self.fname_to_ident[fname]
 
-        ident1 = self.ident_list[index]
-        ident2 = self.ident_list[index2]
+        ident_index2 = self.generate_random_different_index(self.ident_indices[ident1])
 
-        fname1 = random.choice(self.idents[ident1])
+        ident2 = self.ident_list[ident_index2]
+
+        fname1 = fname
         fname2 = random.choice(self.idents[ident2])
 
         return self.load_image(fname1), self.load_image(fname2)
@@ -80,7 +86,7 @@ class CelebaCroppedPairs(VisionDataset):
         return X
 
     def __len__(self):
-        return len(self.ident_list)
+        return len(self.fnames)
 
 if __name__ == "__main__":
     ds = CelebaCroppedPairs(download=True)
