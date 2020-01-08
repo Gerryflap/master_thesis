@@ -1,5 +1,8 @@
 """
     This program loads a model and can be used to compute the MMPMR over the validation or test set
+
+    The model used by face_recognition is from dlib.
+    More info about the model at: http://dlib.net/face_recognition.py.html
 """
 
 import argparse
@@ -104,6 +107,7 @@ if args.tanh:
 dataset = CelebaCroppedPairsLookAlike(split="test" if args.test else "valid", transform=transforms.Compose(trans))
 loader = DataLoader(dataset, args.batch_size, shuffle=False)
 
+print("Generating Morphs...")
 x1_list = []
 morph_list = []
 x2_list = []
@@ -141,10 +145,16 @@ for i, batch in enumerate(loader):
 
     for img in torch.unbind(x_morph, dim=0):
         morph_list.append(to_numpy_img(img, args.tanh))
+print("Done.")
 
 n_morphs = len(morph_list)
 faces_list = x1_list + x2_list + morph_list
+
+print("Detecting faces in all input and morph images...")
 face_locations = face_recognition.batch_face_locations(faces_list)
+print("Done.")
+
+print("Computing embedding vectors for all input and morph images...")
 face_encodings = []
 for face, face_location in zip(faces_list, face_locations):
     if len(face_location) != 1:
@@ -154,7 +164,8 @@ for face, face_location in zip(faces_list, face_locations):
     else:
         face_enc = face_recognition.face_encodings(face, face_location)[0]
         face_encodings.append(face_enc)
-
+print("Done.")
+print("Collecting data and computing statistics...")
 x1_list = np.stack(x1_list, axis=0)
 x2_list = np.stack(x2_list, axis=0)
 morph_list = np.stack(morph_list, axis=0)
@@ -192,6 +203,9 @@ s = np.stack([dist_x1, dist_x2], axis=1)
 
 mmpmr_value = mmpmr(s, threshold=0.6)
 rmd, rmd_values = relative_morph_distance(dist_x1, dist_x2, dist_x1_x2)
+
+print("Done.")
+print()
 
 print("===== RESULTS =====")
 print()
