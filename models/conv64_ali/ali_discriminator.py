@@ -8,7 +8,8 @@ from util.torch.initialization import weights_init
 
 
 class ALIDiscriminator64(torch.nn.Module):
-    def __init__(self, latent_size=512, h_size=64, fc_h_size=None, use_bn=True, use_mish=False, n_channels=3, dropout=0.2, full_dropout=True):
+    def __init__(self, latent_size=512, h_size=64, fc_h_size=None, use_bn=True, use_mish=False, n_channels=3,
+                 dropout=0.2, full_dropout=True):
         super().__init__()
 
         self.n_channels = n_channels
@@ -62,9 +63,6 @@ class ALIDiscriminator64(torch.nn.Module):
         self.lin_xz2 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2, bias=True)
         self.lin_xz3 = torch.nn.Linear(self.fc_h_size*2, 1, bias=True)
 
-
-
-
     @staticmethod
     def leaky_relu(x):
         return torch.nn.functional.leaky_relu(x, 0.02)
@@ -72,7 +70,7 @@ class ALIDiscriminator64(torch.nn.Module):
     def forward(self, inp):
         x, z = inp
 
-        h_x = self.compute_dx(x)
+        h_x, dis_l = self.compute_dx(x)
         h_z = self.compute_dz(z)
 
         prediction = self.compute_dxz(h_x, h_z)
@@ -108,6 +106,8 @@ class ALIDiscriminator64(torch.nn.Module):
             h = self.bn_4(h)
         h = self.activ(h)
 
+        dis_l = h
+
         h = self.conv_5(h)
         if self.dropout != 0 and self.full_dropout:
             h = self.conv_dropout_layer(h)
@@ -117,7 +117,7 @@ class ALIDiscriminator64(torch.nn.Module):
 
         # Flatten to batch of vectors
         h_x = h.view(-1, self.h_size * 8)
-        return h_x
+        return h_x, dis_l
 
     def compute_dz(self, z):
         if self.dropout != 0:

@@ -41,7 +41,6 @@ class ALIDiscriminator28(torch.nn.Module):
             self.dropout_layer = torch.nn.Dropout(dropout, False)
             self.dropout_conv_layer = torch.nn.Dropout2d(dropout, False)
 
-
         self.lin_z1 = torch.nn.Linear(latent_size, self.fc_h_size, bias=False)
         self.lin_z2 = torch.nn.Linear(self.fc_h_size, self.fc_h_size, bias=False)
 
@@ -59,7 +58,7 @@ class ALIDiscriminator28(torch.nn.Module):
     def forward(self, inp):
         x, z = inp
 
-        h_x = self.compute_dx(x)
+        h_x, _ = self.compute_dx(x)
         h_z = self.compute_dz(z)
 
         prediction = self.compute_dxz(h_x, h_z)
@@ -78,7 +77,6 @@ class ALIDiscriminator28(torch.nn.Module):
             h = self.bn_2(h)
         h = self.activ(h)
 
-
         h = self.conv_3(h)
         if self.dropout != 0:
             h = self.dropout_conv_layer(h)
@@ -86,6 +84,7 @@ class ALIDiscriminator28(torch.nn.Module):
             h = self.bn_3(h)
         h = self.activ(h)
 
+        dis_l = h
 
         h = self.conv_4(h)
         if self.dropout != 0:
@@ -96,7 +95,7 @@ class ALIDiscriminator28(torch.nn.Module):
 
         # Flatten to batch of vectors
         h_x = h.view(-1, self.h_size * 4)
-        return h_x
+        return h_x, dis_l
 
     def compute_dz(self, z):
         if self.dropout != 0:
