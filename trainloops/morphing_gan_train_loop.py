@@ -105,7 +105,7 @@ class MorphingGANTrainLoop(TrainLoop):
 
             x_recon = self.Gx(z_hat)
 
-            z1_hat, z2_hat = z_hat[:]
+            z1_hat, z2_hat = z_hat[:self.batch_size], z_hat[self.batch_size:]
             z_morph = 0.5*(z1_hat + z2_hat)
             x_morph = self.Gx(z_morph)
 
