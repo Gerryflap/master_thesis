@@ -3,11 +3,10 @@
     WARNING: not yet functional because the MNIST dataset does give the correct items yet.
     Morphing GAN on the MNIST dataset.
 """
-
-from torchvision.datasets import MNIST
-
 from data.mnist_pairs import MNISTPairs
 from models.conv28.encoder import Encoder28
+
+from trainloops.listeners.morph_image_logger import MorphImageLogger
 from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28
@@ -83,6 +82,7 @@ listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
+    MorphImageLogger(output_path, valid_dataset, args),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True)
 ]
 train_loop = MorphingGANTrainLoop(
@@ -100,7 +100,7 @@ train_loop = MorphingGANTrainLoop(
     use_sigmoid=True,
     morph_loss_factor=args.morph_loss_factor,
     reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
-    morph_loss_mode = "pixelwise" if not args.use_dis_l_morph_loss else "dis_l"
+    morph_loss_mode="pixelwise" if not args.use_dis_l_morph_loss else "dis_l"
 
 )
 

@@ -1,6 +1,8 @@
 """
-    The GAN image sample logger produces samples from G for every epoch with constant latent vectors and writes them
-    to disk. It requires a training loop that either has a G (generator) or a dec (decoder). It will also work for VAEs.
+    This listener generates images with 3 rows:
+        x1, x_morph, x2
+    It can be used to evaluate morphing performance
+
 """
 import math
 import os
@@ -13,7 +15,7 @@ import util.output
 from trainloops.listeners.listener import Listener
 
 
-class MorphImageSampleLogger(Listener):
+class MorphImageLogger(Listener):
     def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0, folder_name="morph_samples", eval_mode=True):
         super().__init__()
         self.path = os.path.join(experiment_output_path, "imgs", folder_name)
