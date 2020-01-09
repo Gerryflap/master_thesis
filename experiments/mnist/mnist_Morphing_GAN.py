@@ -1,9 +1,12 @@
 """
+
+    WARNING: not yet functional because the MNIST dataset does give the correct items yet.
     Morphing GAN on the MNIST dataset.
 """
 
 from torchvision.datasets import MNIST
 
+from data.mnist_pairs import MNISTPairs
 from models.conv28.encoder import Encoder28
 from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
@@ -49,12 +52,12 @@ args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("mnist", "Morphing_GAN", args)
 
-dataset = MNIST("data/downloads/mnist", train=True, download=True, transform=transforms.Compose([
+dataset = MNISTPairs("data/downloads/mnist", train=True, download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
 ]))
 
-valid_dataset = MNIST("data/downloads/mnist", train=False, download=True, transform=transforms.Compose([
+valid_dataset = MNISTPairs("data/downloads/mnist", train=False, download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
 ]))
