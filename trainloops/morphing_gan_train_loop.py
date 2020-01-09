@@ -129,7 +129,7 @@ class MorphingGANTrainLoop(TrainLoop):
                     L_morph = self.morph_loss(dis_l_morph, dis_l_x1, dis_l_x2)
             else:
                 # Do not compute L_morph if it is no needed
-                L_morph = 0.0
+                L_morph = torch.zeros((1,), dtype=torch.float32)
             L_syn = L_g + self.morgan_alpha * L_recon + self.morph_loss_factor * L_morph
 
             # ========== Back propagation and updates ==========
