@@ -1,6 +1,7 @@
 from data.celeba_cropped_pairs import CelebaCroppedPairs
 from models.conv64_ali.encoder import Encoder64
 from trainloops.listeners.cluster_killswitch import KillSwitchListener
+from trainloops.listeners.morph_image_logger import MorphImageLogger
 from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
 from models.conv64_ali.ali_discriminator import ALIDiscriminator64
 from models.conv64_ali.generator import Generator64
@@ -82,6 +83,7 @@ listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
+    MorphImageLogger(output_path, valid_dataset, args),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
     ModelSaver(output_path, n=30, overwrite=False, print_output=True),
     KillSwitchListener(output_path)

@@ -1,5 +1,6 @@
 from data.celeba_cropped_pairs import CelebaCroppedPairs
 from models.conv28.encoder import Encoder28
+from trainloops.listeners.morph_image_logger import MorphImageLogger
 from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28
@@ -83,6 +84,7 @@ listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
+    MorphImageLogger(output_path, valid_dataset, args),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
 ]
 train_loop = MorphingGANTrainLoop(
