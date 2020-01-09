@@ -19,7 +19,9 @@ def get_log_odds(raw_marginals, use_sigmoid):
 
 
 class ALITrainLoop(TrainLoop):
-    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True):
+    def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1,
+                 morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
+                 reconstruction_loss_mode="pixelwise"):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -36,6 +38,10 @@ class ALITrainLoop(TrainLoop):
         self.d_img_noise_std = d_img_noise_std
         self.d_real_label = d_real_label
         self.decrease_noise = decrease_noise
+
+        if reconstruction_loss_mode not in ["pixelwise", "dis_l"]:
+            raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" or \"dis_l\"")
+        self.reconstruction_loss_mode = reconstruction_loss_mode
 
     def epoch(self):
         self.Gx.train()
@@ -57,7 +63,6 @@ class ALITrainLoop(TrainLoop):
                     else:
                         print("WARNING! Gx does not have an \"output_bias\". "
                               "Using untied biases as the last layer of Gx is advised!")
-
 
             # ========== Computations for Dis(x, z_hat) ==========
 
@@ -94,7 +99,10 @@ class ALITrainLoop(TrainLoop):
 
             if self.morgan:
                 x_recon = self.Gx(z_hat)
-                L_pixel = self.morgan_pixel_loss(x_recon, x_no_noise)
+                if self.reconstruction_loss_mode == "pixelwise":
+                    L_pixel = self.morgan_pixel_loss(x_recon, x_no_noise)
+                else:
+                    L_pixel = self.dis_l_loss(x_recon, x_no_noise)
                 L_syn = L_g + self.morgan_alpha * L_pixel
 
             # ========== Back propagation and updates ==========
@@ -156,6 +164,11 @@ class ALITrainLoop(TrainLoop):
         # loss = absolute_errors.sum()/WxH
         loss = absolute_errors.mean()
         return loss
+
+    def dis_l_loss(self, prediction, target):
+        _, dis_l_prediction = self.D.compute_dx(prediction)
+        _, dis_l_target = self.D.compute_dx(target)
+        return torch.nn.functional.mse_loss(dis_l_prediction, dis_l_target)
 
     def add_instance_noise(self, x):
         noise_factor = self.d_img_noise_std * \
