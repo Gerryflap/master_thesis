@@ -98,7 +98,10 @@ train_loop = MorphingGANTrainLoop(
     morgan_alpha=args.morgan_alpha,
     d_img_noise_std=0.1,
     use_sigmoid=True,
-    reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l"
+    morph_loss_factor=args.morph_loss_factor,
+    reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
+    morph_loss_mode = "pixelwise" if not args.use_dis_l_morph_loss else "dis_l"
+
 )
 
 train_loop.train()
