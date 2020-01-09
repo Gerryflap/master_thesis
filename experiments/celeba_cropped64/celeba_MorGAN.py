@@ -19,7 +19,7 @@ import argparse
 # Parse commandline arguments
 
 
-parser = argparse.ArgumentParser(description="Celeba ALI experiment.")
+parser = argparse.ArgumentParser(description="Celeba MorGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.00001,
                     help="Changes the learning rate, default is 0.00001")
@@ -47,6 +47,8 @@ parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                     help="Changes the label value for the \"real\" output of D. "
                          "This can be used for label smoothing. "
                          "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
+parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
+                    help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
 
 args = parser.parse_args()
 
@@ -111,7 +113,8 @@ train_loop = ALITrainLoop(
     d_real_label=args.d_real_label,
     d_img_noise_std=args.instance_noise_std,
     decrease_noise=True,
-    use_sigmoid=True
+    use_sigmoid=True,
+    reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l"
 )
 
 train_loop.train()

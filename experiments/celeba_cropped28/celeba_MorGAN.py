@@ -8,14 +8,12 @@ import util.output
 from torchvision import transforms
 import torch
 import argparse
-
-# Parse commandline arguments
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
-from trainloops.listeners.discriminator_overfit_monitor import DiscriminatorOverfitMonitor
-from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
-from trainloops.listeners.parameter_value_logger import ParameterValueLogger
+
+# Parse commandline arguments
+
 
 parser = argparse.ArgumentParser(description="Celeba MorGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
@@ -43,6 +41,8 @@ parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                     help="Changes the label value for the \"real\" output of D. "
                          "This can be used for label smoothing. "
                          "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
+parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
+                    help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
 
 args = parser.parse_args()
 
@@ -98,7 +98,8 @@ train_loop = ALITrainLoop(
     d_real_label=args.d_real_label,
     d_img_noise_std=args.instance_noise_std,
     decrease_noise=True,
-    use_sigmoid=True
+    use_sigmoid=True,
+    reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
 )
 
 train_loop.train()
