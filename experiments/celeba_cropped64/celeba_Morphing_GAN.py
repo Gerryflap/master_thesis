@@ -59,11 +59,7 @@ valid_dataset = CelebaCroppedPairs(split="valid", download=True, transform=trans
     transforms.ToTensor(),
 ]))
 
-# Make sure that the batch size can be halved, since we're going to use take half size batches to ensure that the
-# total batch size is equal to the given batch size. This is necessary since the dataset gives 2 images instead of one for each index
-assert (args.batch_size//2)*2 == args.batch_size
-
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size//2, shuffle=True, num_workers=4)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 print("Dataset length: ", len(dataset))
 

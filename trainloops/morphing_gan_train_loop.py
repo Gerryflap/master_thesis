@@ -61,29 +61,30 @@ class MorphingGANTrainLoop(TrainLoop):
             if self.cuda:
                 x1 = x1.cuda()
                 x2 = x2.cuda()
-            x = torch.cat([x1, x2], dim=0)
+            x_merged = torch.cat([x1, x2], dim=0)
 
             if self.current_epoch == 0 and i == 0:
                     if hasattr(self.Gx, 'output_bias'):
-                        self.Gx.output_bias.data = get_log_odds(x, self.use_sigmoid)
+                        self.Gx.output_bias.data = get_log_odds(x_merged, self.use_sigmoid)
                     else:
                         print("WARNING! Gx does not have an \"output_bias\". "
                               "Using untied biases as the last layer of Gx is advised!")
 
             # ========== Computations for Dis(x, z_hat) ==========
 
-            x_no_noise = x
             # Add noise to the inputs if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
-                x = self.add_instance_noise(x)
+                x = self.add_instance_noise(x1)
+            else:
+                x = x1
 
             # Sample from conditionals (sampling is implemented by models)
-            z_hat = self.Gz.encode(x)
-            dis_q = self.D((x, z_hat))
+            z1_hat = self.Gz.encode(x)
+            dis_q = self.D((x, z1_hat))
 
             # ========== Computations for Dis(x_tilde, z) ==========
 
-            z = self.generate_z_batch(self.batch_size*2)
+            z = self.generate_z_batch(self.batch_size)
             x_tilde = self.Gx(z)
             # Add noise to the inputs of D if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
@@ -103,15 +104,29 @@ class MorphingGANTrainLoop(TrainLoop):
 
             L_g = L_g_real + L_g_fake
 
-            x_recon = self.Gx(z_hat)
+            x_recon = self.Gx(z1_hat)
 
-            z1_hat, z2_hat = z_hat[:self.batch_size], z_hat[self.batch_size:]
+            z2_hat = self.Gz.encode(x2)
             z_morph = 0.5*(z1_hat + z2_hat)
             x_morph = self.Gx(z_morph)
 
-            L_recon = self.reconstruction_loss(x_recon, x_no_noise)
+            if self.reconstruction_loss_mode == "pixelwise":
+                dis_l_x1 = None
+                L_recon = self.reconstruction_loss(x_recon, x1)
+            else:
+                _, dis_l_recon = self.D.compute_dx(x_recon)
+                _, dis_l_x1 = self.D.compute_dx(x1)
+                L_recon = self.reconstruction_loss(x_recon, x1)
+
             if self.morph_loss_factor != 0.0:
-                L_morph = self.morph_loss(x_morph, x1, x2)
+                if self.reconstruction_loss_mode == "pixelwise":
+                    L_morph = self.morph_loss(x_morph, x1, x2)
+                else:
+                    _, dis_l_morph = self.D.compute_dx(x_morph)
+                    _, dis_l_x2 = self.D.compute_dx(x2)
+                    if dis_l_x1 is None:
+                        _, dis_l_x1 = self.D.compute_dx(x1)
+                    L_morph = self.morph_loss(dis_l_morph, dis_l_x1, dis_l_x2)
             else:
                 # Do not compute L_morph if it is no needed
                 L_morph = 0.0
@@ -183,10 +198,8 @@ class MorphingGANTrainLoop(TrainLoop):
             x2_loss = self.dis_l_loss(x_morph, x2)
         return (x1_loss + x2_loss) * 0.5
 
-    def dis_l_loss(self, prediction, target):
-        _, dis_l_pred = self.D.compute_dx(prediction)
-        _, dis_l_target = self.D.compute_dx(target)
-        return torch.nn.functional.mse_loss(dis_l_pred, dis_l_target)
+    def dis_l_loss(self, dis_l_prediction, dis_l_target):
+        return torch.nn.functional.mse_loss(dis_l_prediction, dis_l_target)
 
     @staticmethod
     def morgan_pixel_loss(x_recon, target):
