@@ -1,11 +1,11 @@
 """
-    ALI on the MNIST dataset. Can also be used as MorGAN using the MorGAN alpha parameter
+    Morphing GAN on the MNIST dataset.
 """
 
 from torchvision.datasets import MNIST
 
 from models.conv28.encoder import Encoder28
-from trainloops.ali_train_loop import ALITrainLoop
+from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28
 import util.output
@@ -18,7 +18,7 @@ from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 
-parser = argparse.ArgumentParser(description="MNIST ALI experiment.")
+parser = argparse.ArgumentParser(description="MNIST Morphing GAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
@@ -39,11 +39,15 @@ parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.0, type=float,
                     help="Sets the alpha parameter in the MorGAN training algorithm")
+parser.add_argument("--morph_loss_factor", action="store", default=0.3, type=float,
+                    help="Scales the morph loss")
 parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
+parser.add_argument("--use_dis_l_morph_loss", action="store_true", default=False,
+                    help="Switches the morph loss to a VAEGAN like loss instead of pixelwise.")
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("mnist", "ali", args)
+output_path = util.output.init_experiment_output_dir("mnist", "Morphing_GAN", args)
 
 dataset = MNIST("data/downloads/mnist", train=True, download=True, transform=transforms.Compose([
     transforms.Resize(28),
@@ -78,7 +82,7 @@ listeners = [
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True)
 ]
-train_loop = ALITrainLoop(
+train_loop = MorphingGANTrainLoop(
     listeners=listeners,
     Gz=Gz,
     Gx=Gx,
