@@ -1,0 +1,94 @@
+"""
+    This File uses the existing splits for train/valid/test and creates new pairs for the specified set
+    that are guaranteed to have at most 0.4 distance between the images of the same identity.
+    Any images that do not fit this requirement are thrown out.
+"""
+import json
+from collections import defaultdict
+
+import numpy as np
+
+# 0 = train, 1 = valid, 2 = test
+chosen_split = "1"
+threshold_between_morph_pairs = 1.0
+
+embeddings = np.load("data/celeba_cropped/embeddings.npy")
+with open("data/celeba_cropped/embedding_file_order.txt") as f:
+    fnames = f.readlines()
+fnames = list(fname[:-1] for fname in fnames)
+fname_to_index = {fname: i for i, fname in enumerate(fnames)}
+
+with open("data/celeba_cropped/list_eval_partition_morphing.txt") as f:
+    fnames_with_split = f.readlines()
+    fnames_split = [l.split() for l in fnames_with_split]
+    fnames_in_split = [fname for fname, split in fnames_split if split == chosen_split]
+fname_set = set(fnames_in_split)
+
+ident_to_fnames = defaultdict(lambda: [])
+with open("data/celeba/identity_CelebA.txt") as f:
+    lines = f.readlines()
+    tuples = [tuple(l.split()) for l in lines]
+    for fname, ident in tuples:
+        # print(fname, ident)
+        ident = int(ident)
+        if fname in fname_set:
+            ident_to_fnames[ident].append(fname)
+
+ident_list = list(ident_to_fnames.keys())
+ident_to_ident_list_index = {ident: i for i, ident in enumerate(ident_list)}
+print("Total idents: ", len(ident_to_fnames))
+
+def euclidean_distance(emb1, emb2):
+    return np.sqrt(np.sum(np.square(emb1 - emb2), axis=-1))
+
+
+def find_top2_image_pair(ident):
+    ident_embeddings = np.stack([embeddings[fname_to_index[fname]] for fname in ident_to_fnames[ident]], axis=0)
+
+    indices = None
+    for first_index in range(ident_embeddings.shape[0]):
+        for second_index in range(first_index, ident_embeddings.shape[0]):
+            if first_index == second_index:
+                continue
+            dist = euclidean_distance(ident_embeddings[first_index], ident_embeddings[second_index])
+            if dist < 0.4 and dist != 0:
+                indices = (fname_to_index[ident][first_index], fname_to_index[ident][second_index])
+                indices = (fname_to_index[indices[0]], fname_to_index[indices[1]])
+    return indices
+
+def get_ident_dict(ident):
+    fname_indices = image_pairs[ident]
+    morph_in = fnames[fname_indices[0]]
+    comparison_pic = fnames[fname_indices[1]]
+    return {"ident": ident, "morph_in": morph_in, "comparison_pic": comparison_pic}
+
+
+image_pairs = {ident: find_top2_image_pair(ident) for ident in ident_list}
+input_image_embeddings = np.stack([embeddings[image_pairs[ident][0]] for ident in ident_list], axis=0)
+
+pairs = []
+unused_idents = set(ident_list)
+while len(unused_idents) >= 2:
+    ident = unused_idents.pop()
+    ident_index = ident_to_ident_list_index[ident]
+    embedding = input_image_embeddings[ident_index]
+    distances = euclidean_distance(embedding, input_image_embeddings)
+    sort = np.argsort(distances)
+
+    for other_index in sort:
+        if other_index == ident_index:
+            continue
+
+        if distances[other_index] <= threshold_between_morph_pairs:
+            # We have found a suitable candidate
+            other_ident = ident_list[other_index]
+            unused_idents.remove(other_ident)
+
+            pairs.append([get_ident_dict(ident), get_ident_dict(other_ident)])
+        else:
+            # We've passed the threshold, no suitable candidate can be found for this identity
+            break
+
+print("Made %d pairs, saving..."%len(pairs))
+with open("better_pairs_%s.json", 'w') as f:
+    json.dump(pairs, f)
