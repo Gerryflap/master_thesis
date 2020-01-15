@@ -38,7 +38,7 @@ class CelebaCroppedPairsLookAlike(VisionDataset):
         }
         split = split_map[split]
 
-        if split == "valid":
+        if split == 1:
             with open("data/celeba_cropped/valid_pairs.json", "r") as f:
                 self.pairs = json.load(f)
         else:

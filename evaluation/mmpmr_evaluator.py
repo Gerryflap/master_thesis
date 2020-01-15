@@ -87,6 +87,10 @@ if not isinstance(Gz, MorphingEncoder):
     manual_morph = True
 else:
     manual_morph = False
+
+output_path = init_experiment_output_dir("celeba64", "model_evaluation", args)
+
+
 if args.eval:
     Gx.eval()
     Gz.eval()
@@ -111,6 +115,8 @@ print("Generating Morphs...")
 x1_list = []
 morph_list = []
 x2_list = []
+x1_recon_list = []
+x2_recon_list = []
 
 for i, batch in enumerate(loader):
     if args.max_output_batches is not None and i >= args.max_output_batches:
@@ -137,18 +143,28 @@ for i, batch in enumerate(loader):
 
         z_morph = 0.5*(z1 + z2)
     else:
-        z_morph = Gz.morph(x1, x2, use_mean=args.use_z_mean)
+        z_morph, z1, z2 = Gz.morph(x1, x2, use_mean=args.use_z_mean, return_all=True)
+    x1_recon = Gx(z1)
+    x2_recon = Gx(z2)
     x_morph = Gx(z_morph)
 
     if args.cuda:
+        x1_recon = x1_recon.cpu()
+        x2_recon = x2_recon.cpu()
         x_morph = x_morph.cpu()
 
     for img in torch.unbind(x_morph, dim=0):
         morph_list.append(to_numpy_img(img, args.tanh))
+
+    for img in torch.unbind(x1_recon, dim=0):
+        x1_recon_list.append(to_numpy_img(img, args.tanh))
+
+    for img in torch.unbind(x2_recon, dim=0):
+        x2_recon_list.append(to_numpy_img(img, args.tanh))
 print("Done.")
 
 n_morphs = len(morph_list)
-faces_list = x1_list + x2_list + morph_list
+faces_list = x1_list + x2_list + morph_list + x1_recon_list + x2_recon_list
 
 print("Detecting faces in all input and morph images...")
 face_locations = face_recognition.batch_face_locations(faces_list)
@@ -169,10 +185,15 @@ print("Collecting data and computing statistics...")
 x1_list = np.stack(x1_list, axis=0)
 x2_list = np.stack(x2_list, axis=0)
 morph_list = np.stack(morph_list, axis=0)
+x1_recon_list = np.stack(x1_recon_list, axis=0)
+x2_recon_list = np.stack(x2_recon_list, axis=0)
 
 x1_enc = np.stack(face_encodings[:n_morphs], axis=0)
 x2_enc = np.stack(face_encodings[n_morphs:2*n_morphs], axis=0)
-morphs_enc = np.stack(face_encodings[2*n_morphs:], axis=0)
+morphs_enc = np.stack(face_encodings[2*n_morphs:3*n_morphs], axis=0)
+x1_recon_enc = np.stack(face_encodings[3*n_morphs:4*n_morphs], axis=0)
+x2_recon_enc = np.stack(face_encodings[4*n_morphs:], axis=0)
+
 
 # Filter any rows with nan embeddings in the x1 and x2
 # TODO: Find a better solution to this!
@@ -183,10 +204,14 @@ print("WARNING! Due to undetectable faces in the dataset, %d images have been dr
 x1_list = x1_list[not_nan_indices]
 x2_list = x2_list[not_nan_indices]
 morph_list = morph_list[not_nan_indices]
+x1_recon_list = x1_recon_list[not_nan_indices]
+x2_recon_list = x2_recon_list[not_nan_indices]
 
 x1_enc = x1_enc[not_nan_indices]
 x2_enc = x2_enc[not_nan_indices]
 morphs_enc = morphs_enc[not_nan_indices]
+x1_recon_enc = x1_recon_enc[not_nan_indices]
+x2_recon_enc = x2_recon_enc[not_nan_indices]
 
 
 # Assert that there are no nans in the comparison faces
@@ -197,28 +222,47 @@ morphs_enc = morphs_enc[not_nan_indices]
 dist_x1 = np.sqrt(np.sum(np.square(x1_enc - morphs_enc), axis=1))
 dist_x2 = np.sqrt(np.sum(np.square(x2_enc - morphs_enc), axis=1))
 dist_x1_x2 = np.sqrt(np.sum(np.square(x1_enc - x2_enc), axis=1))
+dist_x1_recon = np.sqrt(np.sum(np.square(x1_enc - x1_recon_enc), axis=1))
+dist_x2_recon = np.sqrt(np.sum(np.square(x2_enc - x2_recon_enc), axis=1))
+
+dist_recon = np.concatenate([dist_x1_recon, dist_x2_recon], axis=0)
+
+# Replace nan values with the maximal euclidean distance on a 1-D hypersphere
+dist_x1[np.isnan(dist_x1)] = 2.0
+dist_x2[np.isnan(dist_x2)] = 2.0
+dist_recon[np.isnan(dist_recon)] = 1.0
 
 
 s = np.stack([dist_x1, dist_x2], axis=1)
 
 mmpmr_value = mmpmr(s, threshold=0.6)
 rmd, rmd_values = relative_morph_distance(dist_x1, dist_x2, dist_x1_x2)
+correct_reconstruction_rate = (dist_recon < 0.6).mean()
 
 print("Done.")
 print()
 
-print("===== RESULTS =====")
-print()
-print("Computed MMPMR: ", mmpmr_value)
-print("Computed Mean RMD: ", rmd)
-print()
-print("===================")
+
+out_str = ""
+out_str += "===== RESULTS =====\n"
+out_str += "\n"
+out_str += "Computed MMPMR: %s\n"%str(mmpmr_value)
+out_str += "Computed reconstruction rate: %s\n"%str(correct_reconstruction_rate)
+out_str += "Computed Mean RMD: %s\n"%str(rmd)
+out_str += "Mean distance morph to x1 and morph to x2: %s\n"%str(np.concatenate((dist_x1, dist_x2), axis=0).mean())
+out_str += "Mean distance x to x_recon: %s\n"%str(dist_recon.mean())
+out_str += "\n"
+out_str += "==================="
+
+print(out_str)
+with open(os.path.join(output_path, "results.txt"), "w") as f:
+    f.write(out_str)
 
 if args.visualize:
     import matplotlib.pyplot as plt
     plt.rcParams.update({'axes.titlesize': 8})
 
-    f = plt.figure(figsize=(20, 100), dpi=120)
+    f = plt.figure(dpi=250)
     axs = f.subplots(5, 2)
 
     max_distances = np.max(s, axis=1)
@@ -240,12 +284,19 @@ if args.visualize:
         axs[plot_index, 1].axis('off')
 
     plt.subplots_adjust(hspace=1.0)
-    plt.show()
+    plt.savefig(os.path.join(output_path, "top5s.png"))
+    plt.clf()
 
     plt.hist(max_distances, bins=60, range=(0.0, 1.2))
     plt.title("Max euclidean distances")
-    plt.show()
+    plt.savefig(os.path.join(output_path, "max_morph_distances.png"))
+    plt.clf()
+
+    plt.hist(dist_recon, bins=60, range=(0.0, 1.2))
+    plt.title("Reconstruction distances")
+    plt.savefig(os.path.join(output_path, "recon_distances.png"))
+    plt.clf()
 
     plt.hist(rmd_values, bins=60)
     plt.title("RMD Values")
-    plt.show()
+    plt.savefig(os.path.join(output_path, "rmd.png"))
