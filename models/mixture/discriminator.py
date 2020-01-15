@@ -47,6 +47,10 @@ class Discriminator(MorphingEncoder):
             torch.nn.Linear(h_size, 1),
         )
 
+    def compute_dx(self, x):
+        # This method is used by the Morphing GAN algorithm to acquire the value for dis_l
+        return None, self.Dx(x)
+
     def forward(self, inp):
         if self.mode == "ali":
             x, z = inp
