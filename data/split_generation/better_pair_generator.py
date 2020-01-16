@@ -9,7 +9,7 @@ from collections import defaultdict
 import numpy as np
 
 # 0 = train, 1 = valid, 2 = test
-chosen_split = "1"
+chosen_split = "2"
 threshold_between_morph_pairs = 1.0
 
 embeddings = np.load("data/celeba_cropped/embeddings.npy")
@@ -65,6 +65,7 @@ def get_ident_dict(ident):
 
 image_pairs = {ident: find_top2_image_pair(ident) for ident in ident_list}
 input_image_embeddings = np.stack([embeddings[image_pairs[ident][0]] if image_pairs[ident] is not None else np.full((128,), np.nan) for ident in ident_list], axis=0)
+ref_image_embeddings = np.stack([embeddings[image_pairs[ident][1]] if image_pairs[ident] is not None else np.full((128,), np.nan) for ident in ident_list], axis=0)
 
 pairs = []
 unused_idents = set(ident_list)
@@ -72,7 +73,10 @@ while len(unused_idents) >= 2:
     ident = unused_idents.pop()
     ident_index = ident_to_ident_list_index[ident]
     embedding = input_image_embeddings[ident_index]
-    distances = euclidean_distance(embedding, input_image_embeddings)
+    ref_embedding = input_image_embeddings[ident_index]
+    inp_distances = euclidean_distance(embedding, input_image_embeddings)
+    ref_distances = euclidean_distance(embedding, ref_image_embeddings)
+    distances = np.maximum(inp_distances, ref_distances)
     sort = np.argsort(distances)
 
     for other_index in sort:
@@ -85,10 +89,12 @@ while len(unused_idents) >= 2:
             continue
 
         if distances[other_index] <= threshold_between_morph_pairs:
+            print("Pairing ", ident, other_ident)
             # We have found a suitable candidate
             unused_idents.remove(other_ident)
 
             pairs.append([get_ident_dict(ident), get_ident_dict(other_ident)])
+            break
         else:
             # We've passed the threshold, no suitable candidate can be found for this identity
             break
