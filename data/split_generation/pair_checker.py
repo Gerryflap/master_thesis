@@ -18,7 +18,7 @@ def to_numpy_img(img):
     return img
 
 
-dataset = CelebaCroppedPairsLookAlike(split="valid", transform=transforms.ToTensor())
+dataset = CelebaCroppedPairsLookAlike(split="better_valid", transform=transforms.ToTensor())
 loader = DataLoader(dataset, 64, shuffle=False)
 
 inputs = []
