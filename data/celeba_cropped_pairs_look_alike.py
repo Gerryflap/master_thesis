@@ -26,7 +26,7 @@ class CelebaCroppedPairsLookAlike(VisionDataset):
             # Initialize the dataset if it does not yet exist
             CelebaCropped(split, transform, target_transform, download)
 
-        if split not in ["valid", "test"]:
+        if split not in ["valid", "test", "better_valid"]:
             raise ValueError("This Dataset can only be used for evaluation (valid or test)!")
 
         # Load filenames and splits
