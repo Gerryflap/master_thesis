@@ -17,6 +17,8 @@ parser.add_argument("--lr", action="store", type=float, default=0.003,
                     help="Changes the learning rate, default is 0.003")
 parser.add_argument("--h_size", action="store", type=int, default=32,
                     help="Sets the h_size, which changes the size of the network")
+parser.add_argument("--d_h_size", action="store", type=int, default=None,
+                    help="Overrides the h_size for D when specified")
 parser.add_argument("--epochs", action="store", type=int, default=101, help="Sets the number of training epochs")
 parser.add_argument("--l_size", action="store", type=int, default=2, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
@@ -38,7 +40,7 @@ dataloader = torch.utils.data.DataLoader(train, batch_size=args.batch_size, shuf
 
 Gx = Generator(args.l_size, args.h_size)
 Gz = Encoder(args.l_size, args.h_size)
-D = Discriminator(args.l_size, args.h_size, mode="ali")
+D = Discriminator(args.l_size, args.h_size if args.d_h_size is None else args.d_h_size, mode="ali")
 
 
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))

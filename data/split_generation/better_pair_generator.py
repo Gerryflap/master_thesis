@@ -52,7 +52,7 @@ def find_top2_image_pair(ident):
                 continue
             dist = euclidean_distance(ident_embeddings[first_index], ident_embeddings[second_index])
             if dist < 0.4 and dist != 0:
-                indices = (fname_to_index[ident][first_index], fname_to_index[ident][second_index])
+                indices = (ident_to_fnames[ident][first_index], ident_to_fnames[ident][second_index])
                 indices = (fname_to_index[indices[0]], fname_to_index[indices[1]])
     return indices
 
@@ -64,7 +64,7 @@ def get_ident_dict(ident):
 
 
 image_pairs = {ident: find_top2_image_pair(ident) for ident in ident_list}
-input_image_embeddings = np.stack([embeddings[image_pairs[ident][0]] for ident in ident_list], axis=0)
+input_image_embeddings = np.stack([embeddings[image_pairs[ident][0]] if image_pairs[ident] is not None else np.full((128,), np.nan) for ident in ident_list], axis=0)
 
 pairs = []
 unused_idents = set(ident_list)
@@ -79,9 +79,13 @@ while len(unused_idents) >= 2:
         if other_index == ident_index:
             continue
 
+        other_ident = ident_list[other_index]
+
+        if other_ident not in unused_idents:
+            continue
+
         if distances[other_index] <= threshold_between_morph_pairs:
             # We have found a suitable candidate
-            other_ident = ident_list[other_index]
             unused_idents.remove(other_ident)
 
             pairs.append([get_ident_dict(ident), get_ident_dict(other_ident)])
@@ -90,5 +94,5 @@ while len(unused_idents) >= 2:
             break
 
 print("Made %d pairs, saving..."%len(pairs))
-with open("better_pairs_%s.json", 'w') as f:
+with open("better_pairs_%s.json"%chosen_split, 'w') as f:
     json.dump(pairs, f)
