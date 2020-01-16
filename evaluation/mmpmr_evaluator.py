@@ -123,12 +123,6 @@ for i, batch in enumerate(loader):
         break
     ((x1, x2), (x1_comp, x2_comp)), idents = batch
 
-    for img in torch.unbind(x1_comp, dim=0):
-        x1_list.append(to_numpy_img(img, args.tanh))
-
-    for img in torch.unbind(x2_comp, dim=0):
-        x2_list.append(to_numpy_img(img, args.tanh))
-
     if args.cuda:
         x1 = x1.cuda()
         x2 = x2.cuda()
@@ -152,6 +146,14 @@ for i, batch in enumerate(loader):
         x1_recon = x1_recon.cpu()
         x2_recon = x2_recon.cpu()
         x_morph = x_morph.cpu()
+        x1 = x1.cpu()
+        x2 = x2.cpu()
+
+    for img in torch.unbind(x1_comp, dim=0):
+        x1_list.append(to_numpy_img(img, args.tanh))
+
+    for img in torch.unbind(x2_comp, dim=0):
+        x2_list.append(to_numpy_img(img, args.tanh))
 
     for img in torch.unbind(x_morph, dim=0):
         morph_list.append(to_numpy_img(img, args.tanh))
