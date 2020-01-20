@@ -46,7 +46,6 @@ parser.add_argument("--res", action="store", type=int, default=64,
 parser.add_argument("--tanh", action="store_true",  default=False,
                     help="Has to be used if the model is a tanh model instead of sigmoid")
 parser.add_argument("--test", action="store_true", default=False, help="Switches to the test set")
-parser.add_argument("--better_valid", action="store_true", default=False, help="Switches to the better_valid set")
 parser.add_argument("--decoder_filename", action="store", type=str, default="Gx.pt",
                     help="Filename of the decoder/generator/Gx network. "
                          "Usually this option can be left at the default value, which is Gx.pt")
@@ -112,9 +111,6 @@ split = "valid"
 
 if args.test:
     split = "test"
-
-if args.better_valid:
-    split = "better_valid"
 
 dataset = CelebaCroppedPairsLookAlike(split=split, transform=transforms.Compose(trans))
 loader = DataLoader(dataset, args.batch_size, shuffle=False)
