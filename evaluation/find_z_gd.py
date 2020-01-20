@@ -3,6 +3,7 @@
      It saves z.npy which can be loaded into the latent space explorer
 """
 import argparse
+import os
 
 import numpy as np
 import torch
@@ -13,10 +14,11 @@ import dlib
 
 parser = argparse.ArgumentParser(description="Image to latent vector converter.")
 
-parser.add_argument("--dec", action="store", type=str, required=True, help="Path to Decoder/Generator model")
+parser.add_argument("--param_path", action="store", type=str, required=True, help="Path to Gx and D models")
 parser.add_argument("--img", action="store", type=str, required=True, help="Path to input image")
 parser.add_argument("--img2", action="store", type=str, default=None, help="Path to second input image for morphing")
 parser.add_argument("--res", action="store", type=int, required=True, help="Model input resolution")
+parser.add_argument("--lr", action="store", type=float, default=0.05, help="Adam learning rate")
 parser.add_argument("--n_steps", action="store", type=int, default=1000, help="Number of optimization steps to take")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="If true, a sample is taken from the encoder output distribution. Otherwise the mean is used.")
@@ -26,16 +28,17 @@ parser.add_argument("--sigmoid_model", action="store_true", default=False,
                     help="This flag is required if the loaded model was trained on images with range 0-1. This is done with the MorGAN models at the time of writing.")
 parser.add_argument("--visualize", action="store_true", default=False,
                     help="Visualizes the images every step")
-parser.add_argument("--D", action="store", type=str, default=None, help="Path to the Discriminator. "
-                                                                        "D will be used for computing dis_l if this parameter is set. "
-                                                                        "Otherwise mse between pixels will be used")
+parser.add_argument("--use_dis_l", action="store_true", default=False,
+                    help="Switches to Dis_l loss instead of pixels")
 parser.add_argument("--regularization_factor", action="store", type=float, default=0.03,
                     help="Scales the regularization term "
                          "that keeps z close to 0")
+parser.add_argument("--init_with_Gz", action="store_true", default=False,
+                    help="Initializes z on Gz(x) or 0.5*(Gz(x1) + Gz(x2))")
 
 args = parser.parse_args()
 
-fname_dec = args.dec
+fname_dec = os.path.join(args.param_path, "Gx.pt")
 
 Gx = torch.load(fname_dec, map_location=torch.device('cpu'))
 Gx.eval()
@@ -43,17 +46,27 @@ Gx.requires_grad = False
 
 D = None
 
-if args.D is not None:
-    fname_D = args.D
+if args.use_dis_l:
+    fname_D = os.path.join(args.param_path, "D.pt")
 
     D = torch.load(fname_D, map_location=torch.device('cpu'))
     D.eval()
+
+Gz = None
+if args.init_with_Gz:
+    fname_Gz = os.path.join(args.param_path, "Gz.pt")
+
+    Gz = torch.load(fname_Gz, map_location=torch.device('cpu'))
+    Gz.eval()
 
 if args.cuda:
     Gx = Gx.cuda()
 
     if D is not None:
         D = D.cuda()
+
+    if args.init_with_Gz:
+        Gz = Gz.cuda()
 
 predictor_path = "data/data_prep/shape_predictor_5_face_landmarks.dat"
 detector = dlib.get_frontal_face_detector()
@@ -162,32 +175,32 @@ z = LatentVector(z_size)
 if args.cuda:
     z = z.cuda()
 
-opt = torch.optim.Adam(z.parameters(), 0.05)
+if Gz is not None:
+    if x2 is not None:
+        z_val = Gz.morph(x, x2).detach()
+    else:
+        z_val = Gz.encode(x).detach()
+    z.param.data = z_val
+
+opt = torch.optim.Adam(z.parameters(), args.lr)
 
 try:
     for i in range(args.n_steps):
         z_val = z.forward(None)
         x_recon = Gx(z_val)
 
-        p = 0.5
-        if x2 is not None:
-            p = torch.rand([])
-            p = (i/args.n_steps) * 0.5 + (1-(i/args.n_steps)) * p
-            if args.cuda:
-                p = p.cuda()
-
         if D is not None:
             _, dis_l_x_rec = D.compute_dx(x_recon)
             loss = torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x, reduction="mean")
             if x2 is not None:
-                loss *= p
-                loss += (1-p) * torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x2, reduction="mean")
+                loss += torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x2, reduction="mean")
+                loss *= 0.5
 
         else:
             loss = torch.nn.functional.mse_loss(x_recon, x)
             if x2 is not None:
-                loss *= p
-                loss += (1-p) * torch.nn.functional.mse_loss(x_recon, x2, reduction="mean")
+                loss += torch.nn.functional.mse_loss(x_recon, x2, reduction="mean")
+                loss *= 0.5
 
         # L_reg = torch.pow(z_val, 2).mean()
         L_reg = torch.pow(z_val.mean() - 0, 2) + torch.pow(z_val.var() - 1, 2)
