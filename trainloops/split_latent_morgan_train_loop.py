@@ -22,7 +22,8 @@ def get_log_odds(raw_marginals, use_sigmoid):
 class SplitMorGANTrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1,
                  morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
-                 reconstruction_loss_mode="pixelwise", constrained_latent_size=128, constrained_latent_loss_factor=1.0):
+                 reconstruction_loss_mode="pixelwise", constrained_latent_size=128, constrained_latent_loss_factor=1.0,
+                 unconstrained_latent_noise_std=0.0):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -46,6 +47,7 @@ class SplitMorGANTrainLoop(TrainLoop):
             raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" or \"dis_l\"")
         self.reconstruction_loss_mode = reconstruction_loss_mode
         self.cll_factor = constrained_latent_loss_factor
+        self.unconstrained_latent_noise_std = unconstrained_latent_noise_std
 
     def epoch(self):
         self.Gx.train()
@@ -87,6 +89,12 @@ class SplitMorGANTrainLoop(TrainLoop):
                 z_mean[:, :self.constrained_latent_size],
                 z2_mean[:, :self.constrained_latent_size]
             )
+
+            if self.unconstrained_latent_noise_std != 0.0:
+                noise = torch.normal(0, self.unconstrained_latent_noise_std, z_hat[:, self.constrained_latent_size:].size())
+                if self.cuda:
+                    noise = noise.cuda()
+                z_hat[:, self.constrained_latent_size:] += noise
 
             # ========== Computations for Dis(x_tilde, z) ==========
 

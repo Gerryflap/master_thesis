@@ -44,8 +44,11 @@ parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", defa
 parser.add_argument("--l_constrained_size", action="store", type=int, default=12,
                     help="Sets the size of the constrained part of the latent space. "
                          "This should always be smaller or equal to the latent size.")
-parser.add_argument("--l_constrain_factor", action="store", default=1.0, type=float,
+parser.add_argument("--l_constrained_factor", action="store", default=1.0, type=float,
                     help="The factor that scales L_latent (which is the loss that constrains a part of the latent space)")
+parser.add_argument("--unconstrained_latent_noise_std", action="store", default=0.0, type=float,
+                    help="Standard deviation of noise added to the unconstrained part of the latent space. "
+                         "This is done to prevent the model from putting all information in that part")
 
 args = parser.parse_args()
 
@@ -103,8 +106,9 @@ train_loop = SplitMorGANTrainLoop(
     decrease_noise=True,
     use_sigmoid=True,
     reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
-    constrained_latent_loss_factor=args.l_constrain_factor,
+    constrained_latent_loss_factor=args.l_constrained_factor,
     constrained_latent_size=args.l_constrained_size,
+    unconstrained_latent_noise_std=args.unconstrained_latent_noise_std
 
 )
 
