@@ -46,7 +46,7 @@ parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                          "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
 parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
-parser.add_argument("--l_constrained_size", action="store", type=int, default=12,
+parser.add_argument("--l_constrained_size", action="store", type=int, default=128,
                     help="Sets the size of the constrained part of the latent space. "
                          "This should always be smaller or equal to the latent size.")
 parser.add_argument("--l_constrained_factor", action="store", default=1.0, type=float,
@@ -73,7 +73,7 @@ print("Dataset length: ", len(dataset))
 
 Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
 Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
-D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
