@@ -2,6 +2,9 @@
     An ALI/MorGAN trainloop that splits the latent vector into two parts:
     a part that should be (nearly) equal between different images of the same person and a part
     where this requirement is not present.
+
+    The part where images of the same person should be roughly equal is considered the "constrained" part of the latent
+    space. The loss here is computed using the
 """
 import torch
 import torch.nn.functional as F
@@ -54,7 +57,7 @@ class SplitMorGANTrainLoop(TrainLoop):
         self.Gz.train()
         self.D.train()
 
-        for i, (x, x2, _) in enumerate(self.dataloader):
+        for i, (x, x2, x3) in enumerate(self.dataloader):
             if x.size()[0] != self.batch_size:
                 continue
 
@@ -63,6 +66,7 @@ class SplitMorGANTrainLoop(TrainLoop):
             if self.cuda:
                 x = x.cuda()
                 x2 = x2.cuda()
+                x3 = x3.cuda()
 
             if self.current_epoch == 0 and i == 0:
                     if hasattr(self.Gx, 'output_bias'):
@@ -83,11 +87,14 @@ class SplitMorGANTrainLoop(TrainLoop):
             dis_q = self.D((x, z_hat))
 
             z2_hat, z2_mean, _ = self.Gz(x2)
+            z3_hat, z3_mean, _ = self.Gz(x3)
 
             # Compute L_latent
-            L_latent = torch.nn.functional.mse_loss(
-                z_mean[:, :self.constrained_latent_size],
-                z2_mean[:, :self.constrained_latent_size]
+            L_latent = torch.nn.functional.triplet_margin_loss(
+                anchor=z_hat[:, :self.constrained_latent_size],
+                positive=z2_hat[:, :self.constrained_latent_size],
+                negative=z3_hat[:, :self.constrained_latent_size],
+                margin=0.2
             )
 
             if self.unconstrained_latent_noise_std != 0.0:
