@@ -34,8 +34,8 @@ class Generator28(torch.nn.Module):
         self.dense = None
         self.add_dense_layer = add_dense_layer
         if add_dense_layer:
-            self.dense = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=1, bias=False)
-            self.bn_dense = torch.nn.BatchNorm2d(self.h_size * 4)
+            self.dense = torch.nn.Conv2d(latent_size, latent_size, kernel_size=1, bias=False)
+            self.bn_dense = torch.nn.BatchNorm2d(latent_size)
 
 
     @staticmethod
