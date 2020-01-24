@@ -94,7 +94,7 @@ class SplitMorGANTrainLoop(TrainLoop):
                 anchor=z_hat[:, :self.constrained_latent_size],
                 positive=z2_hat[:, :self.constrained_latent_size],
                 negative=z3_hat[:, :self.constrained_latent_size],
-                margin=0.2
+                margin=0.5
             )
 
             if self.unconstrained_latent_noise_std != 0.0:
