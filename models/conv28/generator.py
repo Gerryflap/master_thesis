@@ -3,7 +3,7 @@ from util.torch.activations import mish
 from util.torch.initialization import weights_init
 
 class Generator28(torch.nn.Module):
-    def __init__(self, latent_size, h_size, use_mish=False, bias=False,  n_channels=1, sigmoid_out=False):
+    def __init__(self, latent_size, h_size, use_mish=False, bias=False,  n_channels=1, sigmoid_out=False, add_dense_layer=False):
         super().__init__()
 
         # Bias is being phased out
@@ -31,7 +31,11 @@ class Generator28(torch.nn.Module):
         self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
         self.bn_3 = torch.nn.BatchNorm2d(self.h_size)
 
-
+        self.dense = None
+        self.add_dense_layer = add_dense_layer
+        if add_dense_layer:
+            self.dense = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=1, bias=False)
+            self.bn_dense = torch.nn.BatchNorm2d(self.h_size * 4)
 
 
     @staticmethod
@@ -40,6 +44,11 @@ class Generator28(torch.nn.Module):
 
     def forward(self, inp):
         x = inp.view(-1, self.latent_size, 1, 1)
+
+        if self.add_dense_layer:
+            x = self.dense(x)
+            x = self.bn_dense(x)
+            x = self.activ(x)
 
         x = self.conv_1(x)
         x = self.bn_1(x)

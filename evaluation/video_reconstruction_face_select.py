@@ -13,7 +13,7 @@ import dlib
 
 # 0 = No random, 1 = Every frame a new random
 load_z = False
-random_mode = 1
+random_mode = 0
 crop_region_size = 0
 
 if random_mode == 0:

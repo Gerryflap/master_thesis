@@ -6,7 +6,7 @@ from util.torch.initialization import weights_init
 
 
 class Encoder28(MorphingEncoder):
-    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False, cap_variance=True):
+    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False, cap_variance=True, add_dense_layer=False):
         super().__init__()
 
         self.n_channels = n_channels
@@ -34,6 +34,12 @@ class Encoder28(MorphingEncoder):
         if not deterministic:
             self.std_fc = torch.nn.Linear(h_size * 4, latent_size, bias=True)
 
+        self.dense = None
+        self.add_dense_layer = add_dense_layer
+        if add_dense_layer:
+            self.dense = torch.nn.Linear(h_size * 4, h_size * 4, bias=False)
+            self.bn_dense = torch.nn.BatchNorm1d(self.h_size * 4)
+
 
 
     @staticmethod
@@ -59,6 +65,11 @@ class Encoder28(MorphingEncoder):
 
         # Flatten to vector
         x = x.view(-1, self.h_size * 4)
+
+        if self.add_dense_layer:
+            x = self.dense(x)
+            x = self.bn_dense(x)
+            x = self.activ(x)
 
         means = self.mean_fc(x)
         if self.deterministic:
