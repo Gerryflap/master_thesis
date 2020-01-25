@@ -61,3 +61,4 @@ trainloop = FRSTrainLoop(
     cuda=args.cuda,
     epochs=args.epochs
 )
+trainloop.train()
