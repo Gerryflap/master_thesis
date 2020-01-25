@@ -46,3 +46,8 @@ class TLU(torch.nn.Module):
 
     def forward(self, x):
         return torch.max(x, self.tau)
+
+
+def map_to_hypersphere(x, epsilon=1e-10):
+    distances = torch.sqrt(torch.sum(x*x, dim=1, keepdim=True))
+    return x/(distances + epsilon)
