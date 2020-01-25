@@ -21,7 +21,7 @@ class FRSTrainLoop(TrainLoop):
         self.cuda = cuda
 
     def epoch(self):
-
+        self.model.train()
         for (anchor, positive, negative) in self.dataloader:
             if anchor.size()[0] != self.batch_size:
                 continue

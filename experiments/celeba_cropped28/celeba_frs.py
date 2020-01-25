@@ -11,6 +11,7 @@ from data.celeba_cropped_triplets import CelebaCroppedTriplets
 from models.conv28.frs import FRS28
 from trainloops.frs_trainloop import FRSTrainLoop
 from trainloops.listeners.cluster_killswitch import KillSwitchListener
+from trainloops.listeners.frs_accuracy_printer import FRSAccuracyPrinter
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 
@@ -36,6 +37,11 @@ dataset = CelebaCroppedTriplets(split="train", download=True, transform=transfor
     transforms.ToTensor(),
 ]))
 
+valid_dataset = CelebaCroppedTriplets(split="valid", download=True, transform=transforms.Compose([
+    transforms.Resize(28),
+    transforms.ToTensor(),
+]))
+
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 frs_model = FRS28(args.l_size, args.h_size, use_mish=args.use_mish, n_channels=3, add_dense_layer=True)
@@ -50,6 +56,7 @@ frs_model.init_weights()
 listeners = [
     LossReporter(),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    FRSAccuracyPrinter(args.cuda, valid_dataset),
     KillSwitchListener(output_path)
 ]
 
