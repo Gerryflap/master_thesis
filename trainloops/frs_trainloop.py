@@ -20,10 +20,6 @@ class FRSTrainLoop(TrainLoop):
         self.dataloader = dataloader
         self.cuda = cuda
 
-        if cuda:
-            self.real_label = self.real_label.cuda()
-            self.fake_label = self.fake_label.cuda()
-
     def epoch(self):
 
         for (anchor, positive, negative) in self.dataloader:
