@@ -21,7 +21,7 @@ def get_log_odds(raw_marginals, use_sigmoid):
 class ALITrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1,
                  morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
-                 reconstruction_loss_mode="pixelwise"):
+                 reconstruction_loss_mode="pixelwise", frs_model=None):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -39,9 +39,10 @@ class ALITrainLoop(TrainLoop):
         self.d_real_label = d_real_label
         self.decrease_noise = decrease_noise
 
-        if reconstruction_loss_mode not in ["pixelwise", "dis_l"]:
-            raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" or \"dis_l\"")
+        if reconstruction_loss_mode not in ["pixelwise", "dis_l", "frs"]:
+            raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" \"dis_l\", or \"frs\"")
         self.reconstruction_loss_mode = reconstruction_loss_mode
+        self.frs_model = frs_model
 
     def epoch(self):
         self.Gx.train()
@@ -101,8 +102,10 @@ class ALITrainLoop(TrainLoop):
                 x_recon = self.Gx(z_hat)
                 if self.reconstruction_loss_mode == "pixelwise":
                     L_pixel = self.morgan_pixel_loss(x_recon, x_no_noise)
-                else:
+                elif self.reconstruction_loss_mode == "dis_l":
                     L_pixel = self.dis_l_loss(x_recon, x_no_noise)
+                else:
+                    L_pixel = self.frs_loss(x_recon, x_no_noise)
                 L_syn = L_g + self.morgan_alpha * L_pixel
 
             # ========== Back propagation and updates ==========
@@ -174,3 +177,9 @@ class ALITrainLoop(TrainLoop):
         noise_factor = self.d_img_noise_std * \
                        (1 if not self.decrease_noise else 1 - (self.current_epoch / self.epochs))
         return x + torch.randn_like(x) * noise_factor
+
+    def frs_loss(self, prediction, target):
+        z_pred = self.frs_model(prediction)
+        z_target = self.frs_model(target)
+        distances = torch.sqrt(torch.sum(torch.pow(z_pred - z_target, 2), dim=1))
+        return distances.mean()
