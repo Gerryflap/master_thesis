@@ -115,6 +115,7 @@ train_loop = ALITrainLoop(
     decrease_noise=True,
     use_sigmoid=True,
     reconstruction_loss_mode=reconstruction_loss_mode,
+    frs_model=frs_model
 )
 
 train_loop.train()
