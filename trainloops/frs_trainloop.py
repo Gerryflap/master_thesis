@@ -26,6 +26,11 @@ class FRSTrainLoop(TrainLoop):
             if anchor.size()[0] != self.batch_size:
                 continue
 
+            if self.cuda:
+                anchor = anchor.cuda()
+                positive = positive.cuda()
+                negative.cuda()
+
             z_anchor = self.model(anchor)
             z_positive = self.model(positive)
             z_negative = self.model(negative)
