@@ -43,7 +43,7 @@ class FRSAccuracyPrinter(Listener):
         pos_distances = torch.sqrt(torch.sum(torch.pow(anchors - positives, 2), dim=1))
         neg_distances = torch.sqrt(torch.sum(torch.pow(anchors - negatives, 2), dim=1))
 
-        pos_acc = (pos_distances < 0.6).mean()
-        neg_acc = (neg_distances >= 0.6).mean()
+        pos_acc = (pos_distances < 0.6).type(torch.float32).mean()
+        neg_acc = (neg_distances >= 0.6).type(torch.float32).mean()
         print("Positive samples accuracy: ", pos_acc.detach().item())
         print("Negative samples accuracy: ", neg_acc.detach().item())
