@@ -15,7 +15,7 @@ class FRSAccuracyPrinter(Listener):
 
     def report(self, state_dict):
         print("Epoch: %d"%state_dict["epoch"])
-        model = state_dict["models"]["model"]
+        model = state_dict["networks"]["model"]
         model.eval()
 
         anchors = []
