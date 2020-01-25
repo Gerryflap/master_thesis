@@ -29,7 +29,7 @@ class FRSTrainLoop(TrainLoop):
             if self.cuda:
                 anchor = anchor.cuda()
                 positive = positive.cuda()
-                negative.cuda()
+                negative = negative.cuda()
 
             z_anchor = self.model(anchor)
             z_positive = self.model(positive)
