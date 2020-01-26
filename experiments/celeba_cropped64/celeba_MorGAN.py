@@ -49,6 +49,8 @@ parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                          "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
 parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
+parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model. "
+                                                                     "Switches to FRS reconstruction loss")
 
 args = parser.parse_args()
 
@@ -64,6 +66,14 @@ valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filterin
 ]))
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+
+# Code for loading frs model when frs based reconstruction loss is used
+frs_model = None
+if args.frs_path is not None:
+    frs_model = torch.load(args.frs_path)
+    frs_model.eval()
+    if args.cuda:
+        frs_model = frs_model.cuda()
 
 if args.continue_with is None:
     Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
@@ -99,6 +109,11 @@ listeners = [
     ModelSaver(output_path, n=30, overwrite=False, print_output=True),
     KillSwitchListener(output_path)
 ]
+
+reconstruction_loss_mode = "pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l"
+if frs_model is not None:
+    reconstruction_loss_mode = "frs"
+
 train_loop = ALITrainLoop(
     listeners=listeners,
     Gz=Gz,
@@ -114,7 +129,8 @@ train_loop = ALITrainLoop(
     d_img_noise_std=args.instance_noise_std,
     decrease_noise=True,
     use_sigmoid=True,
-    reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l"
+    reconstruction_loss_mode=reconstruction_loss_mode,
+    frs_model=frs_model
 )
 
 train_loop.train()
