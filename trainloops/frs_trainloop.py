@@ -11,7 +11,8 @@ class FRSTrainLoop(TrainLoop):
             optimizer,
             dataloader: torch.utils.data.DataLoader,
             cuda=False,
-            epochs=1
+            epochs=1,
+            margin=0.6,
     ):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
@@ -19,6 +20,7 @@ class FRSTrainLoop(TrainLoop):
         self.optimizer = optimizer
         self.dataloader = dataloader
         self.cuda = cuda
+        self.margin = margin
 
     def epoch(self):
         self.model.train()
@@ -35,7 +37,7 @@ class FRSTrainLoop(TrainLoop):
             z_positive = self.model(positive)
             z_negative = self.model(negative)
 
-            loss = F.triplet_margin_loss(z_anchor, z_positive, z_negative, margin=0.6)
+            loss = F.triplet_margin_loss(z_anchor, z_positive, z_negative, margin=self.margin)
 
             self.optimizer.zero_grad()
             loss.backward()

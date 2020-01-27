@@ -4,14 +4,13 @@
 """
 import random
 from collections import defaultdict
-from functools import partial
 import os
 
 import PIL.Image
 from torchvision.datasets import VisionDataset
+
 from data.celeba_cropped import CelebaCropped
 
-from shutil import copyfile
 
 assert os.path.isdir("data")
 
@@ -112,3 +111,16 @@ class CelebaCroppedTriplets(VisionDataset):
         return len(self.fnames)
 
 
+if __name__ == "__main__":
+    from torchvision.transforms import transforms
+    from torchvision.utils import save_image
+    import torch
+    ds = CelebaCroppedTriplets(transform=transforms.ToTensor())
+    imgs = []
+    for i in range(100):
+        a, p, n = ds[i]
+        imgs.append(a)
+        imgs.append(p)
+        imgs.append(n)
+    imgs = torch.stack(imgs, dim=0)
+    save_image(imgs, "triplets.png", nrow=3)

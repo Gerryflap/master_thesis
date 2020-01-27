@@ -12,6 +12,8 @@ from PIL import Image
 
 import dlib
 
+from util.torch.losses import euclidean_distance
+
 parser = argparse.ArgumentParser(description="Image to latent vector converter.")
 
 parser.add_argument("--param_path", action="store", type=str, required=True, help="Path to Gx and D models")
@@ -35,6 +37,8 @@ parser.add_argument("--regularization_factor", action="store", type=float, defau
                          "that keeps z close to 0")
 parser.add_argument("--init_with_Gz", action="store_true", default=False,
                     help="Initializes z on Gz(x) or 0.5*(Gz(x1) + Gz(x2))")
+parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model. "
+                                                                     "Switches to FRS reconstruction loss")
 
 args = parser.parse_args()
 
@@ -45,6 +49,15 @@ Gx.eval()
 Gx.requires_grad = False
 
 D = None
+
+# Code for loading frs model when frs based reconstruction loss is used
+frs_model = None
+if args.frs_path is not None:
+    frs_model = torch.load(args.frs_path)
+    frs_model.requires_grad = False
+    frs_model.eval()
+    if args.cuda:
+        frs_model = frs_model.cuda()
 
 if args.use_dis_l:
     fname_D = os.path.join(args.param_path, "D.pt")
@@ -170,6 +183,12 @@ if D is not None:
         _, dis_l_x2 = D.compute_dx(x2)
         dis_l_x2 = dis_l_x2.detach()
 
+if frs_model is not None:
+    emb_x = frs_model(x).detach()
+    if x2 is not None:
+        emb_x2 = frs_model(x2).detach()
+
+
 z = LatentVector(z_size)
 
 if args.cuda:
@@ -189,6 +208,7 @@ try:
         z_val = z.forward(None)
         x_recon = Gx(z_val)
 
+        loss = 0
         if D is not None:
             _, dis_l_x_rec = D.compute_dx(x_recon)
             loss = torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x, reduction="mean")
@@ -196,7 +216,17 @@ try:
                 loss += torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x2, reduction="mean")
                 loss *= 0.5
 
-        else:
+        if frs_model is not None:
+            emb_rec = frs_model(x_recon)
+            if x2 is None:
+                loss += euclidean_distance(emb_rec, emb_x)
+                print(loss.detach().item())
+            else:
+                loss1 = euclidean_distance(emb_rec, emb_x)
+                loss2 = euclidean_distance(emb_rec, emb_x2)
+                print(loss1.detach().item(), loss2.detach().item())
+                loss += torch.max(loss1, loss2)
+        if D is None and frs_model is None:
             loss = torch.nn.functional.mse_loss(x_recon, x)
             if x2 is not None:
                 loss += torch.nn.functional.mse_loss(x_recon, x2, reduction="mean")

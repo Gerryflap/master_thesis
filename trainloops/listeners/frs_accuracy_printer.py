@@ -5,10 +5,11 @@ from trainloops.listeners.listener import Listener
 
 
 class FRSAccuracyPrinter(Listener):
-    def __init__(self, cuda, dataset):
+    def __init__(self, cuda, dataset, margin=0.6):
         super().__init__()
         self.cuda = cuda
         self.dataloader = DataLoader(dataset, 32, drop_last=False)
+        self.margin = margin
 
     def initialize(self):
         pass
@@ -43,7 +44,9 @@ class FRSAccuracyPrinter(Listener):
         pos_distances = torch.sqrt(torch.sum(torch.pow(anchors - positives, 2), dim=1))
         neg_distances = torch.sqrt(torch.sum(torch.pow(anchors - negatives, 2), dim=1))
 
-        pos_acc = (pos_distances < 0.6).type(torch.float32).mean()
-        neg_acc = (neg_distances >= 0.6).type(torch.float32).mean()
+        pos_acc = (pos_distances < self.margin).type(torch.float32).mean()
+        neg_acc = (neg_distances >= self.margin).type(torch.float32).mean()
         print("Positive samples accuracy: ", pos_acc.detach().item())
         print("Negative samples accuracy: ", neg_acc.detach().item())
+        print("Positive samples mean distance: ", pos_distances.mean().detach().item())
+        print("Negative samples mean distance: ", neg_distances.mean().detach().item())

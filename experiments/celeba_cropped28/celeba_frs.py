@@ -44,7 +44,7 @@ valid_dataset = CelebaCroppedTriplets(split="valid", download=True, transform=tr
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-frs_model = FRS28(args.l_size, args.h_size, use_mish=args.use_mish, n_channels=3, add_dense_layer=True)
+frs_model = FRS28(args.l_size, args.h_size, use_mish=args.use_mish, n_channels=3, add_dense_layer=True, hypersphere_output=True)
 
 if args.cuda:
     frs_model = frs_model.cuda()
@@ -56,7 +56,7 @@ frs_model.init_weights()
 listeners = [
     LossReporter(),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
-    FRSAccuracyPrinter(args.cuda, valid_dataset),
+    FRSAccuracyPrinter(args.cuda, valid_dataset, margin=1.0),
     KillSwitchListener(output_path)
 ]
 
@@ -66,6 +66,7 @@ trainloop = FRSTrainLoop(
     optimizer,
     dataloader,
     cuda=args.cuda,
-    epochs=args.epochs
+    epochs=args.epochs,
+    margin=1.0
 )
 trainloop.train()
