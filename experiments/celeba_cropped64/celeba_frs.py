@@ -27,6 +27,8 @@ parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
+parser.add_argument("--n_negatives", action="store", type=int, default=1,
+                    help="if > 1, switch to hard triplet selection and select hardest negative from n negatives")
 
 args = parser.parse_args()
 
@@ -34,7 +36,7 @@ output_path = util.output.init_experiment_output_dir("celeba64", "frs", args)
 
 dataset = CelebaCroppedTriplets(split="train", download=True, transform=transforms.Compose([
     transforms.ToTensor(),
-]))
+]), give_n_negatives=args.n_negatives)
 
 valid_dataset = CelebaCroppedTriplets(split="valid", download=True, transform=transforms.Compose([
     transforms.ToTensor(),
@@ -65,6 +67,7 @@ trainloop = FRSTrainLoop(
     dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    margin=1.0
+    margin=1.0,
+    use_hard_triplets=args.n_negatives > 1
 )
 trainloop.train()

@@ -5,7 +5,7 @@
 import random
 from collections import defaultdict
 import os
-
+import torch
 import PIL.Image
 from torchvision.datasets import VisionDataset
 
@@ -18,7 +18,7 @@ assert os.path.isdir("data")
 class CelebaCroppedTriplets(VisionDataset):
     cropped_base_folder = "celeba_cropped/img_align/"
 
-    def __init__(self, split="train", transform=None, target_transform=None, download=False):
+    def __init__(self, split="train", transform=None, target_transform=None, download=False, give_n_negatives=1):
         super().__init__("data", transforms=None, transform=transform, target_transform=target_transform)
 
         if not os.path.isdir("data/celeba_cropped/"):
@@ -59,6 +59,7 @@ class CelebaCroppedTriplets(VisionDataset):
 
         self.ident_list = list(self.idents.keys())
         self.ident_indices = {ident: i for i, ident in enumerate(self.ident_list)}
+        self.give_n_negatives = give_n_negatives
 
     def generate_random_different_index(self, index, list_length=None):
         if list_length is None:
@@ -84,9 +85,7 @@ class CelebaCroppedTriplets(VisionDataset):
         fname = self.fnames[index]
         ident1 = self.fname_to_ident[fname]
 
-        ident_index3 = self.generate_random_different_index(self.ident_indices[ident1])
 
-        ident3 = self.ident_list[ident_index3]
 
         fname1 = fname
         if len(self.idents[ident1]) == 1:
@@ -95,9 +94,19 @@ class CelebaCroppedTriplets(VisionDataset):
             self.fname_to_index_in_ident_image_list[fname],
             len(self.idents[ident1]))
         fname2 = self.idents[ident1][image_index2]
-        fname3 = random.choice(self.idents[ident3])
 
-        return self.load_image(fname1), self.load_image(fname2), self.load_image(fname3)
+        if self.give_n_negatives == 1:
+            ident_index3 = self.generate_random_different_index(self.ident_indices[ident1])
+            ident3 = self.ident_list[ident_index3]
+            fname3 = random.choice(self.idents[ident3])
+            img3 = self.load_image(fname3)
+        else:
+            negatives = [self.generate_random_different_index(self.ident_indices[ident1]) for _ in range(self.give_n_negatives)]
+            neg_idents = [self.ident_list[neg_i] for neg_i in negatives]
+            neg_fnames = [random.choice(self.idents[ident3]) for ident3 in neg_idents]
+            img3 = torch.stack([self.load_image(fname3) for fname3 in neg_fnames], dim=0)
+
+        return self.load_image(fname1), self.load_image(fname2), img3
 
     def load_image(self, name):
         X = PIL.Image.open(os.path.join(self.root, self.cropped_base_folder, name))
@@ -114,7 +123,6 @@ class CelebaCroppedTriplets(VisionDataset):
 if __name__ == "__main__":
     from torchvision.transforms import transforms
     from torchvision.utils import save_image
-    import torch
     ds = CelebaCroppedTriplets(transform=transforms.ToTensor())
     imgs = []
     for i in range(100):

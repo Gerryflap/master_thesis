@@ -16,38 +16,25 @@ from util.torch.losses import euclidean_distance
 
 parser = argparse.ArgumentParser(description="Image to latent vector converter.")
 
-parser.add_argument("--param_path", action="store", type=str, required=True, help="Path to Gx and D models")
+parser.add_argument("--param_path", action="store", type=str, required=True, help="Path to D model folder")
 parser.add_argument("--img", action="store", type=str, required=True, help="Path to input image")
 parser.add_argument("--img2", action="store", type=str, default=None, help="Path to second input image for morphing")
-parser.add_argument("--res", action="store", type=int, required=True, help="Model input resolution")
 parser.add_argument("--lr", action="store", type=float, default=0.05, help="Adam learning rate")
 parser.add_argument("--n_steps", action="store", type=int, default=1000, help="Number of optimization steps to take")
+parser.add_argument("--res", action="store", type=int, default=64, help="Image resolution")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="If true, a sample is taken from the encoder output distribution. Otherwise the mean is used.")
 parser.add_argument("--fix_contrast", action="store_true", default=False,
                     help="If true, makes sure that the colors in the image span from 0-255")
-parser.add_argument("--sigmoid_model", action="store_true", default=False,
-                    help="This flag is required if the loaded model was trained on images with range 0-1. This is done with the MorGAN models at the time of writing.")
 parser.add_argument("--visualize", action="store_true", default=False,
                     help="Visualizes the images every step")
 parser.add_argument("--use_dis_l", action="store_true", default=False,
                     help="Switches to Dis_l loss instead of pixels")
-parser.add_argument("--regularization_factor", action="store", type=float, default=0.03,
-                    help="Scales the regularization term "
-                         "that keeps z close to 0")
-parser.add_argument("--init_with_Gz", action="store_true", default=False,
-                    help="Initializes z on Gz(x) or 0.5*(Gz(x1) + Gz(x2))")
 parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model. "
                                                                      "Switches to FRS reconstruction loss")
-parser.add_argument("--d_real_regularization", action="store_true", default=False, help="Keeps D(x,z) to zero")
 
 args = parser.parse_args()
 
-fname_dec = os.path.join(args.param_path, "Gx.pt")
-
-Gx = torch.load(fname_dec, map_location=torch.device('cpu'))
-Gx.eval()
-Gx.requires_grad = False
 
 D = None
 
@@ -60,33 +47,22 @@ if args.frs_path is not None:
     if args.cuda:
         frs_model = frs_model.cuda()
 
-if args.use_dis_l or args.d_real_regularization:
+if args.use_dis_l:
     fname_D = os.path.join(args.param_path, "D.pt")
 
     D = torch.load(fname_D, map_location=torch.device('cpu'))
     D.eval()
 
-Gz = None
-if args.init_with_Gz:
-    fname_Gz = os.path.join(args.param_path, "Gz.pt")
-
-    Gz = torch.load(fname_Gz, map_location=torch.device('cpu'))
-    Gz.eval()
 
 if args.cuda:
-    Gx = Gx.cuda()
-
     if D is not None:
         D = D.cuda()
 
-    if args.init_with_Gz:
-        Gz = Gz.cuda()
 
 predictor_path = "data/data_prep/shape_predictor_5_face_landmarks.dat"
 detector = dlib.get_frontal_face_detector()
 sp = dlib.shape_predictor(predictor_path)
 
-z_size = Gx.latent_size
 resolution = args.res
 real_resolution = resolution
 
@@ -127,8 +103,6 @@ def load_process_img(fname):
     # input_frame = input_frame.permute(2, 0, 1)
     input_frame = input_frame.unsqueeze(0)
     # input_frame /= 255.0
-    if not args.sigmoid_model:
-        input_frame = input_frame * 2 - 1
     return input_frame
 
 
@@ -141,13 +115,14 @@ def to_numpy_img(img, tanh_mode):
     return img
 
 
-class LatentVector(torch.nn.Module):
-    def __init__(self, l_size):
+class TrainableImage(torch.nn.Module):
+    def __init__(self, res):
         super().__init__()
-        self.param = torch.nn.Parameter(torch.normal(0, 1, (1, l_size)), requires_grad=True)
+        self.param = torch.nn.Parameter(torch.normal(0.0, 0.3, (1, 3, res, res)), requires_grad=True)
+        self.param = self.param
 
     def forward(self, inp):
-        return self.param
+        return torch.sigmoid(self.param)
 
 
 stop = False
@@ -175,7 +150,7 @@ if args.cuda:
     if x2 is not None:
         x2 = x2.cuda()
 
-if args.use_dis_l:
+if D is not None:
     _, dis_l_x = D.compute_dx(x)
     D.requires_grad = False
     dis_l_x = dis_l_x.detach()
@@ -190,27 +165,25 @@ if frs_model is not None:
         emb_x2 = frs_model(x2).detach()
 
 
-z = LatentVector(z_size)
-
+x_rec = TrainableImage(resolution)
 if args.cuda:
-    z = z.cuda()
+    x_rec = x_rec.cuda()
 
-if Gz is not None:
-    if x2 is not None:
-        z_val = Gz.morph(x, x2).detach()
-    else:
-        z_val = Gz.encode(x).detach()
-    z.param.data = z_val
+opt = torch.optim.Adam(x_rec.parameters(), args.lr)
 
-opt = torch.optim.Adam(z.parameters(), args.lr)
+for i in range(100):
+    x_recon = x_rec.forward(None)
+    loss = torch.nn.functional.mse_loss(x_recon, x)
+    opt.zero_grad()
+    loss.backward()
+    opt.step()
+
 
 try:
     for i in range(args.n_steps):
-        z_val = z.forward(None)
-        x_recon = Gx(z_val)
-
+        x_recon = x_rec.forward(None)
         loss = 0
-        if args.use_dis_l:
+        if D is not None:
             _, dis_l_x_rec = D.compute_dx(x_recon)
             loss = torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x, reduction="mean")
             if x2 is not None:
@@ -220,28 +193,18 @@ try:
         if frs_model is not None:
             emb_rec = frs_model(x_recon)
             if x2 is None:
-                dist = euclidean_distance(emb_rec, emb_x.detach())
-                loss += dist
-                print("Embedding distance: ", dist.detach().item())
+                loss += euclidean_distance(emb_rec, emb_x)
+                print(loss.detach().item())
             else:
                 loss1 = euclidean_distance(emb_rec, emb_x)
                 loss2 = euclidean_distance(emb_rec, emb_x2)
-                print("Embedding distances: ", loss1.detach().item(), loss2.detach().item())
+                print(loss1.detach().item(), loss2.detach().item())
                 loss += torch.max(loss1, loss2)
-        if D is not None and args.d_real_regularization:
-            #D_loss = torch.pow(D((x_recon, z_val)), 2).mean()
-            D_loss = torch.sigmoid(D((x_recon, z_val))).mean()
-            loss += D_loss
-            print("D_loss", D_loss.detach().item())
         if D is None and frs_model is None:
             loss = torch.nn.functional.mse_loss(x_recon, x)
             if x2 is not None:
                 loss += torch.nn.functional.mse_loss(x_recon, x2, reduction="mean")
                 loss *= 0.5
-
-        # L_reg = torch.pow(z_val, 2).mean()
-        L_reg = torch.pow(z_val.mean() - 0, 2) + torch.pow(z_val.var() - 1, 2)
-        loss += args.regularization_factor * L_reg
 
         opt.zero_grad()
         loss.backward()
@@ -257,8 +220,4 @@ try:
             break
 except KeyboardInterrupt:
     plt.close()
-    z_val = z.param.data.detach().cpu().numpy()
-    np.save("z.npy", z_val)
 
-z = z.param.data.detach().cpu().numpy()
-np.save("z.npy", z)
