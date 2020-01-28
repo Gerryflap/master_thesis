@@ -1,3 +1,5 @@
+import math
+
 import torch
 from torch.utils.data import DataLoader
 
@@ -5,11 +7,21 @@ from trainloops.listeners.listener import Listener
 
 
 class FRSAccuracyPrinter(Listener):
-    def __init__(self, cuda, dataset, margin=0.6):
+    def __init__(self, cuda, dataset, margin=None, far=0.05):
+        """
+        Initializes the FRS Accuracy printer
+        :param cuda: Whether to use cuda
+        :param dataset: The dataset to use for evaluation.
+            Keep in mind that the WHOLE dataset is used. This is done in batches of 32
+        :param margin: If specified, overrides far and uses the specified margin as the threshold to determine real from fake
+        :param far: False Accept Rate. Aims to get at most this FAR. The threshold is set such that this is reached.
+        """
         super().__init__()
         self.cuda = cuda
         self.dataloader = DataLoader(dataset, 32, drop_last=False)
         self.margin = margin
+        self.far = far
+
 
     def initialize(self):
         pass
@@ -44,8 +56,14 @@ class FRSAccuracyPrinter(Listener):
         pos_distances = torch.sqrt(torch.sum(torch.pow(anchors - positives, 2), dim=1))
         neg_distances = torch.sqrt(torch.sum(torch.pow(anchors - negatives, 2), dim=1))
 
-        pos_acc = (pos_distances < self.margin).type(torch.float32).mean()
-        neg_acc = (neg_distances >= self.margin).type(torch.float32).mean()
+        threshold = self.margin
+        if threshold is None:
+            sorted_index = min((len(self.dataloader), math.floor(self.far*len(self.dataloader))))
+            neg_distances_sorted, _ = torch.sort(neg_distances)
+            threshold = neg_distances_sorted[sorted_index]
+
+        pos_acc = (pos_distances < threshold).type(torch.float32).mean()
+        neg_acc = (neg_distances >= threshold).type(torch.float32).mean()
         print("Positive samples accuracy: ", pos_acc.detach().item())
         print("Negative samples accuracy: ", neg_acc.detach().item())
         print("Positive samples mean distance: ", pos_distances.mean().detach().item())

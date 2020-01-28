@@ -58,7 +58,7 @@ frs_model.init_weights()
 listeners = [
     LossReporter(),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
-    FRSAccuracyPrinter(args.cuda, valid_dataset, margin=1.0),
+    FRSAccuracyPrinter(args.cuda, valid_dataset),
     KillSwitchListener(output_path)
 ]
 
@@ -69,7 +69,7 @@ trainloop = FRSTrainLoop(
     dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    margin=1.0,
+    margin=0.2,
     use_hard_triplets=args.n_negatives > 1
 )
 trainloop.train()

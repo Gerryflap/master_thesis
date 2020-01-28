@@ -218,7 +218,11 @@ try:
                 loss *= 0.5
 
         if frs_model is not None:
-            emb_rec = frs_model(x_recon)
+            noise = torch.normal(0, 0.01, x_recon.size())
+            if args.cuda:
+                noise = noise.cuda()
+            x_recon_noise = x_recon + noise
+            emb_rec = frs_model(x_recon_noise)
             if x2 is None:
                 dist = euclidean_distance(emb_rec, emb_x.detach())
                 loss += dist
