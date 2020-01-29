@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 
 from trainloops.train_loop import TrainLoop
+from util.torch.losses import euclidean_distance
 
 
 def get_log_odds(raw_marginals, use_sigmoid):
@@ -20,7 +21,8 @@ def get_log_odds(raw_marginals, use_sigmoid):
 class MorphingGANTrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0,
                  d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
-                 morph_loss_factor=0.0, reconstruction_loss_mode="pixelwise", morph_loss_mode="pixelwise"):
+                 morph_loss_factor=0.0, reconstruction_loss_mode="pixelwise", morph_loss_mode="pixelwise",
+                 frs_model=None):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -36,13 +38,14 @@ class MorphingGANTrainLoop(TrainLoop):
         self.d_img_noise_std = d_img_noise_std
         self.d_real_label = d_real_label
         self.decrease_noise = decrease_noise
+        self.frs_model = frs_model
 
-        if reconstruction_loss_mode not in ["pixelwise", "dis_l"]:
-            raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" or \"dis_l\"")
+        if reconstruction_loss_mode not in ["pixelwise", "dis_l", "frs"]:
+            raise ValueError("Reconstruction loss mode must be one of \"pixelwise\", \"dis_l\" or \"frs\"")
         self.reconstruction_loss_mode = reconstruction_loss_mode
 
-        if morph_loss_mode not in ["pixelwise", "dis_l"]:
-            raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" or \"dis_l\"")
+        if morph_loss_mode not in ["pixelwise", "dis_l", "frs"]:
+            raise ValueError("Reconstruction loss mode must be one of \"pixelwise\", \"dis_l\" or \"frs\"")
         self.morph_loss_mode = morph_loss_mode
         self.morph_loss_factor = morph_loss_factor
 
@@ -113,20 +116,26 @@ class MorphingGANTrainLoop(TrainLoop):
             if self.reconstruction_loss_mode == "pixelwise":
                 dis_l_x1 = None
                 L_recon = self.reconstruction_loss(x_recon, x1)
-            else:
+            elif self.reconstruction_loss_mode == "dis_l":
                 _, dis_l_recon = self.D.compute_dx(x_recon)
                 _, dis_l_x1 = self.D.compute_dx(x1)
                 L_recon = self.reconstruction_loss(x_recon, x1)
+            else:
+                L_recon = euclidean_distance(self.frs_model(x_recon), self.frs_model(x1))
 
             if self.morph_loss_factor != 0.0:
-                if self.reconstruction_loss_mode == "pixelwise":
+                if self.morph_loss_mode == "pixelwise":
                     L_morph = self.morph_loss(x_morph, x1, x2)
-                else:
+                elif self.morph_loss_mode == "dis_l":
                     _, dis_l_morph = self.D.compute_dx(x_morph)
                     _, dis_l_x2 = self.D.compute_dx(x2)
                     if dis_l_x1 is None:
                         _, dis_l_x1 = self.D.compute_dx(x1)
                     L_morph = self.morph_loss(dis_l_morph, dis_l_x1, dis_l_x2)
+                else:
+                    dist1 = euclidean_distance(self.frs_model(x_morph), self.frs_model(x1))
+                    dist2 = euclidean_distance(self.frs_model(x_morph), self.frs_model(x2))
+                    L_morph = torch.max(dist1, dist2)
             else:
                 # Do not compute L_morph if it is no needed
                 L_morph = torch.zeros((1,), dtype=torch.float32)
@@ -193,10 +202,11 @@ class MorphingGANTrainLoop(TrainLoop):
         if self.morph_loss_mode == "pixelwise":
             x1_loss = self.morgan_pixel_loss(x_morph, x1)
             x2_loss = self.morgan_pixel_loss(x_morph, x2)
+            return (x1_loss + x2_loss) * 0.5
         else:
             x1_loss = self.dis_l_loss(x_morph, x1)
             x2_loss = self.dis_l_loss(x_morph, x2)
-        return (x1_loss + x2_loss) * 0.5
+            return (x1_loss + x2_loss) * 0.5
 
     def dis_l_loss(self, dis_l_prediction, dis_l_target):
         return torch.nn.functional.mse_loss(dis_l_prediction, dis_l_target)
