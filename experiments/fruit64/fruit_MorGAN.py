@@ -1,5 +1,8 @@
 from data.FruitDataset import FruitDataset
 from models.conv28.encoder import Encoder28
+from models.conv64_ali.ali_discriminator import ALIDiscriminator64
+from models.conv64_ali.encoder import Encoder64
+from models.conv64_ali.generator import Generator64
 from trainloops.ali_train_loop import ALITrainLoop
 from trainloops.gan_train_loop import GanTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
@@ -16,7 +19,7 @@ from trainloops.listeners.model_saver import ModelSaver
 # Parse commandline arguments
 
 
-parser = argparse.ArgumentParser(description="Celeba MorGAN experiment.")
+parser = argparse.ArgumentParser(description="Fruit MorGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
@@ -47,15 +50,15 @@ parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", defa
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("fruit28", "MorGAN", args)
+output_path = util.output.init_experiment_output_dir("fruit64", "MorGAN", args)
 
 dataset = FruitDataset("data/fruit/48x48/oranges/", transform=transforms.Compose([
-    transforms.Resize(28),
+    transforms.Resize(64),
     transforms.ToTensor(),
 ]), only_original=False)
 
 valid_dataset = FruitDataset("data/fruit/48x48/oranges/", transform=transforms.Compose([
-    transforms.Resize(28),
+    transforms.Resize(64),
     transforms.ToTensor(),
 ]), only_original=False)
 
@@ -63,9 +66,9 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
-D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
+Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
+D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
