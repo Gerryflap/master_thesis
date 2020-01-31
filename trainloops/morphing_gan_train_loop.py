@@ -139,6 +139,8 @@ class MorphingGANTrainLoop(TrainLoop):
             else:
                 # Do not compute L_morph if it is no needed
                 L_morph = torch.zeros((1,), dtype=torch.float32)
+                if self.cuda:
+                    L_morph = L_morph.cuda()
             L_syn = L_g + self.morgan_alpha * L_recon + self.morph_loss_factor * L_morph
 
             # ========== Back propagation and updates ==========
