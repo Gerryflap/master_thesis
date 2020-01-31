@@ -119,7 +119,7 @@ class MorphingGANTrainLoop(TrainLoop):
             elif self.reconstruction_loss_mode == "dis_l":
                 _, dis_l_recon = self.D.compute_dx(x_recon)
                 _, dis_l_x1 = self.D.compute_dx(x1)
-                L_recon = self.reconstruction_loss(x_recon, x1)
+                L_recon = self.reconstruction_loss(dis_l_recon, dis_l_x1)
             else:
                 L_recon = euclidean_distance(self.frs_model(x_recon), self.frs_model(x1))
 
