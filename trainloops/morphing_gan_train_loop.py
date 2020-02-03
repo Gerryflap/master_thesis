@@ -121,6 +121,7 @@ class MorphingGANTrainLoop(TrainLoop):
                 _, dis_l_x1 = self.D.compute_dx(x1)
                 L_recon = self.reconstruction_loss(dis_l_recon, dis_l_x1)
             else:
+                dis_l_x1 = None
                 L_recon = euclidean_distance(self.frs_model(x_recon), self.frs_model(x1))
 
             if self.morph_loss_factor != 0.0:
@@ -153,10 +154,9 @@ class MorphingGANTrainLoop(TrainLoop):
 
             # Gradient update on the Generator networks
             self.optim_G.zero_grad()
-            if self.morgan:
-                L_syn.backward()
-            else:
-                L_g.backward()
+
+            L_syn.backward()
+
             self.optim_G.step()
 
         losses = {
