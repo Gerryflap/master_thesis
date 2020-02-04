@@ -22,7 +22,7 @@ class MorphingGANTrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0,
                  d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
                  morph_loss_factor=0.0, reconstruction_loss_mode="pixelwise", morph_loss_mode="pixelwise",
-                 frs_model=None):
+                 frs_model=None, unlock_D=False):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -39,6 +39,7 @@ class MorphingGANTrainLoop(TrainLoop):
         self.d_real_label = d_real_label
         self.decrease_noise = decrease_noise
         self.frs_model = frs_model
+        self.unlock_D = unlock_D
 
         if reconstruction_loss_mode not in ["pixelwise", "dis_l", "frs"]:
             raise ValueError("Reconstruction loss mode must be one of \"pixelwise\", \"dis_l\" or \"frs\"")
@@ -147,7 +148,7 @@ class MorphingGANTrainLoop(TrainLoop):
             # ========== Back propagation and updates ==========
 
             # Gradient update on Discriminator network
-            if L_g.detach().item() < 3.5:
+            if L_g.detach().item() < 3.5 or self.unlock_D:
                 self.optim_D.zero_grad()
                 L_d.backward(retain_graph=True)
                 self.optim_D.step()

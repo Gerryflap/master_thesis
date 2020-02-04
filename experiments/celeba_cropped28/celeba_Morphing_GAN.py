@@ -135,7 +135,8 @@ train_loop = MorphingGANTrainLoop(
     morph_loss_factor=args.morph_loss_factor,
     reconstruction_loss_mode=rec_loss,
     morph_loss_mode=morph_loss,
-    frs_model=frs_model
+    frs_model=frs_model,
+    unlock_D=False
 
 )
 

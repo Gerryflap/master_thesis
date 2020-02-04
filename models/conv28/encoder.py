@@ -1,12 +1,12 @@
 import torch
 
 from models.morphing_encoder import MorphingEncoder
-from util.torch.activations import mish
+from util.torch.activations import mish, LocalResponseNorm
 from util.torch.initialization import weights_init
 
 
 class Encoder28(MorphingEncoder):
-    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False, cap_variance=True, add_dense_layer=False):
+    def __init__(self, latent_size, h_size, use_mish=False, n_channels=1, deterministic=False, cap_variance=True, add_dense_layer=False, use_lr_norm=False):
         super().__init__()
 
         self.n_channels = n_channels
@@ -25,10 +25,16 @@ class Encoder28(MorphingEncoder):
         self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
         self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=4, stride=1, bias=False)
 
-        self.bn_1 = torch.nn.BatchNorm2d(self.h_size)
-        self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
-        self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
-        self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
+        if not use_lr_norm:
+            self.bn_1 = torch.nn.BatchNorm2d(self.h_size)
+            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
+            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
+            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 4)
+        else:
+            self.bn_1 = LocalResponseNorm()
+            self.bn_2 = LocalResponseNorm()
+            self.bn_3 = LocalResponseNorm()
+            self.bn_4 = LocalResponseNorm()
 
         self.mean_fc = torch.nn.Linear(h_size * 4, latent_size, bias=True)
         if not deterministic:
