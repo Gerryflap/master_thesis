@@ -48,6 +48,9 @@ parser.add_argument("--frs_path", action="store", default=None, help="Path to fa
 parser.add_argument("--use_lr_norm", action="store_true", default=False,
                     help="Uses local response norm, which will make the generator and encoder samples "
                          "independent from the rest of the batch.")
+parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
+                    help="If > 0, enables R1 loss which pushes the gradient "
+                         "norm to zero for real samples in the discriminator.")
 
 args = parser.parse_args()
 
@@ -69,7 +72,8 @@ print("Dataset length: ", len(dataset))
 
 Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True, use_lr_norm=args.use_lr_norm)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True, use_lr_norm=args.use_lr_norm)
-D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3,
+                       dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
@@ -118,7 +122,8 @@ train_loop = ALITrainLoop(
     decrease_noise=True,
     use_sigmoid=True,
     reconstruction_loss_mode=reconstruction_loss_mode,
-    frs_model=frs_model
+    frs_model=frs_model,
+    r1_reg_gamma=args.r1_gamma
 )
 
 train_loop.train()
