@@ -137,7 +137,8 @@ train_loop = ALITrainLoop(
     use_sigmoid=True,
     reconstruction_loss_mode=reconstruction_loss_mode,
     frs_model=frs_model,
-    r1_reg_gamma=args.r1_gamma
+    r1_reg_gamma=args.r1_gamma,
+
 )
 
 train_loop.train()

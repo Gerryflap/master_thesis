@@ -126,7 +126,7 @@ class ALITrainLoop(TrainLoop):
             # ========== Back propagation and updates ==========
 
             # Gradient update on Discriminator network
-            if L_g.detach().item() < 3.5:
+            if L_g.detach().item() < 3.5 or self.r1_reg_gamma != 0.0:
                 self.optim_D.zero_grad()
                 L_d.backward(retain_graph=True)
                 self.optim_D.step()
