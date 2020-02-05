@@ -76,7 +76,12 @@ while len(unused_idents) >= 2:
     ref_embedding = input_image_embeddings[ident_index]
     inp_distances = euclidean_distance(embedding, input_image_embeddings)
     ref_distances = euclidean_distance(embedding, ref_image_embeddings)
-    distances = np.maximum(inp_distances, ref_distances)
+
+    # Switched from max to only input distances.
+    # This is more fair since at the time of creating the morph you don't have the references yet.
+    # distances = np.maximum(inp_distances, ref_distances)
+    distances = inp_distances
+
     sort = np.argsort(distances)
 
     for other_index in sort:
