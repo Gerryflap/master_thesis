@@ -1,6 +1,10 @@
 """
     Models a train loop for ALI: Adversarially Learned Inference (https://arxiv.org/abs/1606.00704)
     Additionally, this train loop can also perform the MorGAN algorithm by setting the MorGAN alpha
+
+    R1 regularization (https://arxiv.org/pdf/1801.04406.pdf) (or at least something like it)
+     can be enabled using the r1_reg_gamma parameter.
+    It will "push" the gradients for real samples to 0. This is done for z ~ p(z) and x ~ p(x).
 """
 import torch
 import torch.nn.functional as F
@@ -21,7 +25,7 @@ def get_log_odds(raw_marginals, use_sigmoid):
 class ALITrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1,
                  morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
-                 reconstruction_loss_mode="pixelwise", frs_model=None):
+                 reconstruction_loss_mode="pixelwise", frs_model=None, r1_reg_gamma=0.0):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -43,6 +47,7 @@ class ALITrainLoop(TrainLoop):
             raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" \"dis_l\", or \"frs\"")
         self.reconstruction_loss_mode = reconstruction_loss_mode
         self.frs_model = frs_model
+        self.r1_reg_gamma = r1_reg_gamma
 
     def epoch(self):
         self.Gx.train()
@@ -97,6 +102,7 @@ class ALITrainLoop(TrainLoop):
             L_g_real = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q))
 
             L_g = L_g_real + L_g_fake
+            L_syn = L_g
 
             if self.morgan:
                 x_recon = self.Gx(z_hat)
@@ -106,7 +112,14 @@ class ALITrainLoop(TrainLoop):
                     L_pixel = self.dis_l_loss(x_recon, x_no_noise)
                 else:
                     L_pixel = self.frs_loss(x_recon, x_no_noise)
-                L_syn = L_g + self.morgan_alpha * L_pixel
+                L_syn += self.morgan_alpha * L_pixel
+
+            if self.r1_reg_gamma != 0:
+                # Computes an R1-like loss (keep in mind that it is not completely the same)
+                x_grads = torch.autograd.grad(dis_q, x, create_graph=True, only_inputs=True)[0]
+                z_grads = torch.autograd.grad(dis_p, z, create_graph=True, only_inputs=True)[0]
+                r1_loss = torch.pow(x_grads, 2).mean() + torch.pow(z_grads, 2).mean()
+                L_syn += (self.r1_reg_gamma/2.0) * r1_loss
 
             # ========== Back propagation and updates ==========
 
@@ -118,10 +131,9 @@ class ALITrainLoop(TrainLoop):
 
             # Gradient update on the Generator networks
             self.optim_G.zero_grad()
-            if self.morgan:
-                L_syn.backward()
-            else:
-                L_g.backward()
+
+            L_syn.backward()
+
             self.optim_G.step()
 
         losses = {
