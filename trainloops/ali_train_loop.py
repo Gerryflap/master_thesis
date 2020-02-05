@@ -121,7 +121,7 @@ class ALITrainLoop(TrainLoop):
                 x_grads = torch.autograd.grad(self.D((x_no_noise, z_hat)).sum(), x_no_noise, create_graph=True, only_inputs=True)[0]
                 z_grads = torch.autograd.grad(self.D((x_tilde, z)).sum(), z, create_graph=True, only_inputs=True)[0]
                 r1_loss = torch.pow(x_grads, 2).mean() + torch.pow(z_grads, 2).mean()
-                L_syn += (self.r1_reg_gamma/2.0) * r1_loss
+                L_d += (self.r1_reg_gamma/2.0) * r1_loss
 
             # ========== Back propagation and updates ==========
 
