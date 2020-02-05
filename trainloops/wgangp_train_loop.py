@@ -58,6 +58,8 @@ class GanTrainLoop(TrainLoop):
 
             d_loss = d_loss + 10.0 * d_grad_loss
 
+            d_loss.backward()
+
             # Update weights
             self.D_optimizer.step()
 
