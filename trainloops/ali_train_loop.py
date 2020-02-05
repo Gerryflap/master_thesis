@@ -116,6 +116,8 @@ class ALITrainLoop(TrainLoop):
 
             if self.r1_reg_gamma != 0:
                 # Computes an R1-like loss (keep in mind that it is not completely the same)
+                x.requires_grad = True
+                z.requires_grad = True
                 x_grads = torch.autograd.grad(dis_q.sum(), x, create_graph=True, only_inputs=True)[0]
                 z_grads = torch.autograd.grad(dis_p.sum(), z, create_graph=True, only_inputs=True)[0]
                 r1_loss = torch.pow(x_grads, 2).mean() + torch.pow(z_grads, 2).mean()
