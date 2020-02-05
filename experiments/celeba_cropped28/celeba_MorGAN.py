@@ -45,6 +45,9 @@ parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", defa
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
 parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model. "
                                                                      "Switches to FRS reconstruction loss")
+parser.add_argument("--use_lr_norm", action="store_true", default=False,
+                    help="Uses local response norm, which will make the generator and encoder samples "
+                         "independent from the rest of the batch.")
 
 args = parser.parse_args()
 
@@ -64,8 +67,8 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True, use_lr_norm=args.use_lr_norm)
+Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True, use_lr_norm=args.use_lr_norm)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))

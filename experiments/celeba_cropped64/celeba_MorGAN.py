@@ -51,6 +51,10 @@ parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", defa
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
 parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model. "
                                                                      "Switches to FRS reconstruction loss")
+parser.add_argument("--use_lr_norm", action="store_true", default=False,
+                    help="Uses local response norm, which will make the generator and encoder samples "
+                         "independent from the rest of the batch.")
+
 
 args = parser.parse_args()
 
@@ -76,8 +80,8 @@ if args.frs_path is not None:
         frs_model = frs_model.cuda()
 
 if args.continue_with is None:
-    Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
-    Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
+    Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True, use_lr_norm=args.use_lr_norm)
+    Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True, use_lr_norm=args.use_lr_norm)
     D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
                            n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
     G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))

@@ -1,10 +1,10 @@
 import torch
-from util.torch.activations import mish
+from util.torch.activations import mish, LocalResponseNorm
 from util.torch.initialization import weights_init
 
 
 class Generator64(torch.nn.Module):
-    def __init__(self, latent_size, h_size, use_mish=False, n_channels=3, sigmoid_out=False):
+    def __init__(self, latent_size, h_size, use_mish=False, n_channels=3, sigmoid_out=False, use_lr_norm=False):
         super().__init__()
 
         self.n_channels = n_channels
@@ -27,11 +27,18 @@ class Generator64(torch.nn.Module):
 
         self.output_bias = torch.nn.Parameter(torch.zeros((3, 64, 64)), requires_grad=True)
 
-        self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 8)
-        self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 4)
-        self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
-        self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 2)
-        self.bn_5 = torch.nn.BatchNorm2d(self.h_size)
+        if not use_lr_norm:
+            self.bn_1 = torch.nn.BatchNorm2d(self.h_size * 8)
+            self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 4)
+            self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
+            self.bn_4 = torch.nn.BatchNorm2d(self.h_size * 2)
+            self.bn_5 = torch.nn.BatchNorm2d(self.h_size)
+        else:
+            self.bn_1 = LocalResponseNorm()
+            self.bn_2 = LocalResponseNorm()
+            self.bn_3 = LocalResponseNorm()
+            self.bn_4 = LocalResponseNorm()
+            self.bn_5 = LocalResponseNorm()
 
 
 

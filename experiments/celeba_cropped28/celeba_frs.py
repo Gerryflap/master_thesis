@@ -27,6 +27,8 @@ parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
+parser.add_argument("--n_negatives", action="store", type=int, default=1,
+                    help="if > 1, switch to hard triplet selection and select hardest negative from n negatives")
 
 args = parser.parse_args()
 
@@ -35,7 +37,7 @@ output_path = util.output.init_experiment_output_dir("celeba28", "frs", args)
 dataset = CelebaCroppedTriplets(split="train", download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-]))
+]), give_n_negatives=args.n_negatives)
 
 valid_dataset = CelebaCroppedTriplets(split="valid", download=True, transform=transforms.Compose([
     transforms.Resize(28),
@@ -44,7 +46,7 @@ valid_dataset = CelebaCroppedTriplets(split="valid", download=True, transform=tr
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-frs_model = FRS28(args.l_size, args.h_size, use_mish=args.use_mish, n_channels=3, add_dense_layer=True)
+frs_model = FRS28(args.l_size, args.h_size, use_mish=args.use_mish, n_channels=3, add_dense_layer=True, hypersphere_output=True)
 
 if args.cuda:
     frs_model = frs_model.cuda()
@@ -66,6 +68,8 @@ trainloop = FRSTrainLoop(
     optimizer,
     dataloader,
     cuda=args.cuda,
-    epochs=args.epochs
+    epochs=args.epochs,
+    margin=0.2,
+    use_hard_triplets=args.n_negatives > 1
 )
 trainloop.train()

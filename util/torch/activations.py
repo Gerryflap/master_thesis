@@ -48,6 +48,31 @@ class TLU(torch.nn.Module):
         return torch.max(x, self.tau)
 
 
+def local_response_normalization(x, eps=1e-8):
+    """
+    Implements the variant of LRN used in ProGAN https://arxiv.org/pdf/1710.10196.pdf
+    :param eps: Epsilon is a small number added to the divisor to avoid division by zero
+    :param x: Output of convolutional layer (or any other tensor with channels on axis 1)
+    :return: Normalized x
+    """
+    divisor = (torch.pow(x, 2).mean(dim=1, keepdim=True) + eps).sqrt()
+    b = x/divisor
+    return b
+
+
+class LocalResponseNorm(torch.nn.Module):
+    def __init__(self, eps=1e-8):
+        """
+        Implements the variant of LRN used in ProGAN https://arxiv.org/pdf/1710.10196.pdf
+        :param eps: Epsilon is a small number added to the divisor to avoid division by zero
+        """
+        super().__init__()
+        self.eps = eps
+
+    def forward(self, inp):
+        return local_response_normalization(inp, self.eps)
+
+
 def map_to_hypersphere(x, epsilon=1e-10):
     distances = torch.sqrt(torch.sum(x*x, dim=1, keepdim=True))
     return x/(distances + epsilon)

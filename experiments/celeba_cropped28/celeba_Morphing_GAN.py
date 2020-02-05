@@ -46,6 +46,13 @@ parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                     help="Changes the label value for the \"real\" output of D. "
                          "This can be used for label smoothing. "
                          "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
+parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model."
+                                                                     "Only needed when FRS loss is used somewhere.")
+parser.add_argument("--use_frs_reconstruction_loss", action="store_true", default=False,
+                    help="Switches the reconstruction loss to an FRS euclidean distance loss instead of pixelwise.")
+parser.add_argument("--use_frs_morph_loss", action="store_true", default=False,
+                    help="Switches the morph loss to an FRS euclidean distance loss instead of pixelwise.")
+
 
 args = parser.parse_args()
 
@@ -71,6 +78,14 @@ D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D,
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
+# Code for loading frs model when frs based reconstruction loss is used
+frs_model = None
+if args.frs_path is not None:
+    frs_model = torch.load(args.frs_path)
+    frs_model.eval()
+    if args.cuda:
+        frs_model = frs_model.cuda()
+
 if args.cuda:
     Gz = Gz.cuda()
     Gx = Gx.cuda()
@@ -87,6 +102,21 @@ listeners = [
     MorphImageLogger(output_path, valid_dataset, args),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
 ]
+
+if args.use_dis_l_reconstruction_loss:
+    rec_loss = "dis_l"
+elif args.use_frs_reconstruction_loss:
+    rec_loss = "frs"
+else:
+    rec_loss = "pixelwise"
+
+if args.use_dis_l_morph_loss:
+    morph_loss = "dis_l"
+elif args.use_frs_morph_loss:
+    morph_loss = "frs"
+else:
+    morph_loss = "pixelwise"
+
 train_loop = MorphingGANTrainLoop(
     listeners=listeners,
     Gz=Gz,
@@ -103,8 +133,10 @@ train_loop = MorphingGANTrainLoop(
     decrease_noise=True,
     use_sigmoid=True,
     morph_loss_factor=args.morph_loss_factor,
-    reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
-    morph_loss_mode="pixelwise" if not args.use_dis_l_morph_loss else "dis_l"
+    reconstruction_loss_mode=rec_loss,
+    morph_loss_mode=morph_loss,
+    frs_model=frs_model,
+    unlock_D=False
 
 )
 
