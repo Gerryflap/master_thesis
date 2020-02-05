@@ -1,4 +1,4 @@
-from trainloops.gan_train_loop import GanTrainLoop
+from trainloops.wgangp_train_loop import GanTrainLoop
 from models.conv28.discriminator import Discriminator28
 from models.conv28.generator import Generator28
 from data.celeba_cropped import CelebaCropped
@@ -40,7 +40,7 @@ dataset = CelebaCropped(split="train", download=True, transform=transforms.Compo
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
 G = Generator28(args.l_size, args.h_size, args.use_mish, bias=False, n_channels=3, sigmoid_out=True)
-D = Discriminator28(args.h_size, use_bn=False, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate)
+D = Discriminator28(args.h_size, use_bn=False, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, use_logits=True)
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
