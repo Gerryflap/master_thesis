@@ -54,7 +54,9 @@ parser.add_argument("--frs_path", action="store", default=None, help="Path to fa
 parser.add_argument("--use_lr_norm", action="store_true", default=False,
                     help="Uses local response norm, which will make the generator and encoder samples "
                          "independent from the rest of the batch.")
-
+parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
+                    help="If > 0, enables R1 loss which pushes the gradient "
+                         "norm to zero for real samples in the discriminator.")
 
 args = parser.parse_args()
 
@@ -134,7 +136,8 @@ train_loop = ALITrainLoop(
     decrease_noise=True,
     use_sigmoid=True,
     reconstruction_loss_mode=reconstruction_loss_mode,
-    frs_model=frs_model
+    frs_model=frs_model,
+    r1_reg_gamma=args.r1_gamma
 )
 
 train_loop.train()

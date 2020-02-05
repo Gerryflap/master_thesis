@@ -112,7 +112,7 @@ class ALITrainLoop(TrainLoop):
                     L_pixel = self.dis_l_loss(x_recon, x_no_noise)
                 else:
                     L_pixel = self.frs_loss(x_recon, x_no_noise)
-                L_syn += self.morgan_alpha * L_pixel
+                L_syn = L_g + self.morgan_alpha * L_pixel
 
             if self.r1_reg_gamma != 0:
                 # Computes an R1-like loss (keep in mind that it is not completely the same)
