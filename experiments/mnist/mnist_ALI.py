@@ -32,7 +32,6 @@ parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
-parser.add_argument("--no_bias_in_G", action="store_true", default=False, help="Disables biases in the Generator")
 parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D, which currently does not work well")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
@@ -41,6 +40,9 @@ parser.add_argument("--morgan_alpha", action="store", default=0.0, type=float,
                     help="Sets the alpha parameter in the MorGAN training algorithm")
 parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
+parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
+                    help="If > 0, enables R1 loss which pushes the gradient "
+                         "norm to zero for real samples in the discriminator.")
 args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("mnist", "ali", args)
@@ -91,7 +93,8 @@ train_loop = ALITrainLoop(
     morgan_alpha=args.morgan_alpha,
     d_img_noise_std=0.1,
     use_sigmoid=True,
-    reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l"
+    reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
+    r1_reg_gamma=args.r1_gamma
 )
 
 train_loop.train()

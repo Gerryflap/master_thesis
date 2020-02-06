@@ -24,9 +24,11 @@ parser.add_argument("--l_size", action="store", type=int, default=2, help="Size 
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--morgan_alpha", action="store", type=float, default=0.3, help="MorGAN alpha")
-parser.add_argument("--instance_noise_std", action="store", type=float, default=0.1,
+parser.add_argument("--instance_noise_std", action="store", type=float, default=0.0,
                     help="Standard deviation of instance noise")
-
+parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
+                    help="If > 0, enables R1 loss which pushes the gradient "
+                         "norm to zero for real samples in the discriminator.")
 
 
 args = parser.parse_args()
@@ -62,10 +64,10 @@ listeners = [
         args.l_size,
         valid,
         output_reproductions=True,
-        discriminator_output=False,
+        discriminator_output=True,
         cuda=args.cuda,
         sample_reconstructions=True,
-        every_n_epochs=10
+        every_n_epochs=10,
     )
 ]
 
@@ -81,7 +83,8 @@ trainloop = ALITrainLoop(
     epochs=args.epochs,
     morgan_alpha=args.morgan_alpha,
     d_img_noise_std=args.instance_noise_std,
-    decrease_noise=True
+    decrease_noise=True,
+    r1_reg_gamma=args.r1_gamma
 )
 
 trainloop.train()

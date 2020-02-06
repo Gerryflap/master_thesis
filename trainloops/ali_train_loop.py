@@ -73,6 +73,7 @@ class ALITrainLoop(TrainLoop):
             # ========== Computations for Dis(x, z_hat) ==========
 
             x_no_noise = x
+            x_no_noise.requires_grad = True
             # Add noise to the inputs if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
                 x = self.add_instance_noise(x)
@@ -84,6 +85,7 @@ class ALITrainLoop(TrainLoop):
             # ========== Computations for Dis(x_tilde, z) ==========
 
             z = self.generate_z_batch(self.batch_size)
+            z.requires_grad = True
             x_tilde = self.Gx(z)
             # Add noise to the inputs of D if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
@@ -100,7 +102,6 @@ class ALITrainLoop(TrainLoop):
 
             L_g_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
             L_g_real = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q))
-
             L_g = L_g_real + L_g_fake
             L_syn = L_g
 
@@ -115,12 +116,23 @@ class ALITrainLoop(TrainLoop):
                 L_syn = L_g + self.morgan_alpha * L_pixel
 
             if self.r1_reg_gamma != 0:
-                # Computes an R1-like loss (keep in mind that it is not completely the same)
-                x_no_noise.requires_grad = True
-                z.requires_grad = True
-                x_grads = torch.autograd.grad(self.D((x_no_noise, z_hat)).sum(), x_no_noise, create_graph=True, only_inputs=True)[0]
-                z_grads = torch.autograd.grad(self.D((x_tilde, z)).sum(), z, create_graph=True, only_inputs=True)[0]
-                r1_loss = torch.pow(x_grads, 2).mean() + torch.pow(z_grads, 2).mean()
+                # Computes an R1-like loss
+                grad_outputs = torch.ones_like(dis_p)
+                x_grads = torch.autograd.grad(
+                    torch.sigmoid(dis_q),
+                    x_no_noise,
+                    create_graph=True,
+                    only_inputs=True,
+                    grad_outputs=grad_outputs
+                )[0]
+                z_grads = torch.autograd.grad(
+                    torch.sigmoid(dis_p),
+                    z,
+                    create_graph=True,
+                    only_inputs=True,
+                    grad_outputs=grad_outputs
+                )[0]
+                r1_loss = 0.5*(x_grads.norm(2, dim=list(range(1, len(x_grads.size())))).mean() + z_grads.norm(2, dim=1).mean())
                 L_d += (self.r1_reg_gamma/2.0) * r1_loss
 
             # ========== Back propagation and updates ==========
@@ -146,6 +158,8 @@ class ALITrainLoop(TrainLoop):
             losses["L_pixel"] = L_pixel.detach().item()
             losses["L_syn"] = L_syn.detach().item()
 
+        if self.r1_reg_gamma != 0.0:
+            losses["R1_loss"] = r1_loss.detach().item()
 
         return {
             "epoch": self.current_epoch,

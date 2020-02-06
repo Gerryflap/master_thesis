@@ -75,9 +75,14 @@ class MixtureVisualizer(Listener):
             nn_inp = torch.from_numpy(nn_inp)
             if self.cuda:
                 nn_inp = nn_inp.cuda()
-            nn_outp = D(nn_inp).cpu().detach().numpy()
-            if D.mode == "vaegan":
-                nn_outp = nn_outp[0]
+            if D.mode == "ali":
+                zs = Gz.encode(nn_inp)
+                nn_outp = D((nn_inp, zs)).cpu().detach().numpy()
+            else:
+                nn_outp = D(nn_inp).cpu().detach().numpy()
+                if D.mode == "vaegan":
+                    nn_outp = nn_outp[0]
+
             contour = plt.contourf(
                 xx,
                 yy,
