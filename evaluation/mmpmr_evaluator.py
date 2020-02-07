@@ -15,6 +15,7 @@ from torchvision.transforms import transforms
 from torchvision.utils import make_grid, save_image
 
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
+from data.frgc_cropped_pairs_look_alike import FRGCPairsLookAlike
 from evaluation.metrics.evaluation_metrics import mmpmr, relative_morph_distance
 from models.morphing_encoder import MorphingEncoder
 import face_recognition
@@ -62,6 +63,8 @@ parser.add_argument("--train", action="store_true", default=False,
                     help="When this flag is present, the models are put in train mode. This affects BatchNorm")
 parser.add_argument("--visualize", action="store_true", default=False,
                     help="When this flag is present, a matplotlib visualization is shown with the best and worst morphs")
+parser.add_argument("--frgc", action="store_true", default=False,
+                    help="When this flag is present, the FRGC dataset will be used for evaluation")
 args = parser.parse_args()
 
 if args.test:
@@ -88,7 +91,7 @@ if not isinstance(Gz, MorphingEncoder):
 else:
     manual_morph = False
 
-output_path = init_experiment_output_dir("celeba64", "model_evaluation", args)
+output_path = init_experiment_output_dir("celeba64" if not args.frgc else "frgc64", "model_evaluation", args)
 
 
 if args.eval:
@@ -112,7 +115,10 @@ split = "valid"
 if args.test:
     split = "test"
 
-dataset = CelebaCroppedPairsLookAlike(split=split, transform=transforms.Compose(trans))
+if args.frgc:
+    dataset = FRGCPairsLookAlike(transform=transforms.Compose(trans))
+else:
+    dataset = CelebaCroppedPairsLookAlike(split=split, transform=transforms.Compose(trans))
 loader = DataLoader(dataset, args.batch_size, shuffle=False)
 
 print("Generating Morphs...")

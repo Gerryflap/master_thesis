@@ -6,7 +6,8 @@ from PIL import Image
 
 def crop_images(
         input_dir,
-        output_dir
+        output_dir,
+        res=64
 ):
     import dlib
     predictor_path = "data/data_prep/shape_predictor_5_face_landmarks.dat"
@@ -28,11 +29,11 @@ def crop_images(
             skipped += 1
             continue
 
-        if os.path.isfile(output_dir + fname):
+        if os.path.isfile(os.path.join(output_dir, fname)):
             continue
 
         # Load the image using Dlib
-        img = dlib.load_rgb_image(input_dir + fname)
+        img = dlib.load_rgb_image(os.path.join(input_dir, fname))
 
         # Ask the detector to find the bounding boxes of each face. The 1 in the
         # second argument indicates that we should upsample the image 1 time. This
@@ -49,11 +50,25 @@ def crop_images(
         for detection in dets:
             faces.append(sp(img, detection))
 
-        image = dlib.get_face_chip(img, faces[0], size=64 + 2 * crop_size)
+        image = dlib.get_face_chip(img, faces[0], size=res + 2 * crop_size)
         if crop_size != 0:
             image = image[crop_size:-crop_size, crop_size:-crop_size]
         img_obj = Image.fromarray(image)
-        img_obj.save(output_dir + fname, format='JPEG', subsampling=0, quality=100)
+        img_obj.save(os.path.join(output_dir, fname), format='JPEG', subsampling=0, quality=100)
 
         if i % 1000 == 0:
             print("%d/%d\t\tskipped: %d" % (i, len(filelist), skipped))
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Image Cropping Tool")
+    parser.add_argument("--input_path", action="store", type=str, required=True,
+                        help="Path to input folder.")
+    parser.add_argument("--output_path", action="store", type=str, required=True,
+                        help="Path to output folder.")
+    parser.add_argument("--res", action="store", type=int, default=64,
+                        help="Output image resolution")
+    args = parser.parse_args()
+
+    crop_images(args.input_path, args.output_path, args.res)

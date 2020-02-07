@@ -47,6 +47,9 @@ parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                          "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
 parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
+parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
+                    help="If > 0, enables R1 loss which pushes the gradient "
+                         "norm to zero for real samples in the discriminator.")
 
 args = parser.parse_args()
 
@@ -84,7 +87,7 @@ D.init_weights()
 listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
-    ModelSaver(output_path, n=50, overwrite=True, print_output=True),
+    ModelSaver(output_path, n=1, overwrite=True, print_output=True),
 ]
 train_loop = ALITrainLoop(
     listeners=listeners,
@@ -102,6 +105,7 @@ train_loop = ALITrainLoop(
     decrease_noise=True,
     use_sigmoid=True,
     reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
+    r1_reg_gamma=args.r1_gamma
 )
 
 train_loop.train()
