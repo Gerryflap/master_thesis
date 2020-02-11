@@ -1,6 +1,15 @@
 from trainloops.train_loop import TrainLoop
 import torch
-import torch.nn.functional as F
+
+
+def get_log_odds(raw_marginals, use_sigmoid):
+    if use_sigmoid:
+        marginals = torch.clamp(raw_marginals.mean(dim=0), 1e-7, 1 - 1e-7)
+    else:
+        # Correct for normalization between -1 and 1
+        raw_marginals = (raw_marginals + 1)/2
+        marginals = torch.clamp(raw_marginals.mean(dim=0), 1e-7, 1 - 1e-7)
+    return torch.log(marginals / (1 - marginals))
 
 class GanTrainLoop(TrainLoop):
     def __init__(
@@ -11,7 +20,7 @@ class GanTrainLoop(TrainLoop):
             G_optimizer,
             D_optimizer,
             dataloader: torch.utils.data.DataLoader,
-            D_steps_per_G_step=2,
+            D_steps_per_G_step=1,
             cuda=False,
             epochs=1
     ):
@@ -30,12 +39,20 @@ class GanTrainLoop(TrainLoop):
         for i, (real_batch, _) in enumerate(self.dataloader):
             if real_batch.size()[0] != self.batch_size:
                 continue
+
+            if self.cuda:
+                real_batch = real_batch.cuda()
+
+            if self.current_epoch == 0 and i == 0:
+                    if hasattr(self.G, 'output_bias'):
+                        self.G.output_bias.data = get_log_odds(real_batch, use_sigmoid=True)
+                    else:
+                        print("WARNING! Gx does not have an \"output_bias\". "
+                              "Using untied biases as the last layer of Gx is advised!")
             # Train D
 
             # Make gradients for D zero
             self.D.zero_grad()
-            if self.cuda:
-                real_batch = real_batch.cuda()
 
             # Compute outputs for real images
             d_real_outputs = self.D(real_batch)
@@ -47,17 +64,20 @@ class GanTrainLoop(TrainLoop):
             d_fake_outputs = self.D(fake_batch)
 
             # Compute losses
-            d_loss = (d_fake_outputs - d_real_outputs).mean()
+            d_loss = (d_fake_outputs - d_real_outputs)
 
-            eps = torch.randn((self.batch_size, 1, 1, 1))
+            eps = torch.rand((self.batch_size, 1, 1, 1))
             if self.cuda:
                 eps = eps.cuda()
             x_hat = eps * real_batch + (1.0-eps) * fake_batch
             x_hat.requires_grad = True
-            grad = torch.autograd.grad(self.D(x_hat).sum(), x_hat, create_graph=True, only_inputs=True)[0]
-            d_grad_loss = (torch.pow(grad, 2) - 1).mean()
+            dis_out = self.D(x_hat)
+            grad_outputs = torch.ones_like(dis_out)
+            grad = torch.autograd.grad(dis_out, x_hat, create_graph=True, only_inputs=True, grad_outputs=grad_outputs)[0]
+            d_grad_loss = torch.pow(grad.norm(2, dim=list(range(1, len(grad.size())))) - 1, 2)
 
             d_loss = d_loss + 10.0 * d_grad_loss
+            d_loss = d_loss.mean()
 
             d_loss.backward()
 
