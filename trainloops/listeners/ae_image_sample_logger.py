@@ -14,7 +14,7 @@ from trainloops.listeners.listener import Listener
 
 
 class AEImageSampleLogger(Listener):
-    def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0, folder_name="AE_samples", print_stats=False, eval_mode=True):
+    def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0, folder_name="AE_samples", print_stats=False, eval_mode=True, every_n_epochs=1):
         super().__init__()
         self.path = os.path.join(experiment_output_path, "imgs", folder_name)
         util.output.make_result_dirs(self.path)
@@ -25,6 +25,7 @@ class AEImageSampleLogger(Listener):
         self.loader = DataLoader(validation_dataset, self.n_images, True)
         self.print_stats = print_stats
         self.eval_mode = eval_mode
+        self.every_n_epochs = every_n_epochs
 
     def initialize(self):
         self.z = self.trainloop.generate_z_batch(self.n_images)
@@ -37,6 +38,8 @@ class AEImageSampleLogger(Listener):
 
     def report(self, state_dict):
         epoch = state_dict["epoch"]
+        if epoch % self.every_n_epochs != 0:
+            return
 
         if "G" in state_dict["networks"]:
             Gx = state_dict["networks"]["G"]
@@ -65,6 +68,7 @@ class AEImageSampleLogger(Listener):
         else:
             z_recon, z_mean, z_logvar = Gz(self.x)
             z_var = torch.exp(z_logvar)
+
         x_recon = Gx(z_recon)
 
         if self.x.detach().min().item() >= 0:
@@ -102,7 +106,7 @@ class AEImageSampleLogger(Listener):
             print("z_mu min: ", z_mean.min().detach().item())
             print("z_mu mean: ", z_mean.mean().detach().item())
             print("z_mu max: ", z_mean.max().detach().item())
-            print("z_mu variance: ", z_mean.var().detach().item())
+            print("z_mu mean variance per feature: ", z_mean.var(dim=0).mean().detach().item())
 
             print()
             print("z_var min: ", z_var.min().detach().item())

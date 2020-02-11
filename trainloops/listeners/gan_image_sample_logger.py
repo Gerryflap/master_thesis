@@ -11,7 +11,7 @@ from trainloops.listeners.listener import Listener
 
 
 class GanImageSampleLogger(Listener):
-    def __init__(self, experiment_output_path, args: Namespace, n_images=16, pad_value=0):
+    def __init__(self, experiment_output_path, args: Namespace, n_images=16, pad_value=0, every_n_epochs=1):
         super().__init__()
         self.path = os.path.join(experiment_output_path, "imgs", "generator_samples")
         util.output.make_result_dirs(self.path)
@@ -20,12 +20,15 @@ class GanImageSampleLogger(Listener):
         self.z = None
         self.pad_value = pad_value
         self.rows = int(math.ceil(math.sqrt(n_images)))
+        self.every_n_epochs = every_n_epochs
 
     def initialize(self):
         self.z = self.trainloop.generate_z_batch(self.n_images)
 
     def report(self, state_dict):
         epoch = state_dict["epoch"]
+        if epoch % self.every_n_epochs != 0:
+            return
 
         if "G" in state_dict["networks"]:
             G = state_dict["networks"]["G"]

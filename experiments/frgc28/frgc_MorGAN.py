@@ -1,3 +1,4 @@
+from data.frgc_cropped import FRGCCropped
 from models.conv28.encoder import Encoder28
 from trainloops.ali_train_loop import ALITrainLoop
 from trainloops.gan_train_loop import GanTrainLoop
@@ -15,16 +16,16 @@ from trainloops.listeners.model_saver import ModelSaver
 # Parse commandline arguments
 
 
-parser = argparse.ArgumentParser(description="Celeba MorGAN experiment.")
+parser = argparse.ArgumentParser(description="FRGC MorGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
-parser.add_argument("--h_size", action="store", type=int, default=16,
+parser.add_argument("--h_size", action="store", type=int, default=32,
                     help="Sets the h_size, which changes the size of the network")
 parser.add_argument("--fc_h_size", action="store", type=int, default=None,
                     help="Sets the fc_h_size, which changes the size of the fully connected layers in D")
-parser.add_argument("--epochs", action="store", type=int, default=100, help="Sets the number of training epochs")
-parser.add_argument("--l_size", action="store", type=int, default=12, help="Size of the latent space")
+parser.add_argument("--epochs", action="store", type=int, default=1000, help="Sets the number of training epochs")
+parser.add_argument("--l_size", action="store", type=int, default=128, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--use_mish", action="store_true", default=False,
@@ -35,7 +36,7 @@ parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha parameter of MorGAN")
-parser.add_argument("--instance_noise_std", action="store", default=0.1, type=float,
+parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
                     help="Sets the standard deviation for instance noise (noise added to inputs of D)")
 parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                     help="Changes the label value for the \"real\" output of D. "
@@ -54,17 +55,19 @@ parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("celeba28", "MorGAN", args)
+output_path = util.output.init_experiment_output_dir("frgc28", "MorGAN", args)
 
-dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
+dataset = FRGCCropped( download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
 ]))
 
-valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filtering=True, transform=transforms.Compose([
+
+valid_dataset = FRGCCropped( download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
 ]))
+
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
@@ -96,10 +99,10 @@ D.init_weights()
 
 listeners = [
     LossReporter(),
-    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
-    AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
+    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True, every_n_epochs=10),
+    AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train", every_n_epochs=10),
     # DiscriminatorOverfitMonitor(dataset, valid_dataset, 100, args),
-    ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    ModelSaver(output_path, n=10, overwrite=True, print_output=True),
 ]
 
 reconstruction_loss_mode = "pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l"

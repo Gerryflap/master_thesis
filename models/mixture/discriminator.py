@@ -5,12 +5,13 @@ from util.torch.initialization import weights_init
 
 
 class Discriminator(MorphingEncoder):
-    def __init__(self, latent_size, h_size=64, mode="normal", batchnorm=True):
+    def __init__(self, latent_size, h_size=64, mode="normal", batchnorm=True, relu=False):
         super().__init__()
         self.latent_size = latent_size
         self.h_size = h_size
         self.mode = mode
         self.bn = batchnorm
+        act = (lambda: torch.nn.LeakyReLU(0.02)) if not relu else torch.nn.ReLU 
 
         if self.mode not in {"normal", "ali", "vaegan"}:
             raise ValueError("Expected the discriminator mode to be one of {\"normal\", \"ali\", \"vaegan\"}.")
@@ -18,41 +19,41 @@ class Discriminator(MorphingEncoder):
         if self.bn:
             self.Dx = torch.nn.Sequential(
                 torch.nn.Linear(2, h_size),
-                torch.nn.LeakyReLU(0.02),
+                act(),
 
                 torch.nn.Linear(h_size, h_size),
                 torch.nn.BatchNorm1d(h_size),
-                torch.nn.LeakyReLU(0.02),
+                act(),
             )
         else:
             self.Dx = torch.nn.Sequential(
                 torch.nn.Linear(2, h_size),
-                torch.nn.LeakyReLU(0.02),
+                act(),
 
                 torch.nn.Linear(h_size, h_size),
-                torch.nn.LeakyReLU(0.02),
+                act(),
             )
 
         d_out_input_size = h_size
         if mode == "ali":
             self.Dz = torch.nn.Sequential(
                 torch.nn.Linear(latent_size, h_size),
-                torch.nn.LeakyReLU(0.02),
+                act(),
 
                 torch.nn.Linear(h_size, h_size),
-                torch.nn.LeakyReLU(0.02),
+                act(),
             )
             d_out_input_size = h_size*2
 
         self.D_out = torch.nn.Sequential(
             torch.nn.Linear(d_out_input_size, h_size),
-            torch.nn.LeakyReLU(0.02),
+            act(),
 
             torch.nn.Linear(h_size, h_size),
-            torch.nn.LeakyReLU(0.02),
+            act(),
 
             torch.nn.Linear(h_size, h_size),
-            torch.nn.LeakyReLU(0.02),
+            act(),
 
             torch.nn.Linear(h_size, 1),
         )

@@ -73,7 +73,8 @@ class ALITrainLoop(TrainLoop):
             # ========== Computations for Dis(x, z_hat) ==========
 
             x_no_noise = x
-            x_no_noise.requires_grad = True
+            if self.r1_reg_gamma != 0.0:
+                x_no_noise.requires_grad = True
             # Add noise to the inputs if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
                 x = self.add_instance_noise(x)
@@ -85,7 +86,8 @@ class ALITrainLoop(TrainLoop):
             # ========== Computations for Dis(x_tilde, z) ==========
 
             z = self.generate_z_batch(self.batch_size)
-            z.requires_grad = True
+            if self.r1_reg_gamma != 0.0:
+                z.requires_grad = True
             x_tilde = self.Gx(z)
             # Add noise to the inputs of D if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
@@ -119,14 +121,14 @@ class ALITrainLoop(TrainLoop):
                 # Computes an R1-like loss
                 grad_outputs = torch.ones_like(dis_p)
                 x_grads = torch.autograd.grad(
-                    torch.sigmoid(dis_q),
+                    dis_q,
                     x_no_noise,
                     create_graph=True,
                     only_inputs=True,
                     grad_outputs=grad_outputs
                 )[0]
                 z_grads = torch.autograd.grad(
-                    torch.sigmoid(dis_p),
+                    dis_p,
                     z,
                     create_graph=True,
                     only_inputs=True,
@@ -138,7 +140,7 @@ class ALITrainLoop(TrainLoop):
             # ========== Back propagation and updates ==========
 
             # Gradient update on Discriminator network
-            if L_g.detach().item() < 3.5 or self.r1_reg_gamma != 0.0:
+            if L_g.detach().item() < 3.5:
                 self.optim_D.zero_grad()
                 L_d.backward(retain_graph=True)
                 self.optim_D.step()

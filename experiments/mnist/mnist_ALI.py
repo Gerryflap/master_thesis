@@ -43,6 +43,12 @@ parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", defa
 parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
                     help="If > 0, enables R1 loss which pushes the gradient "
                          "norm to zero for real samples in the discriminator.")
+parser.add_argument("--use_lr_norm", action="store_true", default=False,
+                    help="Uses local response norm, which will make the generator and encoder samples "
+                         "independent from the rest of the batch.")
+parser.add_argument("--progan_var", action="store_true", default=False,
+                    help="Adds the mean of feature stddevs in D as an extra input to a deeper layer."
+                         "This is supposed to add more variation.")
 args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("mnist", "ali", args)
@@ -59,9 +65,10 @@ valid_dataset = MNIST("data/downloads/mnist", train=False, download=True, transf
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=1)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, False, n_channels=1, sigmoid_out=True)
-D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=1, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=1, use_lr_norm=False, deterministic=True)
+Gx = Generator28(args.l_size, args.h_size, args.use_mish, False, n_channels=1, sigmoid_out=True, use_lr_norm=args.use_lr_norm)
+D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=1,
+                       dropout=args.dropout_rate, fc_h_size=args.fc_h_size, progan_variation=args.progan_var)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
@@ -76,7 +83,7 @@ D.init_weights()
 
 listeners = [
     LossReporter(),
-    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid"),
+    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid",  print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True)
 ]
@@ -91,10 +98,10 @@ train_loop = ALITrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     morgan_alpha=args.morgan_alpha,
-    d_img_noise_std=0.1,
+    d_img_noise_std=0.0,
     use_sigmoid=True,
     reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
-    r1_reg_gamma=args.r1_gamma
+    r1_reg_gamma=args.r1_gamma,
 )
 
 train_loop.train()

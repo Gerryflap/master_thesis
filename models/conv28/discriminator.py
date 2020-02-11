@@ -17,10 +17,10 @@ class Discriminator28(torch.nn.Module):
 
         self.dropout = dropout
         self.h_size = h_size
-        self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=4,  stride=1, bias=False)
+        self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=4,  stride=1, bias=True)
         self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=5, stride=2, bias=False)
         self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
-        self.conv_4 = torch.nn.Conv2d(h_size * 4, n_channels, kernel_size=4, stride=1, bias=False)
+        self.conv_4 = torch.nn.Conv2d(h_size * 4, 1, kernel_size=4, stride=1, bias=True)
 
         self.use_bn = use_bn
         if use_bn:

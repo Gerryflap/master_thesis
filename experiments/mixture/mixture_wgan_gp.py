@@ -13,8 +13,8 @@ from trainloops.listeners.mixture_visualizer import MixtureVisualizer
 
 parser = argparse.ArgumentParser(description="Mixture WGAN GP experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
-parser.add_argument("--lr", action="store", type=float, default=0.003,
-                    help="Changes the learning rate, default is 0.003")
+parser.add_argument("--lr", action="store", type=float, default=0.0001,
+                    help="Changes the learning rate, default is 0.0001")
 parser.add_argument("--lambd", action="store", type=float, default=10.0,
                     help="Lambda, multiplier for gradient penalty")
 parser.add_argument("--h_size", action="store", type=int, default=32,

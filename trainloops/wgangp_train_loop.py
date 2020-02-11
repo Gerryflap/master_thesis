@@ -77,7 +77,8 @@ class GanTrainLoop(TrainLoop):
             dis_out = self.D(x_hat)
             grad_outputs = torch.ones_like(dis_out)
             grad = torch.autograd.grad(dis_out, x_hat, create_graph=True, only_inputs=True, grad_outputs=grad_outputs)[0]
-            d_grad_loss = torch.pow(grad.norm(2, dim=list(range(1, len(grad.size())))) - 1, 2)
+            grad_norm = grad.norm(2, dim=list(range(1, len(grad.size()))))
+            d_grad_loss = torch.pow(grad_norm - 1, 2)
 
             d_loss = d_loss + self.lambd * d_grad_loss
             d_loss = d_loss.mean()
@@ -109,6 +110,7 @@ class GanTrainLoop(TrainLoop):
             "losses": {
                 "D_loss": d_loss.detach().item(),
                 "G_loss": g_loss.detach().item(),
+                "Mean grad norm": grad_norm.mean().detach().item(),
             },
             "networks": {
                 "G": self.G,
