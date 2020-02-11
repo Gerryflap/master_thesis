@@ -5,23 +5,33 @@ from util.torch.initialization import weights_init
 
 
 class Discriminator(MorphingEncoder):
-    def __init__(self, latent_size, h_size=64, mode="normal"):
+    def __init__(self, latent_size, h_size=64, mode="normal", batchnorm=True):
         super().__init__()
         self.latent_size = latent_size
         self.h_size = h_size
         self.mode = mode
+        self.bn = batchnorm
 
         if self.mode not in {"normal", "ali", "vaegan"}:
             raise ValueError("Expected the discriminator mode to be one of {\"normal\", \"ali\", \"vaegan\"}.")
 
-        self.Dx = torch.nn.Sequential(
-            torch.nn.Linear(2, h_size),
-            torch.nn.LeakyReLU(0.02),
+        if self.bn:
+            self.Dx = torch.nn.Sequential(
+                torch.nn.Linear(2, h_size),
+                torch.nn.LeakyReLU(0.02),
 
-            torch.nn.Linear(h_size, h_size),
-            torch.nn.BatchNorm1d(h_size),
-            torch.nn.LeakyReLU(0.02),
-        )
+                torch.nn.Linear(h_size, h_size),
+                torch.nn.BatchNorm1d(h_size),
+                torch.nn.LeakyReLU(0.02),
+            )
+        else:
+            self.Dx = torch.nn.Sequential(
+                torch.nn.Linear(2, h_size),
+                torch.nn.LeakyReLU(0.02),
+
+                torch.nn.Linear(h_size, h_size),
+                torch.nn.LeakyReLU(0.02),
+            )
 
         d_out_input_size = h_size
         if mode == "ali":

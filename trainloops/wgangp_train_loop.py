@@ -22,7 +22,8 @@ class GanTrainLoop(TrainLoop):
             dataloader: torch.utils.data.DataLoader,
             D_steps_per_G_step=1,
             cuda=False,
-            epochs=1
+            epochs=1,
+            lambd=10.0
     ):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
@@ -33,6 +34,7 @@ class GanTrainLoop(TrainLoop):
         self.dataloader = dataloader
         self.D_steps_per_G_step = D_steps_per_G_step
         self.cuda = cuda
+        self.lambd = lambd
 
     def epoch(self):
 
@@ -66,7 +68,8 @@ class GanTrainLoop(TrainLoop):
             # Compute losses
             d_loss = (d_fake_outputs - d_real_outputs)
 
-            eps = torch.rand((self.batch_size, 1, 1, 1))
+            size = [s if i == 0 else 1 for i, s in enumerate(fake_batch.size())]
+            eps = torch.rand(size)
             if self.cuda:
                 eps = eps.cuda()
             x_hat = eps * real_batch + (1.0-eps) * fake_batch
@@ -76,7 +79,7 @@ class GanTrainLoop(TrainLoop):
             grad = torch.autograd.grad(dis_out, x_hat, create_graph=True, only_inputs=True, grad_outputs=grad_outputs)[0]
             d_grad_loss = torch.pow(grad.norm(2, dim=list(range(1, len(grad.size())))) - 1, 2)
 
-            d_loss = d_loss + 10.0 * d_grad_loss
+            d_loss = d_loss + self.lambd * d_grad_loss
             d_loss = d_loss.mean()
 
             d_loss.backward()
