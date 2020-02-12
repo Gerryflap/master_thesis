@@ -11,6 +11,7 @@ import torchvision.transforms.functional as tvF
 from PIL import Image
 
 import dlib
+from torchvision.transforms import transforms
 
 from util.torch.losses import euclidean_distance
 
@@ -40,10 +41,15 @@ parser.add_argument("--init_with_Gz", action="store_true", default=False,
 parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model. "
                                                                      "Switches to FRS reconstruction loss")
 parser.add_argument("--d_real_regularization", action="store_true", default=False, help="Keeps D(x,z) to zero")
+parser.add_argument("--no_face", action="store_true", default=False, help="Skips facial recognition and just rescales the image.")
 
 args = parser.parse_args()
 
 fname_dec = os.path.join(args.param_path, "Gx.pt")
+if not os.path.exists(fname_dec):
+    fname_dec = os.path.join(args.param_path, "G.pt")
+if not os.path.exists(fname_dec):
+    fname_dec = os.path.join(args.param_path, "dec.pt")
 
 Gx = torch.load(fname_dec, map_location=torch.device('cpu'))
 Gx.eval()
@@ -132,6 +138,15 @@ def load_process_img(fname):
     return input_frame
 
 
+def load_process_img_no_face(fname):
+    img = Image.open(fname)
+    img = transforms.Resize(resolution)(img)
+    img = transforms.ToTensor()(img)
+    return img
+
+
+
+
 def to_numpy_img(img, tanh_mode):
     if tanh_mode:
         img = (img + 1) / 2
@@ -164,11 +179,11 @@ if args.visualize:
     plt.figure().canvas.mpl_connect('close_event', stop_running)
     plt.ion()
 
-x = load_process_img(args.img)
+x = load_process_img(args.img) if not args.no_face else load_process_img_no_face(args.img)
 
 x2 = None
 if args.img2 is not None:
-    x2 = load_process_img(args.img2)
+    x2 = load_process_img(args.img2) if not args.no_face else load_process_img_no_face(args.img2)
 
 if args.cuda:
     x = x.cuda()
