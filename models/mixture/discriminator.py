@@ -5,7 +5,7 @@ from util.torch.initialization import weights_init
 
 
 class Discriminator(MorphingEncoder):
-    def __init__(self, latent_size, h_size=64, mode="normal", batchnorm=True, relu=False):
+    def __init__(self, latent_size, h_size=64, mode="normal", batchnorm=True, relu=False, input_size=2):
         super().__init__()
         self.latent_size = latent_size
         self.h_size = h_size
@@ -18,7 +18,7 @@ class Discriminator(MorphingEncoder):
 
         if self.bn:
             self.Dx = torch.nn.Sequential(
-                torch.nn.Linear(2, h_size),
+                torch.nn.Linear(input_size, h_size),
                 act(),
 
                 torch.nn.Linear(h_size, h_size),
@@ -27,7 +27,7 @@ class Discriminator(MorphingEncoder):
             )
         else:
             self.Dx = torch.nn.Sequential(
-                torch.nn.Linear(2, h_size),
+                torch.nn.Linear(input_size, h_size),
                 act(),
 
                 torch.nn.Linear(h_size, h_size),
