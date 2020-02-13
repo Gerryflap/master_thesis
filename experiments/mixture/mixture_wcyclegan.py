@@ -22,7 +22,7 @@ parser.add_argument("--epochs", action="store", type=int, default=101, help="Set
 parser.add_argument("--l_size", action="store", type=int, default=2, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
-parser.add_argument("--alpha", action="store", type=float, default=0.3, help="Alpha, scales z reconstruction loss")
+parser.add_argument("--alpha", action="store", type=float, default=1.0, help="Alpha, scales z reconstruction loss")
 parser.add_argument("--d_steps", action="store", type=int, default=5, help="D steps per G step")
 parser.add_argument("--lambdx", action="store", type=float, default=0.1,
                     help="Lambda, multiplier for gradient penalty on x")
@@ -31,7 +31,7 @@ parser.add_argument("--lambdz", action="store", type=float, default=0.1,
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("mixture", "wcycelgan", args)
+output_path = util.output.init_experiment_output_dir("mixture", "wcyclegan", args)
 
 train = MixtureDataset()
 valid = MixtureDataset()
@@ -74,8 +74,8 @@ trainloop = WCycleGanTrainLoop(
     listeners,
     Gz,
     Gx,
-    Dx,
     Dz,
+    Dx,
     G_optimizer,
     D_optimizer,
     dataloader,
