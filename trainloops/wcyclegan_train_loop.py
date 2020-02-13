@@ -78,7 +78,8 @@ class WCycleGanTrainLoop(TrainLoop):
             if i%self.D_steps_per_G_step == 0:
                 # Compute reconstruction loss for z
                 z_recon = self.Gz.encode(x_tilde)
-                L_recon = torch.nn.functional.mse_loss(z_recon, z).mean()
+                # L_recon = torch.nn.functional.mse_loss(z_recon, z).mean()
+                L_recon = torch.nn.functional.l1_loss(z_recon, z).mean()
 
                 # Compute losses for G
                 gz_wgan_loss = -Dz_fake.mean()

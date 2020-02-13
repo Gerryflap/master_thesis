@@ -1,12 +1,9 @@
-from data.FruitDataset import FruitDataset
+from torchvision.datasets import MNIST
+
 from models.conv28.discriminator import Discriminator28
 from models.conv28.encoder import Encoder28
 from models.mixture.discriminator import Discriminator
-from trainloops.ali_train_loop import ALITrainLoop
-from trainloops.gan_train_loop import GanTrainLoop
-from models.conv28.ali_discriminator import ALIDiscriminator28
 from models.conv28.generator import Generator28
-from data.celeba_cropped import CelebaCropped
 import util.output
 from torchvision import transforms
 import torch
@@ -18,7 +15,7 @@ from trainloops.listeners.model_saver import ModelSaver
 # Parse commandline arguments
 from trainloops.wcyclegan_train_loop import WCycleGanTrainLoop
 
-parser = argparse.ArgumentParser(description="Fruit WcycleGAN experiment.")
+parser = argparse.ArgumentParser(description="MNIST WcycleGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
@@ -44,29 +41,35 @@ parser.add_argument("--lambdz", action="store", type=float, default=0.1,
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("fruit28", "WCycleGAN", args)
+output_path = util.output.init_experiment_output_dir("mnist", "WCycleGAN", args)
 
-dataset = FruitDataset("data/fruit/48x48/oranges/", transform=transforms.Compose([
+dataset = MNIST("data/downloads/mnist", train=True, download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-]), only_original=False)
+]))
 
-valid_dataset = FruitDataset("data/fruit/48x48/oranges/", transform=transforms.Compose([
+valid_dataset = MNIST("data/downloads/mnist", train=False, download=True, transform=transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor(),
-]), only_original=False)
+]))
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
-Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
-Dx = Discriminator28(args.h_size, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, use_bn=False, use_logits=True)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=1, cap_variance=True, deterministic=True)
+Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=1, sigmoid_out=True)
+Dx = Discriminator28(args.h_size, use_mish=args.use_mish, n_channels=1, dropout=args.dropout_rate, use_bn=False, use_logits=True)
 Dz = Discriminator(args.l_size, 128, batchnorm=False, input_size=args.l_size)
+# Dz = torch.nn.Sequential(
+#     torch.nn.Linear(args.l_size, 512),
+#     torch.nn.LeakyReLU(0.02),
+#
+#     torch.nn.Linear(512, 1)
+# )
 
-G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
-D_optimizer = torch.optim.Adam(list(Dz.parameters()) + list(Dx.parameters()), lr=args.lr, betas=(0.5, 0.999))
+G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0, 0.9))
+D_optimizer = torch.optim.Adam(list(Dz.parameters()) + list(Dx.parameters()), lr=args.lr, betas=(0, 0.9))
 
 if args.cuda:
     Gz = Gz.cuda()
@@ -79,7 +82,7 @@ Gx.init_weights()
 
 listeners = [
     LossReporter(),
-    AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
+    AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train", print_stats=True),
     ModelSaver(output_path, n=50, overwrite=True, print_output=True),
 ]
 train_loop = WCycleGanTrainLoop(

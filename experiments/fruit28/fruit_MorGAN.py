@@ -16,7 +16,7 @@ from trainloops.listeners.model_saver import ModelSaver
 # Parse commandline arguments
 
 
-parser = argparse.ArgumentParser(description="Celeba MorGAN experiment.")
+parser = argparse.ArgumentParser(description="Fruit MorGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
