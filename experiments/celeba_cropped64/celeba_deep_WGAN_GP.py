@@ -48,8 +48,8 @@ dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-G = DeepGenerator(args.l_size, args.h_size, 64, 4)
-D = DeepDiscriminator(args.h_size, 4, 3)
+G = DeepGenerator(args.l_size, args.h_size, 4, 4)
+D = DeepDiscriminator(args.h_size, 64, 4, 3)
 
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.0, 0.9))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.0, 0.9))
