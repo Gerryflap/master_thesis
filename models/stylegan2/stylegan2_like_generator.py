@@ -59,7 +59,7 @@ class DeepGenerator(torch.nn.Module):
 
         for layer in self.upscale_layers:
             x, rgb = layer(x)
-            rgb_out = torch.nn.functional.upsample_bilinear(rgb_out, scale_factor=2)
+            rgb_out = torch.nn.functional.interpolate(rgb_out, scale_factor=2, mode='bilinear', align_corners=True)
             rgb_out += rgb
 
         return torch.sigmoid(rgb_out)

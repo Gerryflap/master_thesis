@@ -27,7 +27,6 @@ class DeepDiscriminator(torch.nn.Module):
         self.input_resolution = input_resolution
         self.n_downscales = n_downscales
         self.conv_out_res = int(input_resolution * 0.5**n_downscales)
-        print(self.conv_out_res)
         self.h_size = h_size
         self.n_channels = n_channels
 
