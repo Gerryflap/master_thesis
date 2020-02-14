@@ -31,15 +31,15 @@ class DeepGenerator(torch.nn.Module):
 
         self.lin = torch.nn.Linear(
             latent_size,
-            int(h_size*(2**(n_upscales - 1)) * start_resolution**2)
+            int(h_size*(2**(n_upscales )) * start_resolution**2)
         )
-        self.first_rgb = torch.nn.Conv2d(h_size * 2 ** (n_upscales - 1), n_channels, kernel_size=1)
+        self.first_rgb = torch.nn.Conv2d(h_size * 2 ** (n_upscales ), n_channels, kernel_size=1)
 
         upscale_layers = []
         for i in range(n_upscales):
             layer = UpscaleLayer(
+                int(h_size * (2**(n_upscales - i))),
                 int(h_size * (2**(n_upscales - i - 1))),
-                int(h_size * (2**(n_upscales - i - 2))),
                 n_channels
             )
             upscale_layers.append(layer)
@@ -50,7 +50,7 @@ class DeepGenerator(torch.nn.Module):
         x = torch.nn.functional.leaky_relu(x, 0.02)
         x = x.view(
             -1,
-            int(self.h_size * (2**(self.n_upscales - 1))),
+            int(self.h_size * (2**(self.n_upscales))),
             self.start_resolution,
             self.start_resolution
         )
