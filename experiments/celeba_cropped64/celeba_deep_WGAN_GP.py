@@ -1,6 +1,6 @@
-from data.FruitDataset import FruitDataset
-from models.conv48.discriminator import Discriminator48
-from models.conv48.generator import Generator48
+from data.celeba_cropped import CelebaCropped
+from models.conv64.discriminator import Discriminator64
+from models.conv64_ali.generator import Generator64
 from models.stylegan2.stylegan2_like_discriminator import DeepDiscriminator
 from models.stylegan2.stylegan2_like_generator import DeepGenerator
 from trainloops.wgangp_train_loop import GanTrainLoop
@@ -14,7 +14,7 @@ from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 
-parser = argparse.ArgumentParser(description="Fruit WGAN-GP experiment.")
+parser = argparse.ArgumentParser(description="Celeba Deep WGAN-GP experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
@@ -38,18 +38,19 @@ parser.add_argument("--lambd", action="store", type=float, default=10.0,
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("fruit48", "deep_wgan_gp", args)
+output_path = util.output.init_experiment_output_dir("celeba64", "deep_wgan_gp", args)
 
-dataset = FruitDataset("data/fruit/48x48/oranges/", transform=transforms.Compose([
+dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.ToTensor(),
-]), only_original=False)
+]))
+
+
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-# G = Generator48(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True, use_lr_norm=args.use_lr_norm)
-G = DeepGenerator(args.l_size, args.h_size, 3, 4)
-# D = Discriminator48(args.h_size, use_bn=False, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, use_logits=True)
-D = DeepDiscriminator(args.h_size, 48, 4)
+G = DeepGenerator(args.l_size, args.h_size, 64, 4)
+D = DeepDiscriminator(args.h_size, 4, 3)
+
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.0, 0.9))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.0, 0.9))
 
@@ -59,8 +60,10 @@ if args.cuda:
 
 listeners = [
     LossReporter(),
-    GanImageSampleLogger(output_path, args, pad_value=1),
-    ModelSaver(output_path, n=5, overwrite=True, print_output=True)
+    GanImageSampleLogger(output_path, args, pad_value=1, n_images=6*6),
+    ModelSaver(output_path, n=5, overwrite=True, print_output=True),
+    ModelSaver(output_path, n=20, overwrite=False, print_output=True)
+
 ]
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
                           cuda=args.cuda, epochs=args.epochs, lambd=args.lambd)
