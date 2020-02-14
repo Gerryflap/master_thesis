@@ -27,6 +27,7 @@ class DeepGenerator(torch.nn.Module):
         self.n_upscales = n_upscales
         self.h_size = h_size
         self.n_channels = n_channels
+        self.latent_size = latent_size
 
         self.lin = torch.nn.Linear(
             latent_size,
