@@ -9,7 +9,7 @@ class UpscaleLayer(torch.nn.Module):
         self.to_rgb = torch.nn.Conv2d(out_channels, n_channels, kernel_size=1)
 
     def forward(self, inp):
-        x = torch.nn.functional.upsample_bilinear(inp, scale_factor=2)
+        x = torch.nn.functional.interpolate(inp, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.conv1(x)
         x = torch.nn.functional.leaky_relu(x, 0.02)
 
@@ -33,7 +33,7 @@ class DeepGenerator(torch.nn.Module):
             latent_size,
             int(h_size*(2**(n_upscales - 1)) * start_resolution**2)
         )
-        self.first_rgb = torch.nn.Conv2d(h_size* 2 ** (n_upscales - 1), n_channels, kernel_size=1)
+        self.first_rgb = torch.nn.Conv2d(h_size * 2 ** (n_upscales - 1), n_channels, kernel_size=1)
 
         upscale_layers = []
         for i in range(n_upscales):

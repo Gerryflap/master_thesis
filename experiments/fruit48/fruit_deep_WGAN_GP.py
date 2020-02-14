@@ -1,6 +1,7 @@
 from data.FruitDataset import FruitDataset
 from models.conv48.discriminator import Discriminator48
 from models.conv48.generator import Generator48
+from models.stylegan2.stylegan2_like_discriminator import DeepDiscriminator
 from models.stylegan2.stylegan2_like_generator import DeepGenerator
 from trainloops.wgangp_train_loop import GanTrainLoop
 import util.output
@@ -47,7 +48,8 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 # G = Generator48(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True, use_lr_norm=args.use_lr_norm)
 G = DeepGenerator(args.l_size, args.h_size, 6, 3)
-D = Discriminator48(args.h_size, use_bn=False, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, use_logits=True)
+# D = Discriminator48(args.h_size, use_bn=False, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, use_logits=True)
+D = DeepDiscriminator(args.h_size, 48, 3)
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.0, 0.9))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.0, 0.9))
 
