@@ -32,8 +32,10 @@ parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate in D")
-parser.add_argument("--alpha", action="store", default=1.0, type=float,
-                    help="Sets the alpha parameter that scales the reconstruction loss")
+parser.add_argument("--alpha_z", action="store", default=1.0, type=float,
+                    help="Sets the alpha_z parameter that scales the z reconstruction loss")
+parser.add_argument("--alpha_x", action="store", default=0.0, type=float,
+                    help="Sets the alpha_x parameter that scales the x reconstruction loss")
 parser.add_argument("--d_steps", action="store", type=int, default=5, help="D steps per G step")
 parser.add_argument("--lambdx", action="store", type=float, default=10.0,
                     help="Lambda, multiplier for gradient penalty on x")
@@ -60,7 +62,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True, deterministic=True)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True, deterministic=False)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 Dx = Discriminator28(args.h_size, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, use_bn=False, use_logits=True)
 Dz = Discriminator(args.l_size, 128, batchnorm=False, input_size=args.l_size)
@@ -94,7 +96,8 @@ train_loop = WCycleGanTrainLoop(
     dataloader=dataloader,
     cuda=args.cuda,
     epochs=args.epochs,
-    alpha=args.alpha,
+    alpha_z=args.alpha_z,
+    alpha_x=args.alpha_x,
     lambd_x=args.lambdx,
     lambd_z=args.lambdz,
     D_steps_per_G_step=args.d_steps

@@ -27,7 +27,8 @@ class WCycleGanTrainLoop(TrainLoop):
             epochs=1,
             lambd_x=10.0,
             lambd_z=0.1,
-            alpha=1.0
+            alpha_z=1.0,
+            alpha_x=0.0,
     ):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
@@ -42,7 +43,9 @@ class WCycleGanTrainLoop(TrainLoop):
         self.cuda = cuda
         self.lambd_x = lambd_x
         self.lambd_z = lambd_z
-        self.alpha = alpha
+        self.alpha_z = alpha_z
+        self.alpha_x = alpha_x
+
 
 
     def epoch(self):
@@ -60,7 +63,6 @@ class WCycleGanTrainLoop(TrainLoop):
                     else:
                         print("WARNING! Gx does not have an \"output_bias\". "
                               "Using untied biases as the last layer of Gx is advised!")
-
             # Generate z and x_tilde
             z = self.generate_z_batch(self.batch_size)
             x_tilde = self.Gx(z)
@@ -74,18 +76,6 @@ class WCycleGanTrainLoop(TrainLoop):
 
             Dx_real = self.Dx(x)
             Dx_fake = self.Dx(x_tilde)
-
-            if i%self.D_steps_per_G_step == 0:
-                # Compute reconstruction loss for z
-                z_recon = self.Gz.encode(x_tilde)
-                # L_recon = torch.nn.functional.mse_loss(z_recon, z).mean()
-                L_recon = torch.nn.functional.l1_loss(z_recon, z).mean()
-
-                # Compute losses for G
-                gz_wgan_loss = -Dz_fake.mean()
-                gx_wgan_loss = -Dx_fake.mean()
-
-                g_loss = gz_wgan_loss + gx_wgan_loss + self.alpha * L_recon
 
             # Compute losses for D
             dx_wgan_loss = Dx_fake - Dx_real
@@ -121,28 +111,62 @@ class WCycleGanTrainLoop(TrainLoop):
 
             d_loss = dx_loss + dz_loss
 
-            if i%self.D_steps_per_G_step == 0:
-                self.G_optimizer.zero_grad()
-                g_loss.backward(retain_graph=True)
-                self.G_optimizer.step()
-
             self.D_optimizer.zero_grad()
             d_loss.backward()
             self.D_optimizer.step()
 
+            if i % self.D_steps_per_G_step == 0:
+                # Train G
+                # Generate z and x_tilde
+                z = self.generate_z_batch(self.batch_size)
+                x_tilde = self.Gx(z)
+
+                # Use x from the dataset to generate z_tilde
+                z_tilde = self.Gz.encode(x)
+
+                # Compute D values
+                Dz_fake = self.Dz(z_tilde)
+
+                Dx_fake = self.Dx(x_tilde)
 
 
-        return {
-            "epoch": self.current_epoch,
-            "losses": {
+                # Compute reconstruction loss for z
+                z_recon = self.Gz.encode(x_tilde)
+                # L_recon = torch.nn.functional.mse_loss(z_recon, z).mean()
+                L_recon_z = torch.nn.functional.mse_loss(z_recon, z)
+
+                # Compute losses for G
+                gz_wgan_loss = -Dz_fake.mean()
+                gx_wgan_loss = -Dx_fake.mean()
+
+                g_loss = gz_wgan_loss + gx_wgan_loss + self.alpha_z * L_recon_z
+                if self.alpha_x != 0.0:
+                    x_recon = self.Gx(z_tilde)
+                    L_recon_x = torch.nn.functional.mse_loss(x_recon, x)
+                    g_loss += self.alpha_x * L_recon_x
+
+                self.G_optimizer.zero_grad()
+                g_loss.backward()
+                self.G_optimizer.step()
+
+
+        losses = {
                 "Dx_loss": dx_loss.detach().item(),
                 "Dz_loss": dz_loss.detach().item(),
 
                 "Gx_wgan_loss": gx_wgan_loss.detach().item(),
                 "Gz_wgan_loss": gz_wgan_loss.detach().item(),
+                "L_recon_z": L_recon_z.detach().item(),
                 "G_loss": g_loss.detach().item(),
                 "D_loss": d_loss.detach().item(),
-            },
+            }
+
+        if self.alpha_x != 0.0:
+            losses["L_recon_x"] = L_recon_x.detach().item()
+
+        return {
+            "epoch": self.current_epoch,
+            "losses": losses,
             "networks": {
                 "Gx": self.Gx,
                 "Gz": self.Gz,

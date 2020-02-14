@@ -1,11 +1,12 @@
 import torch
 
 from models.morphing_encoder import MorphingEncoder
+from util.torch.activations import LocalResponseNorm
 from util.torch.initialization import weights_init
 
 
 class Discriminator(MorphingEncoder):
-    def __init__(self, latent_size, h_size=64, mode="normal", batchnorm=True, relu=False, input_size=2):
+    def __init__(self, latent_size, h_size=64, mode="normal", batchnorm=True, relu=False, input_size=2, lr_norm=False):
         super().__init__()
         self.latent_size = latent_size
         self.h_size = h_size
@@ -25,6 +26,17 @@ class Discriminator(MorphingEncoder):
                 torch.nn.BatchNorm1d(h_size),
                 act(),
             )
+
+        elif lr_norm:
+            self.Dx = torch.nn.Sequential(
+                torch.nn.Linear(input_size, h_size),
+                act(),
+
+                torch.nn.Linear(h_size, h_size),
+                act(),
+                LocalResponseNorm(),
+            )
+
         else:
             self.Dx = torch.nn.Sequential(
                 torch.nn.Linear(input_size, h_size),
