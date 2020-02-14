@@ -3,6 +3,7 @@ from models.conv64.discriminator import Discriminator64
 from models.conv64_ali.generator import Generator64
 from models.stylegan2.stylegan2_like_discriminator import DeepDiscriminator
 from models.stylegan2.stylegan2_like_generator import DeepGenerator
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.wgangp_train_loop import GanTrainLoop
 import util.output
 from torchvision import transforms
@@ -62,7 +63,8 @@ listeners = [
     LossReporter(),
     GanImageSampleLogger(output_path, args, pad_value=1, n_images=6*6),
     ModelSaver(output_path, n=5, overwrite=True, print_output=True),
-    ModelSaver(output_path, n=20, overwrite=False, print_output=True)
+    ModelSaver(output_path, n=20, overwrite=False, print_output=True),
+    KillSwitchListener()
 
 ]
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
