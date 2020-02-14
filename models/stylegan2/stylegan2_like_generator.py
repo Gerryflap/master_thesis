@@ -35,14 +35,15 @@ class DeepGenerator(torch.nn.Module):
         )
         self.first_rgb = torch.nn.Conv2d(h_size* 2 ** (n_upscales - 1), n_channels, kernel_size=1)
 
-        self.upscale_layers = []
+        upscale_layers = []
         for i in range(n_upscales):
             layer = UpscaleLayer(
                 int(h_size * (2**(n_upscales - i - 1))),
                 int(h_size * (2**(n_upscales - i - 2))),
                 n_channels
             )
-            self.upscale_layers.append(layer)
+            upscale_layers.append(layer)
+        self.upscale_layers = torch.nn.ModuleList(upscale_layers)
 
     def forward(self, z):
         x = self.lin(z)
