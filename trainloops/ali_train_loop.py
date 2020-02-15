@@ -118,7 +118,7 @@ class ALITrainLoop(TrainLoop):
                     L_pixel = self.frs_loss(x_recon, x_no_noise)
                 L_syn = L_g + self.morgan_alpha * L_pixel
 
-            if self.r1_reg_gamma != 0 and self.compute_r1_every_n_steps:
+            if self.r1_reg_gamma != 0 and i%self.compute_r1_every_n_steps == 0:
                 # Computes an R1-like loss
                 grad_outputs = torch.ones_like(dis_p)
                 x_grads = torch.autograd.grad(
