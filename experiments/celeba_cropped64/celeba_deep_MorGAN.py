@@ -47,7 +47,7 @@ parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("celeba32", "Deep_MorGAN", args)
+output_path = util.output.init_experiment_output_dir("celeba64", "Deep_MorGAN", args)
 
 dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.ToTensor(),
