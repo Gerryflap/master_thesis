@@ -1,5 +1,6 @@
 from models.conv28.encoder import Encoder28
 from models.stylegan2.stylegan2_like_ali_discriminator import DeepAliDiscriminator
+from models.stylegan2.stylegan2_like_alt_ali_discriminator import DeepAltAliDiscriminator
 from models.stylegan2.stylegan2_like_encoder import DeepEncoder
 from models.stylegan2.stylegan2_like_generator import DeepGenerator
 from trainloops.ali_train_loop import ALITrainLoop
@@ -49,7 +50,8 @@ parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
                          "norm to zero for real samples in the discriminator.")
 parser.add_argument("--r1_steps", action="store", type=int, default=1, help="R1 regularization is only applied every R1_STEPS steps. "
                                                                             "Gamma is multiplied with the number of steps to maintain the scale")
-
+parser.add_argument("--alt_discriminator", action="store_true", default=False,
+                    help="Uses the alternative discriminator design.")
 
 args = parser.parse_args()
 
@@ -71,7 +73,10 @@ print("Dataset length: ", len(dataset))
 
 Gz = DeepEncoder(args.l_size, args.h_size, 32, 3, bn=True)
 Gx = DeepGenerator(args.l_size, args.h_size, 4, 3, bn=True)
-D = DeepAliDiscriminator(args.l_size, args.h_size, 32, 3, bn=not args.disable_batchnorm_in_D)
+if not args.alt_discriminator:
+    D = DeepAliDiscriminator(args.l_size, args.h_size, 32, 3, bn=not args.disable_batchnorm_in_D)
+else:
+    D = DeepAltAliDiscriminator(args.l_size, args.h_size, 32, 3, bn=not args.disable_batchnorm_in_D)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
