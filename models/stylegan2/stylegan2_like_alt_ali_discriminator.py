@@ -70,8 +70,19 @@ class DeepAltAliDiscriminator(torch.nn.Module):
 
         self.x_fc = torch.nn.Linear(
             int(h_size*(2**(n_downscales)) * self.conv_out_res**2),
+            int(h_size*(2**(n_downscales + 1)))
+        )
+
+        self.z_fc = torch.nn.Linear(
+            latent_size,
+            int(h_size*(2**(n_downscales + 1)))
+        )
+
+        self.xz_fc = torch.nn.Linear(
+            int(h_size*(2**(n_downscales + 2))),
             1
         )
+
 
     def forward(self, inp):
         x, z = inp
@@ -86,8 +97,11 @@ class DeepAltAliDiscriminator(torch.nn.Module):
             x = layer((x, z_channels))
 
         x = x.view(-1, int(self.h_size * (2 ** self.n_downscales)) * self.conv_out_res * self.conv_out_res)
-        x = self.x_fc(x)
-        return x
+        hx = self.x_fc(x)
+        hz = self.z_fc(z)
+        hxz = torch.cat([hx, hz], dim=1)
+        out = self.xz_fc(hxz)
+        return out
 
     @staticmethod
     def activ(x):
