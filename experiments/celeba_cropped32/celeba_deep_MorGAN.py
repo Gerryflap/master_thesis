@@ -33,10 +33,10 @@ parser.add_argument("--cuda", action="store_true", default=False,
 parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
 parser.add_argument("--disable_batchnorm_in_D", action="store_true", default=False,
-                    help="Enables batch normalization in D")
+                    help="Disables batch normalization in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha parameter of MorGAN")
-parser.add_argument("--instance_noise_std", action="store", default=0.1, type=float,
+parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
                     help="Sets the standard deviation for instance noise (noise added to inputs of D)")
 parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
                     help="Changes the label value for the \"real\" output of D. "
@@ -70,7 +70,7 @@ print("Dataset length: ", len(dataset))
 
 Gz = DeepEncoder(args.l_size, args.h_size, 32, 3, bn=True)
 Gx = DeepGenerator(args.l_size, args.h_size, 4, 3, bn=True)
-D = DeepAliDiscriminator(args.l_size, args.h_size, 32, 3, bn=True)
+D = DeepAliDiscriminator(args.l_size, args.h_size, 32, 3, bn=not args.disable_batchnorm_in_D)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
