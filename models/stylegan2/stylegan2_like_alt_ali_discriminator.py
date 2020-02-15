@@ -98,7 +98,11 @@ class DeepAltAliDiscriminator(torch.nn.Module):
 
         x = x.view(-1, int(self.h_size * (2 ** self.n_downscales)) * self.conv_out_res * self.conv_out_res)
         hx = self.x_fc(x)
+        hx = self.activ(hx)
+
         hz = self.z_fc(z)
+        hz = self.activ(hz)
+
         hxz = torch.cat([hx, hz], dim=1)
         out = self.xz_fc(hxz)
         return out
