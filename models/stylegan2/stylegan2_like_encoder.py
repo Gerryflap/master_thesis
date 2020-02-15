@@ -63,5 +63,5 @@ class DeepEncoder(MorphingEncoder):
 
 
 if __name__ == "__main__":
-    D = DeepEncoder(128, 4, 48, 3)
-    print(D(torch.normal(0, 1, (2, 3, 48, 48))).size())
+    E = DeepEncoder(128, 4, 48, 3)
+    print(E(torch.normal(0, 1, (2, 3, 48, 48)))[0].size())
