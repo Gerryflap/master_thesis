@@ -47,6 +47,9 @@ parser.add_argument("--frs_path", action="store", default=None, help="Path to fa
 parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
                     help="If > 0, enables R1 loss which pushes the gradient "
                          "norm to zero for real samples in the discriminator.")
+parser.add_argument("--r1_steps", action="store", type=int, default=1, help="R1 regularization is only applied every R1_STEPS steps. "
+                                                                            "Gamma is multiplied with the number of steps to maintain the scale")
+
 
 args = parser.parse_args()
 
@@ -118,7 +121,8 @@ train_loop = ALITrainLoop(
     use_sigmoid=True,
     reconstruction_loss_mode=reconstruction_loss_mode,
     frs_model=frs_model,
-    r1_reg_gamma=args.r1_gamma
+    r1_reg_gamma=args.r1_gamma,
+    compute_r1_every_n_steps=args.r1_steps
 )
 
 train_loop.train()

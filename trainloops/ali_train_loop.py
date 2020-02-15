@@ -48,7 +48,7 @@ class ALITrainLoop(TrainLoop):
             raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" \"dis_l\", or \"frs\"")
         self.reconstruction_loss_mode = reconstruction_loss_mode
         self.frs_model = frs_model
-        self.r1_reg_gamma = r1_reg_gamma
+        self.r1_reg_gamma = r1_reg_gamma * compute_r1_every_n_steps
 
     def epoch(self):
         self.Gx.train()
