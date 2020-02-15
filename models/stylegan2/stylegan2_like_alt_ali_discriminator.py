@@ -54,8 +54,9 @@ class DeepAltAliDiscriminator(torch.nn.Module):
         downscale_layers = []
         for i in range(n_downscales):
             layer = DownscaleLayer(
-                int(h_size * (2**i)) + z_channels,
+                int(h_size * (2**i)),
                 int(h_size * (2**(i + 1))),
+                z_channels,
                 bn and (i != 0)
             )
             downscale_layers.append(layer)
