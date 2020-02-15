@@ -25,7 +25,7 @@ def get_log_odds(raw_marginals, use_sigmoid):
 class ALITrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1,
                  morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
-                 reconstruction_loss_mode="pixelwise", frs_model=None, r1_reg_gamma=0.0):
+                 reconstruction_loss_mode="pixelwise", frs_model=None, r1_reg_gamma=0.0, compute_r1_every_n_steps=1):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -42,6 +42,7 @@ class ALITrainLoop(TrainLoop):
         self.d_img_noise_std = d_img_noise_std
         self.d_real_label = d_real_label
         self.decrease_noise = decrease_noise
+        self.compute_r1_every_n_steps = compute_r1_every_n_steps
 
         if reconstruction_loss_mode not in ["pixelwise", "dis_l", "frs"]:
             raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" \"dis_l\", or \"frs\"")
@@ -73,7 +74,7 @@ class ALITrainLoop(TrainLoop):
             # ========== Computations for Dis(x, z_hat) ==========
 
             x_no_noise = x
-            if self.r1_reg_gamma != 0.0:
+            if self.r1_reg_gamma != 0.0 and i%self.compute_r1_every_n_steps == 0:
                 x_no_noise.requires_grad = True
             # Add noise to the inputs if the standard deviation isn't defined to be 0
             if self.d_img_noise_std != 0.0:
@@ -86,7 +87,7 @@ class ALITrainLoop(TrainLoop):
             # ========== Computations for Dis(x_tilde, z) ==========
 
             z = self.generate_z_batch(self.batch_size)
-            if self.r1_reg_gamma != 0.0:
+            if self.r1_reg_gamma != 0.0 and i%self.compute_r1_every_n_steps == 0:
                 z.requires_grad = True
             x_tilde = self.Gx(z)
             # Add noise to the inputs of D if the standard deviation isn't defined to be 0
@@ -117,7 +118,7 @@ class ALITrainLoop(TrainLoop):
                     L_pixel = self.frs_loss(x_recon, x_no_noise)
                 L_syn = L_g + self.morgan_alpha * L_pixel
 
-            if self.r1_reg_gamma != 0:
+            if self.r1_reg_gamma != 0 and self.compute_r1_every_n_steps:
                 # Computes an R1-like loss
                 grad_outputs = torch.ones_like(dis_p)
                 x_grads = torch.autograd.grad(
