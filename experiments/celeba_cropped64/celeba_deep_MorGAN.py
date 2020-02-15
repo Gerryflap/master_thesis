@@ -8,6 +8,7 @@ from torchvision import transforms
 import torch
 import argparse
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 
@@ -89,6 +90,7 @@ listeners = [
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     # DiscriminatorOverfitMonitor(dataset, valid_dataset, 100, args),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    KillSwitchListener(output_path)
 ]
 
 reconstruction_loss_mode = "pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l"
