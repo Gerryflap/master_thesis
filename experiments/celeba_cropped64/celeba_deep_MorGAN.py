@@ -1,11 +1,7 @@
-from models.conv28.encoder import Encoder28
 from models.stylegan2.stylegan2_like_ali_discriminator import DeepAliDiscriminator
 from models.stylegan2.stylegan2_like_encoder import DeepEncoder
 from models.stylegan2.stylegan2_like_generator import DeepGenerator
 from trainloops.ali_train_loop import ALITrainLoop
-from trainloops.gan_train_loop import GanTrainLoop
-from models.conv28.ali_discriminator import ALIDiscriminator28
-from models.conv28.generator import Generator28
 from data.celeba_cropped import CelebaCropped
 import util.output
 from torchvision import transforms
@@ -53,12 +49,10 @@ args = parser.parse_args()
 output_path = util.output.init_experiment_output_dir("celeba32", "Deep_MorGAN", args)
 
 dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
-    transforms.Resize(32),
     transforms.ToTensor(),
 ]))
 
 valid_dataset = CelebaCropped(split="valid", download=True, morgan_like_filtering=True, transform=transforms.Compose([
-    transforms.Resize(32),
     transforms.ToTensor(),
 ]))
 
@@ -66,9 +60,9 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = DeepEncoder(args.l_size, args.h_size, 32, 3, bn=True)
-Gx = DeepGenerator(args.l_size, args.h_size, 4, 3, bn=True)
-D = DeepAliDiscriminator(args.l_size, args.h_size, 32, 3, bn=not args.disable_batchnorm_in_D)
+Gz = DeepEncoder(args.l_size, args.h_size, 64, 4, bn=True)
+Gx = DeepGenerator(args.l_size, args.h_size, 4, 4, bn=True)
+D = DeepAliDiscriminator(args.l_size, args.h_size, 64, 4, bn=not args.disable_batchnorm_in_D)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
