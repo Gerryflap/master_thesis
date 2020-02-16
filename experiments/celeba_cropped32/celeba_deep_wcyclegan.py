@@ -32,6 +32,8 @@ parser.add_argument("--alpha_x", action="store", default=0.3, type=float,
                     help="Sets the alpha (reconstruction) parameter for x")
 parser.add_argument("--alpha_z", action="store", default=0.0, type=float,
                     help="Sets the alpha (reconstruction) parameter for z")
+parser.add_argument("--d_steps", action="store", type=int, default=5, help="Number of D steps per G step")
+
 
 args = parser.parse_args()
 
