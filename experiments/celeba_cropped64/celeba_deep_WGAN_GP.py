@@ -29,10 +29,12 @@ parser.add_argument("--cuda", action="store_true", default=False,
 parser.add_argument("--train_enc", action="store_true", default=False, help="Trains an encoder to reconstruct the input")
 parser.add_argument("--use_lr_norm_in_D", action="store_true", default=False,
                     help="Use local response norm in D")
+parser.add_argument("--lambd", action="store", type=float, default=10.0,
+                    help="Lambda, multiplier for gradient penalty")
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("celeba32", "wgan_gp", args)
+output_path = util.output.init_experiment_output_dir("celeba64", "wgan_gp", args)
 
 dataset = CelebaCropped(split="train", download=True, transform=transforms.Compose([
     transforms.ToTensor(),
@@ -78,6 +80,6 @@ if E is not None:
     )
 
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
-                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer)
+                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer, lambd=args.lambd)
 
 train_loop.train()
