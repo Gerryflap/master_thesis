@@ -112,7 +112,7 @@ class GanTrainLoop(TrainLoop):
                 # If an encoder is specified, train it
                 if self.E is not None:
                     self.E.zero_grad()
-                    z = self.E(real_batch)
+                    z = self.E.encode(real_batch)
                     self.G.requires_grad = False
                     x_recon = self.G(z)
                     encoder_loss = torch.nn.functional.l1_loss(x_recon, real_batch)
