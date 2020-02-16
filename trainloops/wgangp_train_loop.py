@@ -116,6 +116,11 @@ class GanTrainLoop(TrainLoop):
                     self.G.requires_grad = False
                     x_recon = self.G(z)
                     encoder_loss = torch.nn.functional.l1_loss(x_recon, real_batch)
+
+                    encoder_mean_reg = torch.pow(z.mean(), 2)
+                    encoder_var_reg = torch.pow(z.var(dim=1).mean() - 1.0, 2)
+                    encoder_loss += encoder_mean_reg + encoder_var_reg
+
                     encoder_loss.backward()
                     self.E_optimizer.step()
 
