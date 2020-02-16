@@ -40,15 +40,13 @@ class DownscaleLayer(torch.nn.Module):
 
 
 class DeepDiscriminator(torch.nn.Module):
-    def __init__(self, h_size, input_resolution, n_downscales, n_channels=3, bn=False):
+    def __init__(self, h_size, input_resolution, n_downscales, n_channels=3, bn=False, lrn=False):
         super().__init__()
         self.input_resolution = input_resolution
         self.n_downscales = n_downscales
         self.conv_out_res = int(input_resolution * 0.5**n_downscales)
         self.h_size = h_size
         self.n_channels = n_channels
-        self.bn = bn
-
         self.from_rgb = torch.nn.Conv2d(n_channels, h_size, kernel_size=1)
 
         downscale_layers = []
@@ -56,7 +54,8 @@ class DeepDiscriminator(torch.nn.Module):
             layer = DownscaleLayer(
                 int(h_size * (2**i)),
                 int(h_size * (2**(i + 1))),
-                bn and (i != 0)
+                bn and (i != 0),
+                lrn and (i != 0),
             )
             downscale_layers.append(layer)
         self.downscale_layers = torch.nn.ModuleList(downscale_layers)
