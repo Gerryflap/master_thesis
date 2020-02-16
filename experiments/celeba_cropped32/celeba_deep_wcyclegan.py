@@ -91,7 +91,7 @@ train_loop = WCycleGanTrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     alpha_x=args.alpha_x,
-    alpha_z=args.aplha_z,
+    alpha_z=args.alpha_z,
     D_steps_per_G_step=args.d_steps
 )
 
