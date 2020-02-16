@@ -33,7 +33,6 @@ parser.add_argument("--alpha_x", action="store", default=0.3, type=float,
 parser.add_argument("--alpha_z", action="store", default=0.0, type=float,
                     help="Sets the alpha (reconstruction) parameter for z")
 
-
 args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("celeba32", "deep_wcyclegan", args)
@@ -52,9 +51,13 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
+print("Enc")
 Gz = DeepEncoder(args.l_size, args.h_size, 32, 3, lrn=True)
+print("Gen")
 Gx = DeepGenerator(args.l_size, args.h_size, 4, 3, lrn=True)
+print("Discr")
 Dx = DeepDiscriminator(args.l_size, args.h_size, 32, 3, bn=False)
+print("Dz")
 Dz = Discriminator(args.l_size, 128, batchnorm=False, input_size=args.l_size)
 
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.0, 0.9))
