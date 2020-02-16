@@ -23,7 +23,9 @@ class GanTrainLoop(TrainLoop):
             D_steps_per_G_step=1,
             cuda=False,
             epochs=1,
-            lambd=10.0
+            lambd=10.0,
+            E=None,
+            E_optimizer=None
     ):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
@@ -35,6 +37,10 @@ class GanTrainLoop(TrainLoop):
         self.D_steps_per_G_step = D_steps_per_G_step
         self.cuda = cuda
         self.lambd = lambd
+
+        # If an encoder is specified, train the encoder to encode images into G's latent space
+        self.E = E
+        self.E_optimizer = E_optimizer
 
     def epoch(self):
 
@@ -103,22 +109,39 @@ class GanTrainLoop(TrainLoop):
 
                 self.G_optimizer.step()
 
+                # If an encoder is specified, train it
+                if self.E is not None:
+                    self.E.zero_grad()
+                    z = self.E(real_batch)
+                    self.G.requires_grad = False
+                    x_recon = self.G(z)
+                    encoder_loss = torch.nn.functional.l1_loss(x_recon, real_batch)
+                    encoder_loss.backward()
+                    self.E_optimizer.step()
 
+                    self.G.requires_grad = True
+
+        losses = {
+            "D_loss": d_loss.detach().item(),
+            "G_loss": g_loss.detach().item(),
+            "Mean grad norm": grad_norm.mean().detach().item(),
+        }
+
+        if self.E is not None:
+            losses["recon_loss"] = encoder_loss.detach().item()
 
         return {
             "epoch": self.current_epoch,
-            "losses": {
-                "D_loss": d_loss.detach().item(),
-                "G_loss": g_loss.detach().item(),
-                "Mean grad norm": grad_norm.mean().detach().item(),
-            },
+            "losses": losses,
             "networks": {
                 "G": self.G,
                 "D": self.D,
+                "E": self.E
             },
             "optimizers": {
                 "G_optimizer": self.G_optimizer,
-                "D_optimizer": self.D_optimizer
+                "D_optimizer": self.D_optimizer,
+                "E_optimizer": self.E_optimizer
             }
         }
 
