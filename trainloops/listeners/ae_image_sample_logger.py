@@ -54,6 +54,8 @@ class AEImageSampleLogger(Listener):
             Gz = state_dict["networks"]["enc"]
         elif "Gz" in state_dict["networks"]:
             Gz = state_dict["networks"]["Gz"]
+        elif "E" in state_dict["networks"]:
+            Gz = state_dict["networks"]["E"]
         else:
             raise ValueError("Could not find a encoder-like network in the state dict!")
 
