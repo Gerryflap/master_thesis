@@ -51,13 +51,9 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-print("Enc")
 Gz = DeepEncoder(args.l_size, args.h_size, 32, 3, lrn=True)
-print("Gen")
 Gx = DeepGenerator(args.l_size, args.h_size, 4, 3, lrn=True)
-print("Discr")
-Dx = DeepDiscriminator(args.l_size, args.h_size, 32, 3, bn=False)
-print("Dz")
+Dx = DeepDiscriminator(args.h_size, 32, 3, bn=False)
 Dz = Discriminator(args.l_size, 128, batchnorm=False, input_size=args.l_size)
 
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.0, 0.9))
