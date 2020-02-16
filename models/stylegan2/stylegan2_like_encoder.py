@@ -6,7 +6,7 @@ from models.stylegan2.stylegan2_like_discriminator import DownscaleLayer
 
 
 class DeepEncoder(MorphingEncoder):
-    def __init__(self, latent_size, h_size, input_resolution, n_downscales, n_channels=3, bn=False):
+    def __init__(self, latent_size, h_size, input_resolution, n_downscales, n_channels=3, bn=False, lrn=False):
         super().__init__()
         self.input_resolution = input_resolution
         self.n_downscales = n_downscales
@@ -15,6 +15,7 @@ class DeepEncoder(MorphingEncoder):
         self.h_size = h_size
         self.n_channels = n_channels
         self.bn = bn
+        self.lrn = lrn
 
         self.from_rgb = torch.nn.Conv2d(n_channels, h_size, kernel_size=1)
 
@@ -23,7 +24,8 @@ class DeepEncoder(MorphingEncoder):
             layer = DownscaleLayer(
                 int(h_size * (2**i)),
                 int(h_size * (2**(i + 1))),
-                bn and (i != 0)
+                bn and (i != 0),
+                lrn and (i != 0)
             )
             downscale_layers.append(layer)
         self.downscale_layers = torch.nn.ModuleList(downscale_layers)

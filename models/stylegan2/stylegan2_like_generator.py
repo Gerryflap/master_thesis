@@ -1,40 +1,43 @@
 import torch
 
+from util.torch.activations import LocalResponseNorm
 from util.torch.initialization import weights_init
 
 
 class UpscaleLayer(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, n_channels=3, bn=False):
+    def __init__(self, in_channels, out_channels, n_channels=3, bn=False, lrn=False):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
         self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
         self.to_rgb = torch.nn.Conv2d(out_channels, n_channels, kernel_size=1)
 
-        self.bn = bn
-
+        self.norm = bn or lrn
         if bn:
-            self.bn_1 = torch.nn.BatchNorm2d(out_channels)
-            self.bn_2 = torch.nn.BatchNorm2d(out_channels)
+            self.n_1 = torch.nn.BatchNorm2d(out_channels)
+            self.n_2 = torch.nn.BatchNorm2d(out_channels)
+        elif lrn:
+            self.n_1 = LocalResponseNorm()
+            self.n_2 = LocalResponseNorm()
 
 
     def forward(self, inp):
         x = torch.nn.functional.interpolate(inp, scale_factor=2, mode='bilinear', align_corners=True)
         x = self.conv1(x)
         x = torch.nn.functional.leaky_relu(x, 0.02)
-        if self.bn:
-            x = self.bn_1(x)
+        if self.norm:
+            x = self.n_1(x)
 
         x = self.conv2(x)
         x = torch.nn.functional.leaky_relu(x, 0.02)
-        if self.bn:
-            x = self.bn_2(x)
+        if self.norm:
+            x = self.n_2(x)
 
         rgb = self.to_rgb(x)
         return x, rgb
 
 
 class DeepGenerator(torch.nn.Module):
-    def __init__(self, latent_size, h_size, start_resolution, n_upscales, n_channels=3, bn=False):
+    def __init__(self, latent_size, h_size, start_resolution, n_upscales, n_channels=3, bn=False, lrn=False):
         super().__init__()
         self.start_resolution = start_resolution
         self.n_upscales = n_upscales
@@ -48,9 +51,11 @@ class DeepGenerator(torch.nn.Module):
         )
         self.first_rgb = torch.nn.Conv2d(h_size * 2 ** (n_upscales ), n_channels, kernel_size=1)
 
-        self.bn = bn
+        self.norm = bn or lrn
         if bn:
-            self.bn_1 = torch.nn.BatchNorm2d(h_size*(2**n_upscales))
+            self.n_1 = torch.nn.BatchNorm2d(h_size*(2**n_upscales))
+        if lrn:
+            self.n_1 = LocalResponseNorm()
 
         upscale_layers = []
         for i in range(n_upscales):
@@ -58,7 +63,8 @@ class DeepGenerator(torch.nn.Module):
                 int(h_size * (2**(n_upscales - i))),
                 int(h_size * (2**(n_upscales - i - 1))),
                 n_channels,
-                bn
+                bn,
+                lrn
             )
             upscale_layers.append(layer)
         self.upscale_layers = torch.nn.ModuleList(upscale_layers)
@@ -72,6 +78,8 @@ class DeepGenerator(torch.nn.Module):
             self.start_resolution,
             self.start_resolution
         )
+
+        x = self.n_1(x)
 
         rgb_out = self.first_rgb(x)
 

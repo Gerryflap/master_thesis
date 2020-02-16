@@ -1,19 +1,24 @@
 import torch
 
+from util.torch.activations import LocalResponseNorm
 from util.torch.initialization import weights_init
 
 
 class DownscaleLayer(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, bn=False):
+    def __init__(self, in_channels, out_channels, bn=False, lrn=False):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1)
         self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
         self.lower_channels = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1)
 
-        self.bn = bn
+        self.norm = bn or lrn
         if bn:
-            self.bn_1 = torch.nn.BatchNorm2d(out_channels)
-            self.bn_2 = torch.nn.BatchNorm2d(out_channels)
+            self.n_1 = torch.nn.BatchNorm2d(out_channels)
+            self.n_2 = torch.nn.BatchNorm2d(out_channels)
+        elif lrn:
+            self.n_1 = LocalResponseNorm()
+            self.n_2 = LocalResponseNorm()
+
 
     def forward(self, inp):
         carry = torch.nn.functional.interpolate(inp, scale_factor=0.5, mode='bilinear', align_corners=True)
@@ -22,14 +27,14 @@ class DownscaleLayer(torch.nn.Module):
         x = self.conv1(inp)
         x = torch.nn.functional.leaky_relu(x, 0.02)
 
-        if self.bn:
-            x = self.bn_1(x)
+        if self.norm:
+            x = self.n_1(x)
 
         x = self.conv2(x)
         x = torch.nn.functional.leaky_relu(x, 0.02)
 
-        if self.bn:
-            x = self.bn_2(x)
+        if self.norm:
+            x = self.n_2(x)
 
         return carry + x
 
