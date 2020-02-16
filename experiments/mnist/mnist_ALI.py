@@ -1,5 +1,5 @@
 """
-    ALI on the MNIST dataset. Can also be used as MorGAN using the MorGAN alpha parameter
+    ALI on the MNIST dataset. Can also be used as MorGAN using the MorGAN alpha_z parameter
 """
 
 from torchvision.datasets import MNIST
@@ -37,7 +37,7 @@ parser.add_argument("--use_batchnorm_in_D", action="store_true", default=False,
 parser.add_argument("--dropout_rate", action="store", default=0.0, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.0, type=float,
-                    help="Sets the alpha parameter in the MorGAN training algorithm")
+                    help="Sets the alpha_z parameter in the MorGAN training algorithm")
 parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
 parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,

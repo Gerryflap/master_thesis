@@ -1,10 +1,10 @@
 import torch
-from util.torch.activations import mish
+from util.torch.activations import mish, LocalResponseNorm
 from util.torch.initialization import weights_init
 
 
 class Discriminator28(torch.nn.Module):
-    def __init__(self, h_size, use_bn=False, use_mish=False, n_channels=1, dropout=0.0, use_logits=True):
+    def __init__(self, h_size, use_bn=False, use_mish=False, n_channels=1, dropout=0.0, use_logits=True, use_lrnorm=False):
         super().__init__()
 
         self.use_logits = use_logits
@@ -22,10 +22,15 @@ class Discriminator28(torch.nn.Module):
         self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
         self.conv_4 = torch.nn.Conv2d(h_size * 4, 1, kernel_size=4, stride=1, bias=True)
 
-        self.use_bn = use_bn
+        self.use_norm = use_bn or use_lrnorm
         if use_bn:
             self.bn_2 = torch.nn.BatchNorm2d(self.h_size * 2)
             self.bn_3 = torch.nn.BatchNorm2d(self.h_size * 4)
+
+        if use_lrnorm:
+            self.bn_2 = LocalResponseNorm()
+            self.bn_3 = LocalResponseNorm()
+
 
         # if dropout != 0:
         #     self.dropout_layer = torch.nn.Dropout(dropout, True)
@@ -43,12 +48,12 @@ class Discriminator28(torch.nn.Module):
         x = self.activ(x)
 
         x = self.conv_2(x)
-        if self.use_bn:
+        if self.use_norm:
             x = self.bn_2(x)
         x = self.activ(x)
 
         x = self.conv_3(x)
-        if self.use_bn:
+        if self.use_norm:
             x = self.bn_3(x)
         x = self.activ(x)
 

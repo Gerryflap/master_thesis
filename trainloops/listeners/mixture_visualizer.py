@@ -64,6 +64,8 @@ class MixtureVisualizer(Listener):
         if self.discriminator_output:
             if "D" in state_dict["networks"]:
                 D = state_dict["networks"]["D"]
+            elif "Dx" in state_dict["networks"]:
+                D = state_dict["networks"]["Dx"]
             else:
                 raise ValueError("Could not find a Discriminator in the state dict!")
 

@@ -1,27 +1,50 @@
 import torch
 
 from models.morphing_encoder import MorphingEncoder
+from util.torch.activations import LocalResponseNorm
 from util.torch.initialization import weights_init
 
 
 class Encoder(MorphingEncoder):
-    def __init__(self, latent_size, h_size=64, deterministic=False):
+    def __init__(self, latent_size, h_size=64, deterministic=False, bn=True, lr_norm=False):
         super().__init__()
         self.latent_size = latent_size
         self.h_size = h_size
         self.deterministic = deterministic
 
-        self.model = torch.nn.Sequential(
-            torch.nn.Linear(2, h_size),
-            torch.nn.BatchNorm1d(h_size),
-            torch.nn.LeakyReLU(0.02),
+        if bn:
+            self.model = torch.nn.Sequential(
+                torch.nn.Linear(2, h_size),
+                torch.nn.BatchNorm1d(h_size),
+                torch.nn.LeakyReLU(0.02),
 
-            torch.nn.Linear(h_size, h_size),
-            torch.nn.BatchNorm1d(h_size),
-            torch.nn.LeakyReLU(0.02),
+                torch.nn.Linear(h_size, h_size),
+                torch.nn.BatchNorm1d(h_size),
+                torch.nn.LeakyReLU(0.02),
 
-            torch.nn.Linear(h_size, latent_size*2 if not deterministic else latent_size),
-        )
+                torch.nn.Linear(h_size, latent_size*2 if not deterministic else latent_size),
+            )
+        elif lr_norm:
+            self.model = torch.nn.Sequential(
+                torch.nn.Linear(2, h_size),
+                torch.nn.LeakyReLU(0.02),
+
+                torch.nn.Linear(h_size, h_size),
+                torch.nn.LeakyReLU(0.02),
+                LocalResponseNorm(),
+
+                torch.nn.Linear(h_size, latent_size * 2 if not deterministic else latent_size),
+            )
+        else:
+            self.model = torch.nn.Sequential(
+                torch.nn.Linear(2, h_size),
+                torch.nn.LeakyReLU(0.02),
+
+                torch.nn.Linear(h_size, h_size),
+                torch.nn.LeakyReLU(0.02),
+
+                torch.nn.Linear(h_size, latent_size * 2 if not deterministic else latent_size),
+            )
 
     def forward(self, inp):
         model_out = self.model(inp)

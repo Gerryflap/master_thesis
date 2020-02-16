@@ -38,7 +38,7 @@ parser.add_argument("--disable_batchnorm_in_D", action="store_true", default=Fal
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
-                    help="Sets the alpha parameter in the MorGAN training algorithm")
+                    help="Sets the alpha_z parameter in the MorGAN training algorithm")
 parser.add_argument("--continue_with", action="store", type=str, default=None,
                     help="Path the the experiment to load. Keep hyperparams the same!")
 parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,

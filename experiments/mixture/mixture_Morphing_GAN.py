@@ -23,7 +23,7 @@ parser.add_argument("--epochs", action="store", type=int, default=101, help="Set
 parser.add_argument("--l_size", action="store", type=int, default=2, help="Size of the latent space")
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
-parser.add_argument("--morgan_alpha", action="store", type=float, default=0.3, help="MorGAN alpha")
+parser.add_argument("--morgan_alpha", action="store", type=float, default=0.3, help="MorGAN alpha_z")
 parser.add_argument("--instance_noise_std", action="store", type=float, default=0.1,
                     help="Standard deviation of instance noise")
 parser.add_argument("--morph_loss_factor", action="store", default=0.3, type=float,

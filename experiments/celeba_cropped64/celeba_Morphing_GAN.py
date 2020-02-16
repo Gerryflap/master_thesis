@@ -34,7 +34,7 @@ parser.add_argument("--disable_batchnorm_in_D", action="store_true", default=Fal
 parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
-                    help="Sets the alpha parameter of MorGAN")
+                    help="Sets the alpha_z parameter of MorGAN")
 parser.add_argument("--morph_loss_factor", action="store", default=0.3, type=float,
                     help="Scales the morph loss")
 parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
