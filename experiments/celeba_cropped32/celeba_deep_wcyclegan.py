@@ -32,27 +32,11 @@ parser.add_argument("--alpha_x", action="store", default=0.3, type=float,
                     help="Sets the alpha (reconstruction) parameter for x")
 parser.add_argument("--alpha_z", action="store", default=0.0, type=float,
                     help="Sets the alpha (reconstruction) parameter for z")
-parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
-                    help="Sets the standard deviation for instance noise (noise added to inputs of D)")
-parser.add_argument("--d_real_label", action="store", default=1.0, type=float,
-                    help="Changes the label value for the \"real\" output of D. "
-                         "This can be used for label smoothing. "
-                         "Recommended is 1.0 for no smoothing or 0.9 for smoothing")
-parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
-                    help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
-parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model. "
-                                                                     "Switches to FRS reconstruction loss")
-parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
-                    help="If > 0, enables R1 loss which pushes the gradient "
-                         "norm to zero for real samples in the discriminator.")
-parser.add_argument("--r1_steps", action="store", type=int, default=1, help="R1 regularization is only applied every R1_STEPS steps. "
-                                                                            "Gamma is multiplied with the number of steps to maintain the scale")
-parser.add_argument("--alt_discriminator", action="store_true", default=False,
-                    help="Uses the alternative discriminator design.")
+
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("celeba32", "Deep_MorGAN", args)
+output_path = util.output.init_experiment_output_dir("celeba32", "deep_wcyclegan", args)
 
 dataset = CelebaCropped(split="train", download=True, morgan_like_filtering=True, transform=transforms.Compose([
     transforms.Resize(32),
@@ -72,16 +56,9 @@ Gz = DeepEncoder(args.l_size, args.h_size, 32, 3, lrn=True)
 Gx = DeepGenerator(args.l_size, args.h_size, 4, 3, lrn=True)
 Dx = DeepDiscriminator(args.l_size, args.h_size, 32, 3, bn=False)
 Dz = Discriminator(args.l_size, 128, batchnorm=False, input_size=args.l_size)
+
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.0, 0.9))
 D_optimizer = torch.optim.Adam(list(Dz.parameters()) + list(Dx.parameters()), lr=args.lr, betas=(0.0, 0.9))
-
-# Code for loading frs model when frs based reconstruction loss is used
-frs_model = None
-if args.frs_path is not None:
-    frs_model = torch.load(args.frs_path)
-    frs_model.eval()
-    if args.cuda:
-        frs_model = frs_model.cuda()
 
 if args.cuda:
     Gz = Gz.cuda()
