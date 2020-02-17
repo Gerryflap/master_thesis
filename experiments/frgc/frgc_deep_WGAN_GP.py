@@ -1,3 +1,5 @@
+from PIL import Image
+
 from data.frgc_cropped import FRGCCropped
 from models.stylegan2.stylegan2_like_discriminator import DeepDiscriminator
 from models.stylegan2.stylegan2_like_encoder import DeepEncoder
@@ -39,8 +41,8 @@ args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("frgc48", "deep_wgan_gp", args)
 
-dataset = FRGCCropped( download=True, transform=transforms.Compose([
-    transforms.Resize(48),
+dataset = FRGCCropped(download=True, transform=transforms.Compose([
+    transforms.Resize(48, interpolation=Image.LANCZOS),
     transforms.ToTensor(),
 ]))
 
