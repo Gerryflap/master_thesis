@@ -5,7 +5,12 @@ def weights_init(m):
     # This was taken from the PyTorch DCGAN tutorial: https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
     # The value for stddev has been altered to be equal to the ALI value
     classname = m.__class__.__name__
-    if classname.find('Conv2d') != -1:
+
+    if classname.find('Conv2dNormalizedLR') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 1.0)
+        if m.bias is not None:
+            nn.init.constant_(m.bias.data, 0)
+    elif classname.find('Conv2d') != -1:
         nn.init.normal_(m.weight.data, 0.0, 0.02)
         if m.bias is not None:
             nn.init.constant_(m.bias.data, 0)
