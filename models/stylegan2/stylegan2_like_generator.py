@@ -2,14 +2,15 @@ import torch
 
 from util.torch.activations import LocalResponseNorm
 from util.torch.initialization import weights_init
+from util.torch.modules import Conv2dNormalizedLR, LinearNormalizedLR
 
 
 class UpscaleLayer(torch.nn.Module):
     def __init__(self, in_channels, out_channels, n_channels=3, bn=False, lrn=False):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
-        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
-        self.to_rgb = torch.nn.Conv2d(out_channels, n_channels, kernel_size=1)
+        self.conv1 = Conv2dNormalizedLR(in_channels, out_channels, kernel_size=3, padding=1)
+        self.conv2 = Conv2dNormalizedLR(out_channels, out_channels, kernel_size=3, padding=1)
+        self.to_rgb = Conv2dNormalizedLR(out_channels, n_channels, kernel_size=1)
 
         self.norm = bn or lrn
         if bn:
@@ -45,11 +46,11 @@ class DeepGenerator(torch.nn.Module):
         self.n_channels = n_channels
         self.latent_size = latent_size
 
-        self.lin = torch.nn.Linear(
+        self.lin = LinearNormalizedLR(
             latent_size,
             int(h_size*(2**n_upscales) * start_resolution**2)
         )
-        self.first_rgb = torch.nn.Conv2d(h_size * 2 ** (n_upscales ), n_channels, kernel_size=1)
+        self.first_rgb = Conv2dNormalizedLR(h_size * 2 ** (n_upscales ), n_channels, kernel_size=1)
 
         self.norm = bn or lrn
         if bn:

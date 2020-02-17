@@ -3,6 +3,7 @@ import torch
 from models.morphing_encoder import MorphingEncoder
 from util.torch.initialization import weights_init
 from models.stylegan2.stylegan2_like_discriminator import DownscaleLayer
+from util.torch.modules import Conv2dNormalizedLR, LinearNormalizedLR
 
 
 class DeepEncoder(MorphingEncoder):
@@ -17,7 +18,7 @@ class DeepEncoder(MorphingEncoder):
         self.bn = bn
         self.lrn = lrn
 
-        self.from_rgb = torch.nn.Conv2d(n_channels, h_size, kernel_size=1)
+        self.from_rgb = Conv2dNormalizedLR(n_channels, h_size, kernel_size=1)
 
         downscale_layers = []
         for i in range(n_downscales):
@@ -30,12 +31,12 @@ class DeepEncoder(MorphingEncoder):
             downscale_layers.append(layer)
         self.downscale_layers = torch.nn.ModuleList(downscale_layers)
 
-        self.mean_fc = torch.nn.Linear(
+        self.mean_fc = LinearNormalizedLR(
             int(h_size*(2**(n_downscales)) * self.conv_out_res**2),
             latent_size
         )
 
-        self.logvar_fc = torch.nn.Linear(
+        self.logvar_fc = LinearNormalizedLR(
             int(h_size*(2**(n_downscales)) * self.conv_out_res**2),
             latent_size
         )

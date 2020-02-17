@@ -2,14 +2,15 @@ import torch
 
 from util.torch.activations import LocalResponseNorm
 from util.torch.initialization import weights_init
+from util.torch.modules import Conv2dNormalizedLR, LinearNormalizedLR
 
 
 class DownscaleLayer(torch.nn.Module):
     def __init__(self, in_channels, out_channels, bn=False, lrn=False):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1)
-        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
-        self.lower_channels = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1)
+        self.conv1 = Conv2dNormalizedLR(in_channels, out_channels, kernel_size=3, stride=2, padding=1)
+        self.conv2 = Conv2dNormalizedLR(out_channels, out_channels, kernel_size=3, padding=1)
+        self.lower_channels = Conv2dNormalizedLR(in_channels, out_channels, kernel_size=1)
 
         self.norm = bn or lrn
         if bn:
@@ -47,7 +48,7 @@ class DeepDiscriminator(torch.nn.Module):
         self.conv_out_res = int(input_resolution * 0.5**n_downscales)
         self.h_size = h_size
         self.n_channels = n_channels
-        self.from_rgb = torch.nn.Conv2d(n_channels, h_size, kernel_size=1)
+        self.from_rgb = Conv2dNormalizedLR(n_channels, h_size, kernel_size=1)
 
         downscale_layers = []
         for i in range(n_downscales):
@@ -60,7 +61,7 @@ class DeepDiscriminator(torch.nn.Module):
             downscale_layers.append(layer)
         self.downscale_layers = torch.nn.ModuleList(downscale_layers)
 
-        self.out = torch.nn.Linear(
+        self.out = LinearNormalizedLR(
             int(h_size*(2**(n_downscales)) * self.conv_out_res**2),
             1
         )
