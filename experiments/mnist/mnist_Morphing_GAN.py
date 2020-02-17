@@ -61,7 +61,7 @@ valid_dataset = MNISTPairs("data/downloads/mnist", train=False, download=True, t
     transforms.ToTensor(),
 ]))
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=1)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, False, n_channels=1, sigmoid_out=True)

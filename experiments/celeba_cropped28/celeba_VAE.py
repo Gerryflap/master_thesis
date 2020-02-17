@@ -42,7 +42,7 @@ valid_dataset = CelebaCropped(split="valid", download=True, transform=transforms
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 
 enc = VAEGANEncoder28(args.l_size, args.h_size, n_channels=3)

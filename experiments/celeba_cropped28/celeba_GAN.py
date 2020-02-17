@@ -43,7 +43,7 @@ dataset = CelebaCropped(split="train", download=True, transform=transforms.Compo
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 G = Generator28(args.l_size, args.h_size, args.use_mish, not args.no_bias_in_G, n_channels=3)
 D = Discriminator28(args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate)

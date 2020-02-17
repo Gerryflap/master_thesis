@@ -36,7 +36,7 @@ dataset = CelebaCropped(split="train", download=True, transform=transforms.Compo
     transforms.ToTensor(),
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 
 enc = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3)

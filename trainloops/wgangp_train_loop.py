@@ -39,7 +39,7 @@ class GanTrainLoop(TrainLoop):
         self.D_steps_per_G_step = D_steps_per_G_step
         self.cuda = cuda
         self.lambd = lambd
-        # From ProGAN
+        # From ProGAN (does not seem to work as expected!)
         self.gamma_lipschitz = gamma_lipschitz
 
         self.dis_l = dis_l

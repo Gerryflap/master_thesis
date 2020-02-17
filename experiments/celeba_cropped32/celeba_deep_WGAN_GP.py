@@ -48,7 +48,7 @@ valid_dataset = CelebaCropped(split="valid", download=True, transform=transforms
     transforms.ToTensor(),
 ]))
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 G = DeepGenerator(args.l_size, args.h_size, 4, 3, lrn=True)
 D = DeepDiscriminator(args.h_size, 32, 3, bn=False, lrn=args.use_lr_norm_in_D)

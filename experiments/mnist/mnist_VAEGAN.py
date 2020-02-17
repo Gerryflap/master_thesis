@@ -57,7 +57,7 @@ valid_dataset = MNIST("data/downloads/mnist", train=False, download=True, transf
     transforms.Lambda(lambda img: img * 2 - 1)
 ]))
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 Gz = VAEGANEncoder28(args.l_size, args.h_size,  n_channels=1)
 Gx = VAEGANGenerator28(args.l_size, args.h_size, n_channels=1)
