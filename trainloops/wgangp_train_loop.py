@@ -24,8 +24,10 @@ class GanTrainLoop(TrainLoop):
             cuda=False,
             epochs=1,
             lambd=10.0,
+            gamma_lipschitz = 1.0,
             E=None,
-            E_optimizer=None
+            E_optimizer=None,
+            dis_l=False
     ):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
@@ -37,6 +39,10 @@ class GanTrainLoop(TrainLoop):
         self.D_steps_per_G_step = D_steps_per_G_step
         self.cuda = cuda
         self.lambd = lambd
+        # From ProGAN
+        self.gamma_lipschitz = gamma_lipschitz
+
+        self.dis_l = dis_l
 
         # If an encoder is specified, train the encoder to encode images into G's latent space
         self.E = E
@@ -84,7 +90,7 @@ class GanTrainLoop(TrainLoop):
             grad_outputs = torch.ones_like(dis_out)
             grad = torch.autograd.grad(dis_out, x_hat, create_graph=True, only_inputs=True, grad_outputs=grad_outputs)[0]
             grad_norm = grad.norm(2, dim=list(range(1, len(grad.size()))))
-            d_grad_loss = torch.pow(grad_norm - 1, 2)
+            d_grad_loss = torch.pow(grad_norm - self.gamma_lipschitz, 2)/(self.gamma_lipschitz**2)
 
             d_loss = d_loss + self.lambd * d_grad_loss
             d_loss = d_loss.mean()
@@ -115,7 +121,13 @@ class GanTrainLoop(TrainLoop):
                     z = self.E.encode(real_batch)
                     self.G.requires_grad = False
                     x_recon = self.G(z)
-                    encoder_loss = torch.nn.functional.l1_loss(x_recon, real_batch)
+
+                    if self.dis_l:
+                        disl_x = self.D.compute_disl(real_batch)
+                        disl_xrecon = self.D.compute_disl(x_recon)
+                        encoder_loss = torch.nn.functional.l1_loss(disl_xrecon, disl_x)
+                    else:
+                        encoder_loss = torch.nn.functional.l1_loss(x_recon, real_batch)
 
                     encoder_mean_reg = torch.pow(z.mean(), 2)
                     encoder_var_reg = torch.pow(z.var(dim=0).mean() - 1.0, 2)

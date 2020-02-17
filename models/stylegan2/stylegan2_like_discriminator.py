@@ -67,16 +67,21 @@ class DeepDiscriminator(torch.nn.Module):
         )
 
     def forward(self, x):
-        x = self.from_rgb(x)
-        x = torch.nn.functional.leaky_relu(x, 0.02)
-
-        for layer in self.downscale_layers:
-            x = layer(x)
+        x = self.compute_disl(x)
 
         x = x.view(-1, int(self.h_size*(2**self.n_downscales)) * self.conv_out_res * self.conv_out_res)
         x = self.out(x)
 
         return x
+
+    def compute_disl(self, x):
+        x = self.from_rgb(x)
+        x = torch.nn.functional.leaky_relu(x, 0.02)
+
+        for layer in self.downscale_layers:
+            x = layer(x)
+        return x
+
 
     def init_weights(self):
         self.apply(weights_init)

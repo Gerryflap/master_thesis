@@ -29,6 +29,10 @@ parser.add_argument("--cuda", action="store_true", default=False,
 parser.add_argument("--train_enc", action="store_true", default=False, help="Trains an encoder to reconstruct the input")
 parser.add_argument("--use_lr_norm_in_D", action="store_true", default=False,
                     help="Use local response norm in D")
+parser.add_argument("--gamma_lipschitz", action="store", type=float, default=1.0,
+                    help="Changes D to a gamma-Lipschitz function (gamma=1 for 1-Lipschitz)")
+parser.add_argument("--disl", action="store_true", default=False,
+                    help="Use disl loss instead of pixel loss")
 
 args = parser.parse_args()
 
@@ -52,7 +56,7 @@ G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.0, 0.9))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.0, 0.9))
 if args.train_enc:
     E = DeepEncoder(args.l_size, args.h_size, 32, 3, lrn=True)
-    E_optimizer = torch.optim.Adam(E.parameters(), lr=args.lr, betas=(0.5, 0.999))
+    E_optimizer = torch.optim.Adam(E.parameters(), lr=args.lr/5, betas=(0.5, 0.999))
 else:
     E = None
     E_optimizer = None
@@ -80,6 +84,6 @@ if E is not None:
     )
 
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
-                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer)
+                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer, dis_l=args.disl)
 
 train_loop.train()
