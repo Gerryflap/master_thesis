@@ -22,7 +22,7 @@ class DownscaleLayer(torch.nn.Module):
 
 
     def forward(self, inp):
-        carry = torch.nn.functional.interpolate(inp, scale_factor=0.5, mode='bilinear', align_corners=True)
+        carry = torch.nn.functional.interpolate(inp, scale_factor=0.5, mode='bilinear', align_corners=False)
         carry = self.lower_channels(carry)
 
         x = self.conv1(inp)

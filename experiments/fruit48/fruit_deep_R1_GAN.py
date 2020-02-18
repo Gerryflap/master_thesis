@@ -1,13 +1,11 @@
 from PIL import Image
 
 from data.FruitDataset import FruitDataset
-from data.frgc_cropped import FRGCCropped
 from models.stylegan2.stylegan2_like_discriminator import DeepDiscriminator
 from models.stylegan2.stylegan2_like_encoder import DeepEncoder
 from models.stylegan2.stylegan2_like_generator import DeepGenerator
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
-from trainloops.wgangp_train_loop import GanTrainLoop
-from data.celeba_cropped import CelebaCropped
+from trainloops.gan_train_loop import GanTrainLoop
 import util.output
 from torchvision import transforms
 import torch
@@ -33,14 +31,16 @@ parser.add_argument("--cuda", action="store_true", default=False,
 parser.add_argument("--train_enc", action="store_true", default=False, help="Trains an encoder to reconstruct the input")
 parser.add_argument("--use_lr_norm_in_D", action="store_true", default=False,
                     help="Use local response norm in D")
-parser.add_argument("--gamma_lipschitz", action="store", type=float, default=1.0,
-                    help="Changes D to a gamma-Lipschitz function (gamma=1 for 1-Lipschitz)")
+parser.add_argument("--r1_gamma", action="store", type=float, default=1.0,
+                    help="R1 loss gamma")
+parser.add_argument("--r1_steps", action="store", type=int, default=1,
+                    help="R1 loss is computed every 'r1_steps' steps")
 parser.add_argument("--disl", action="store_true", default=False,
                     help="Use disl loss instead of pixel loss")
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("fruit48", "deep_wgan_gp", args)
+output_path = util.output.init_experiment_output_dir("fruit48", "deep_r1_gan", args)
 
 dataset = FruitDataset("data/fruit/48x48/oranges/", transform=transforms.Compose([
     transforms.ToTensor(),
@@ -69,6 +69,7 @@ G.init_weights()
 D.init_weights()
 if E is not None:
     E = E.cuda()
+    E.init_weights()
 
 listeners = [
     LossReporter(),
@@ -82,6 +83,7 @@ if E is not None:
     )
 
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
-                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer, dis_l=args.disl, gamma_lipschitz=args.gamma_lipschitz)
+                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer, dis_l=args.disl,
+                          r1_reg_gamma=args.r1_gamma, compute_r1_every_n_steps=args.r1_steps)
 
 train_loop.train()

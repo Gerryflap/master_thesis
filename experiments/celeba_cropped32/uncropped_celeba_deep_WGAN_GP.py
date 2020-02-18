@@ -1,7 +1,5 @@
-from PIL import Image
+from torchvision.datasets import CelebA
 
-from data.FruitDataset import FruitDataset
-from data.frgc_cropped import FRGCCropped
 from models.stylegan2.stylegan2_like_discriminator import DeepDiscriminator
 from models.stylegan2.stylegan2_like_encoder import DeepEncoder
 from models.stylegan2.stylegan2_like_generator import DeepGenerator
@@ -18,13 +16,13 @@ from trainloops.listeners.gan_image_sample_logger import GanImageSampleLogger
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 
-parser = argparse.ArgumentParser(description="Fruit Deep WGAN-GP experiment.")
+parser = argparse.ArgumentParser(description="Celeba Deep WGAN-GP experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 64")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
                     help="Changes the learning rate, default is 0.0001")
 parser.add_argument("--h_size", action="store", type=int, default=16,
                     help="Sets the h_size, which changes the size of the network")
-parser.add_argument("--epochs", action="store", type=int, default=1000, help="Sets the number of training epochs")
+parser.add_argument("--epochs", action="store", type=int, default=100, help="Sets the number of training epochs")
 parser.add_argument("--d_steps", action="store", type=int, default=2,
                     help="Amount of discriminator steps per generator step")
 parser.add_argument("--l_size", action="store", type=int, default=12, help="Size of the latent space")
@@ -40,20 +38,28 @@ parser.add_argument("--disl", action="store_true", default=False,
 
 args = parser.parse_args()
 
-output_path = util.output.init_experiment_output_dir("fruit48", "deep_wgan_gp", args)
+output_path = util.output.init_experiment_output_dir("uncropped_celeba32", "wgan_gp", args)
 
-dataset = FruitDataset("data/fruit/48x48/oranges/", transform=transforms.Compose([
+dataset = CelebA("data", split="train", download=True, transform=transforms.Compose([
+    transforms.Resize(32),
+    transforms.CenterCrop(32),
     transforms.ToTensor(),
-]), only_original=False)
+]))
+
+valid_dataset = CelebA("data", split="valid", download=True, transform=transforms.Compose([
+    transforms.Resize(32),
+    transforms.CenterCrop(32),
+    transforms.ToTensor(),
+]))
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-G = DeepGenerator(args.l_size, args.h_size, 6, 3, lrn=True)
-D = DeepDiscriminator(args.h_size, 48, 3, bn=False, lrn=args.use_lr_norm_in_D)
+G = DeepGenerator(args.l_size, args.h_size, 4, 3, lrn=True)
+D = DeepDiscriminator(args.h_size, 32, 3, bn=False, lrn=args.use_lr_norm_in_D)
 G_optimizer = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(0.0, 0.9))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.0, 0.9))
 if args.train_enc:
-    E = DeepEncoder(args.l_size, args.h_size, 48, 3, lrn=True)
+    E = DeepEncoder(args.l_size, args.h_size, 32, 3, lrn=True)
     E_optimizer = torch.optim.Adam(E.parameters(), lr=args.lr/5, betas=(0.5, 0.999))
 else:
     E = None
@@ -72,16 +78,16 @@ if E is not None:
 
 listeners = [
     LossReporter(),
-    GanImageSampleLogger(output_path, args, pad_value=1, every_n_epochs=1),
+    GanImageSampleLogger(output_path, args, pad_value=1),
     ModelSaver(output_path, n=5, overwrite=True, print_output=True)
 ]
 
 if E is not None:
     listeners.append(
-        AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train", print_stats=True, every_n_epochs=1)
+        AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True)
     )
 
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
-                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer, dis_l=args.disl, gamma_lipschitz=args.gamma_lipschitz)
+                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer, dis_l=args.disl)
 
 train_loop.train()

@@ -22,7 +22,7 @@ class UpscaleLayer(torch.nn.Module):
 
 
     def forward(self, inp):
-        x = torch.nn.functional.interpolate(inp, scale_factor=2, mode='bilinear', align_corners=True)
+        x = torch.nn.functional.interpolate(inp, scale_factor=2, mode='bilinear', align_corners=False)
         x = self.conv1(x)
         x = torch.nn.functional.leaky_relu(x, 0.02)
         if self.norm:
@@ -86,7 +86,7 @@ class DeepGenerator(torch.nn.Module):
 
         for layer in self.upscale_layers:
             x, rgb = layer(x)
-            rgb_out = torch.nn.functional.interpolate(rgb_out, scale_factor=2, mode='bilinear', align_corners=True)
+            rgb_out = torch.nn.functional.interpolate(rgb_out, scale_factor=2, mode='bilinear', align_corners=False)
             rgb_out += rgb
 
         return torch.sigmoid(rgb_out)

@@ -76,3 +76,16 @@ class LocalResponseNorm(torch.nn.Module):
 def map_to_hypersphere(x, epsilon=1e-10):
     distances = torch.sqrt(torch.sum(x*x, dim=1, keepdim=True))
     return x/(distances + epsilon)
+
+
+def adaptive_instance_normalization(x, ys, yb):
+    """
+    Performs the AdaIN operation using ys and yb as style.
+    :param x: Input feature map (4-dimensional similar to convolutions)
+    :param ys: style scaling factors (batch size, n features)
+    :param yb: style biases (batch size, n features)
+    :return: Normalized x
+    """
+    ys = ys.view(ys.size(0), ys.size(1), 1, 1)
+    yb = yb.view(yb.size(0), yb.size(1), 1, 1)
+    return ys * (x - x.mean(dim=(2, 3), keepdim=True))/x.std(dim=(2, 3), keepdim=True) + yb
