@@ -50,7 +50,7 @@ detector = dlib.get_frontal_face_detector()
 sp = dlib.shape_predictor(predictor_path)
 
 z_size = Gx.latent_size
-resolution = int(Gx(torch.zeros((z_size,))).size()[2])
+resolution = int(Gx(torch.zeros((1, z_size,))).size()[2])
 print(resolution)
 real_resolution = resolution
 sigmoid_model = False
