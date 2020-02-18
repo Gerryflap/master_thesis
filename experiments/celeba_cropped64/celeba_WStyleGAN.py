@@ -3,6 +3,7 @@ from models.stylegan2.stylegan1_skip_generator import StyleGenerator
 from models.stylegan2.stylegan2_like_discriminator import DeepDiscriminator
 from models.stylegan2.stylegan2_like_encoder import DeepEncoder
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.wgangp_train_loop import GanTrainLoop
 import util.output
 from torchvision import transforms
@@ -73,7 +74,9 @@ if E is not None:
 listeners = [
     LossReporter(),
     GanImageSampleLogger(output_path, args, pad_value=1, every_n_epochs=1),
-    ModelSaver(output_path, n=5, overwrite=True, print_output=True)
+    ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    ModelSaver(output_path, n=50, overwrite=False, print_output=True),
+    KillSwitchListener(output_path)
 ]
 
 if E is not None:
