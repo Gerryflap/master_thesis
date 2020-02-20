@@ -82,6 +82,9 @@ class DeepDiscriminator(torch.nn.Module):
             x = layer(x)
         return x
 
+    def compute_dx(self, x):
+        out = self.compute_disl(x)
+        return out, out
 
     def init_weights(self):
         self.apply(weights_init)

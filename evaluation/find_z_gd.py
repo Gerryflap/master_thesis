@@ -75,6 +75,8 @@ if args.use_dis_l or args.d_real_regularization:
 Gz = None
 if args.init_with_Gz:
     fname_Gz = os.path.join(args.param_path, "Gz.pt")
+    if not os.path.exists(fname_Gz):
+        fname_Gz = os.path.join(args.param_path, "E.pt")
 
     Gz = torch.load(fname_Gz, map_location=torch.device('cpu'))
     Gz.eval()
