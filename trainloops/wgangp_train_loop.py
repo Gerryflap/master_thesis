@@ -27,7 +27,8 @@ class GanTrainLoop(TrainLoop):
             gamma_lipschitz = 1.0,
             E=None,
             E_optimizer=None,
-            dis_l=False
+            dis_l=False,
+            recon_loss_G_factor = 0.0
     ):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
@@ -43,6 +44,10 @@ class GanTrainLoop(TrainLoop):
         self.gamma_lipschitz = gamma_lipschitz
 
         self.dis_l = dis_l
+
+        # If an encoder is trained, G can also be trained for reconstruction. This factor scales the recon loss in G
+        self.recon_loss_G_factor = recon_loss_G_factor
+        self.recon_G = self.recon_loss_G_factor != 0.0
 
         # If an encoder is specified, train the encoder to encode images into G's latent space
         self.E = E
@@ -113,13 +118,14 @@ class GanTrainLoop(TrainLoop):
                 g_loss = -self.D(fake_batch).mean()
                 g_loss.backward()
 
-                self.G_optimizer.step()
+                if not self.recon_G:
+                    self.G_optimizer.step()
 
                 # If an encoder is specified, train it
                 if self.E is not None:
                     self.E.zero_grad()
                     z = self.E.encode(real_batch)
-                    self.G.requires_grad = False
+                    self.G.requires_grad = self.recon_G
                     x_recon = self.G(z)
 
                     if self.dis_l:
@@ -129,9 +135,15 @@ class GanTrainLoop(TrainLoop):
                     else:
                         encoder_loss = torch.nn.functional.l1_loss(x_recon, real_batch)
 
+                    if self.recon_G:
+                        g_recon_loss = encoder_loss * self.recon_loss_G_factor
+                        g_recon_loss.backward(retain_graph=True)
+                        self.G_optimizer.step()
+
                     encoder_mean_reg = torch.pow(z.mean(), 2)
-                    encoder_var_reg = torch.pow(z.var(dim=0).mean() - 1.0, 2)
-                    encoder_loss += encoder_mean_reg + encoder_var_reg
+                    encoder_var_feature_reg = torch.pow(z.var(dim=1).mean() - 1.0, 2)
+                    encoder_var_batch_reg = torch.pow(z.var(dim=0).mean() - 1.0, 2)
+                    encoder_loss += encoder_mean_reg + encoder_var_feature_reg + encoder_var_batch_reg
 
                     encoder_loss.backward()
                     self.E_optimizer.step()

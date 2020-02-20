@@ -30,12 +30,10 @@ parser.add_argument("--l_size", action="store", type=int, default=128, help="Siz
 parser.add_argument("--cuda", action="store_true", default=False,
                     help="Enables CUDA support. The script will fail if cuda is not available")
 parser.add_argument("--train_enc", action="store_true", default=False, help="Trains an encoder to reconstruct the input")
-parser.add_argument("--r1_gamma", action="store", type=float, default=1.0,
-                    help="R1 loss gamma")
-parser.add_argument("--r1_steps", action="store", type=int, default=1,
-                    help="R1 loss is computed every 'r1_steps' steps")
 parser.add_argument("--disl", action="store_true", default=False,
                     help="Use disl loss instead of pixel loss")
+parser.add_argument("--recon_loss_G_factor", action="store", type=float, default=1.0,
+                    help="reconstruction loss for G scaling factor")
 
 args = parser.parse_args()
 
@@ -85,6 +83,6 @@ if E is not None:
     )
 
 train_loop = GanTrainLoop(listeners, G, D, G_optimizer, D_optimizer, dataloader, D_steps_per_G_step=args.d_steps,
-                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer, dis_l=args.disl)
+                          cuda=args.cuda, epochs=args.epochs, E=E, E_optimizer=E_optimizer, dis_l=args.disl, recon_loss_G_factor=args.recon_loss_G_factor)
 
 train_loop.train()
