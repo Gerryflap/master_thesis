@@ -79,5 +79,49 @@ class FRS64(torch.nn.Module):
         out = map_to_hypersphere(out)
         return out
 
+    def get_frs_l(self, inp, l=5):
+        if l == 0:
+            return inp
+
+        x = self.conv_1(inp)
+        if self.bn:
+            x = self.bn_1(x)
+        x = self.activ(x)
+
+        if l == 1:
+            return x
+
+        x = self.conv_2(x)
+        if self.bn:
+            x = self.bn_2(x)
+        x = self.activ(x)
+
+        if l == 2:
+            return x
+
+        x = self.conv_3(x)
+        if self.bn:
+            x = self.bn_3(x)
+        x = self.activ(x)
+
+        if l == 3:
+            return x
+
+        x = self.conv_4(x)
+        if self.bn:
+            x = self.bn_4(x)
+        x = self.activ(x)
+
+        if l == 4:
+            return x
+
+        x = self.conv_5(x)
+        if self.bn:
+            x = self.bn_5(x)
+        x = self.activ(x)
+
+        return x
+
+
     def init_weights(self):
         self.apply(weights_init)

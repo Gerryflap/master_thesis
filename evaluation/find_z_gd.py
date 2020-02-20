@@ -4,7 +4,7 @@
 """
 import argparse
 import os
-
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision.transforms.functional as tvF
@@ -42,6 +42,8 @@ parser.add_argument("--frs_path", action="store", default=None, help="Path to fa
                                                                      "Switches to FRS reconstruction loss")
 parser.add_argument("--d_real_regularization", action="store_true", default=False, help="Keeps D(x,z) to zero")
 parser.add_argument("--no_face", action="store_true", default=False, help="Skips facial recognition and just rescales the image.")
+parser.add_argument("--show_loss_plots", action="store_true", default=False, help="When enabled, shows a plot off different losses over the course of optimizing.")
+parser.add_argument("--use_frs_l", action="store_true", default=False, help="Use dis_l like loss with the FRS. This will disable the FRS embedding loss")
 
 args = parser.parse_args()
 
@@ -114,10 +116,10 @@ def load_process_img(fname):
         faces.append(sp(frame, detection))
 
     crop_region_size = 0
-    frame = dlib.get_face_chip(frame, faces[0], size=(64 + crop_region_size * 2))
+    frame = dlib.get_face_chip(frame, faces[0], size=(64 + crop_region_size * 2)*5)
 
     if crop_region_size != 0:
-        frame = frame[crop_region_size:-crop_region_size, crop_region_size:-crop_region_size]
+        frame = frame[crop_region_size*5:-crop_region_size*5, crop_region_size*5:-crop_region_size*5]
 
     if args.fix_contrast:
         frame = frame.astype(np.float32)
@@ -127,7 +129,7 @@ def load_process_img(fname):
         frame = frame.astype(np.uint8)
 
     frame = Image.fromarray(frame)
-    input_frame = tvF.scale(frame, real_resolution)
+    input_frame = tvF.resize(frame, real_resolution, interpolation=Image.LANCZOS)
     input_frame = tvF.to_tensor(input_frame).float()
 
     # input_frame = input_frame.permute(2, 0, 1)
@@ -140,11 +142,13 @@ def load_process_img(fname):
 
 def load_process_img_no_face(fname):
     img = Image.open(fname)
-    img = transforms.Resize(resolution)(img)
+    img = transforms.Resize(resolution, interpolation=Image.LANCZOS)(img)
     img = transforms.ToTensor()(img)
     return img
 
 
+def numpy_euclidean_distance(x1, x2):
+    return np.sqrt(np.sum(np.square(x1 - x2)))
 
 
 def to_numpy_img(img, tanh_mode):
@@ -174,8 +178,6 @@ def stop_running(evt):
 
 
 if args.visualize:
-    import matplotlib.pyplot as plt
-
     plt.figure().canvas.mpl_connect('close_event', stop_running)
     plt.ion()
 
@@ -204,6 +206,16 @@ if frs_model is not None:
     if x2 is not None:
         emb_x2 = frs_model(x2).detach()
 
+if args.use_frs_l:
+    frs_layer = 3
+    frs_l_x = frs_model.get_frs_l(x, l=frs_layer)
+    frs_model.requires_grad = False
+    frs_l_x = frs_l_x.detach()
+
+    if x2 is not None:
+        frs_l_x2 = frs_model.get_frs_l(x2, l=frs_layer)
+        frs_l_x2 = frs_l_x2.detach()
+
 
 z = LatentVector(z_size)
 
@@ -219,6 +231,16 @@ if Gz is not None:
 
 opt = torch.optim.Adam(z.parameters(), args.lr)
 
+if args.show_loss_plots:
+    import face_recognition
+    recon_losses = []
+    frs_dists1 = []
+    img_ident = face_recognition.face_encodings(to_numpy_img(x[0].cpu(), False))[0]
+    if x2 is not None:
+        img2_ident = face_recognition.face_encodings(to_numpy_img(x2[0].cpu(), False))[0]
+        frs_dists2 = []
+        recon2_losses = []
+
 try:
     for i in range(args.n_steps):
         z_val = z.forward(None)
@@ -228,11 +250,23 @@ try:
         if args.use_dis_l:
             _, dis_l_x_rec = D.compute_dx(x_recon)
             loss = torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x, reduction="mean")
+            loss1 = loss
             if x2 is not None:
-                loss += torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x2, reduction="mean")
+                loss2 = torch.nn.functional.mse_loss(dis_l_x_rec, dis_l_x2, reduction="mean")
+                loss = loss1 + loss2
                 loss *= 0.5
 
-        if frs_model is not None:
+        if args.use_frs_l:
+            frs_l_x_rec = frs_model.get_frs_l(x_recon, l=frs_layer)
+
+            loss1 = torch.nn.functional.mse_loss(frs_l_x_rec, frs_l_x, reduction="mean")
+            if x2 is not None:
+                loss2 = torch.nn.functional.mse_loss(frs_l_x_rec, frs_l_x2, reduction="mean")
+                loss += 0.5 * (loss1 + loss2)
+            else:
+                loss += loss1
+
+        if frs_model is not None and not args.use_frs_l:
             noise = torch.normal(0, 0.01, x_recon.size())
             if args.cuda:
                 noise = noise.cuda()
@@ -246,16 +280,19 @@ try:
                 loss1 = euclidean_distance(emb_rec, emb_x)
                 loss2 = euclidean_distance(emb_rec, emb_x2)
                 print("Embedding distances: ", loss1.detach().item(), loss2.detach().item())
-                loss += torch.max(loss1, loss2)
+                # loss += torch.max(loss1, loss2)
+                loss += torch.pow(loss1 ,2) + torch.pow(loss2, 2)
         if D is not None and args.d_real_regularization:
             #D_loss = torch.pow(D((x_recon, z_val)), 2).mean()
             D_loss = torch.sigmoid(D((x_recon, z_val))).mean()
             loss += D_loss
             print("D_loss", D_loss.detach().item())
         if D is None and frs_model is None:
-            loss = torch.nn.functional.mse_loss(x_recon, x)
+            loss = torch.nn.functional.l1_loss(x_recon, x)
+            loss1 = loss
             if x2 is not None:
-                loss += torch.nn.functional.mse_loss(x_recon, x2, reduction="mean")
+                loss2 = torch.nn.functional.l1_loss(x_recon, x2, reduction="mean")
+                loss += loss2
                 loss *= 0.5
 
         # L_reg = torch.pow(z_val, 2).mean()
@@ -271,8 +308,23 @@ try:
                 plt.clf()
                 plt.imshow(to_numpy_img(x_recon[0].cpu(), False))
                 plt.pause(0.01)
+
+        if args.show_loss_plots:
+            ident = face_recognition.face_encodings(to_numpy_img(x_recon[0].cpu(), False))[0]
+            dist = numpy_euclidean_distance(img_ident, ident)
+            frs_dists1.append(dist)
+            if x2 is not None:
+                dist2 = numpy_euclidean_distance(img2_ident, ident)
+                frs_dists2.append(dist2)
+                recon_losses.append(loss1.detach().item())
+                recon2_losses.append(loss2.detach().item())
+            else:
+                recon_losses.append(loss.detach().item())
+
+
+
+
         if stop:
-            plt.close()
             break
 except KeyboardInterrupt:
     plt.close()
@@ -281,3 +333,17 @@ except KeyboardInterrupt:
 
 z = z.param.data.detach().cpu().numpy()
 np.save("z.npy", z)
+
+if args.show_loss_plots:
+    print("Showing plots")
+    plt.ioff()
+    plt.clf()
+    plt.plot(frs_dists1, color="red", label="FRS euclidean distance to x1")
+    plt.plot(recon_losses, color="green", label="Recon loss wrt. x1")
+    if x2 is not None:
+        plt.plot(frs_dists2, color="orange", label="FRS euclidean distance to x2")
+        plt.plot(recon2_losses, color="blue", label="Recon loss wrt. x2")
+    plt.legend()
+    plt.show()
+
+plt.close()
