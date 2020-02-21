@@ -17,8 +17,11 @@ from torchvision.utils import make_grid, save_image
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
 from data.frgc_cropped_pairs_look_alike import FRGCPairsLookAlike
 from evaluation.metrics.evaluation_metrics import mmpmr, relative_morph_distance
+from evaluation.util.gradient_descend_on_z import optimize_z_batch
 from models.morphing_encoder import MorphingEncoder
 import face_recognition
+
+from util.interpolation import torch_slerp
 from util.output import init_experiment_output_dir
 
 def to_numpy_img(img, tanh_mode):
@@ -53,6 +56,9 @@ parser.add_argument("--decoder_filename", action="store", type=str, default="Gx.
 parser.add_argument("--encoder_filename", action="store", type=str, default="Gz.pt",
                     help="Filename of the encoder/Gz network. "
                          "Usually this option can be left at the default value, which is Gz.pt")
+parser.add_argument("--discriminator_filename", action="store", type=str, default="D.pt",
+                    help="Filename of the discriminator network. Only used with gradient descend morphing. "
+                         "Default is D.pt")
 parser.add_argument("--use_z_mean", action="store_true", default=False,
                     help="Uses z = z_mean instead of sampling from q(z|x)"
                     )
@@ -65,6 +71,12 @@ parser.add_argument("--visualize", action="store_true", default=False,
                     help="When this flag is present, a matplotlib visualization is shown with the best and worst morphs")
 parser.add_argument("--frgc", action="store_true", default=False,
                     help="When this flag is present, the FRGC dataset will be used for evaluation")
+parser.add_argument("--gradient_descend_dis_l", action="store_true", default=False,
+                    help="When this flag is present, "
+                         "z_morph will be optimized further using gradient descend with dis_l loss")
+parser.add_argument("--slerp", action="store_true", default=False,
+                    help="Uses slerp interpolation in latent space. "
+                         "This is supposed to work better for normal distributions")
 args = parser.parse_args()
 
 if args.test:
@@ -75,7 +87,7 @@ if args.test:
         exit()
 
 if args.parameter_path is None and args.experiment_path is None:
-    raise ValueError("Not path specified. Please specify either parameter_path or experiment_path")
+    raise ValueError("No path specified. Please specify either parameter_path or experiment_path")
 
 if args.experiment_path is not None:
     param_path = os.path.join(args.experiment_path, "params", "all_epochs")
@@ -85,6 +97,10 @@ else:
 device = torch.device("cpu") if not args.cuda else torch.device("cuda")
 Gx = torch.load(os.path.join(param_path, args.decoder_filename), map_location=device)
 Gz = torch.load(os.path.join(param_path, args.encoder_filename), map_location=device)
+
+if args.gradient_descend_dis_l:
+    D = torch.load(os.path.join(param_path, args.discriminator_filename), map_location=device)
+
 if not isinstance(Gz, MorphingEncoder):
     print("Gz is not a subclass of MorphingEncoder! Morphing is now done the MorGAN way.")
     manual_morph = True
@@ -137,6 +153,13 @@ for i, batch in enumerate(loader):
         x1 = x1.cuda()
         x2 = x2.cuda()
 
+    if args.slerp:
+        z1, z1m, _ = Gz(x1)
+        z2, z2m, _ = Gz(x2)
+
+        if args.use_z_mean:
+            z1, z2 = z1m, z2m
+        z_morph = torch_slerp(0.5, z1, z2, dim=1)
 
     if manual_morph:
         z1, z1m, _ = Gz(x1)
@@ -148,6 +171,11 @@ for i, batch in enumerate(loader):
         z_morph = 0.5*(z1 + z2)
     else:
         z_morph, z1, z2 = Gz.morph(x1, x2, use_mean=args.use_z_mean, return_all=True)
+
+    if args.gradient_descend_dis_l:
+        z_morph, _ = optimize_z_batch(Gx, x1, x2, starting_z=z_morph, dis_l_D=D, n_steps=500)
+        print("Batch %d/%d done..." % (i+1, len(loader)))
+
     x1_recon = Gx(z1)
     x2_recon = Gx(z2)
     x_morph = Gx(z_morph)
@@ -208,7 +236,6 @@ x2_recon_enc = np.stack(face_encodings[4*n_morphs:], axis=0)
 
 
 # Filter any rows with nan embeddings in the x1 and x2
-# TODO: Find a better solution to this!
 not_nan_indices = ~(np.isnan(np.sum(x1_enc, axis=1)) + np.isnan(np.sum(x2_enc, axis=1)))
 
 print("WARNING! Due to undetectable faces in the dataset, %d images have been dropped!"%int(np.sum(~not_nan_indices)))
