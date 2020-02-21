@@ -101,7 +101,7 @@ listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
-    MorphImageLogger(output_path, valid_dataset, args),
+    MorphImageLogger(output_path, valid_dataset, args, slerp=args.use_slerp),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
     ModelSaver(output_path, n=30, overwrite=False, print_output=True),
     KillSwitchListener(output_path)
