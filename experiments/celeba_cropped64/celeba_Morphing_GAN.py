@@ -31,7 +31,7 @@ parser.add_argument("--use_mish", action="store_true", default=False,
                     help="Changes all activations except the ouput of D and G to mish, which might work better")
 parser.add_argument("--disable_batchnorm_in_D", action="store_true", default=False,
                     help="Enables batch normalization in D")
-parser.add_argument("--dropout_rate", action="store", default=0.2, type=float,
+parser.add_argument("--dropout_rate", action="store", default=0.03, type=float,
                     help="Sets the dropout rate in D")
 parser.add_argument("--morgan_alpha", action="store", default=0.3, type=float,
                     help="Sets the alpha_z parameter of MorGAN")
@@ -53,6 +53,10 @@ parser.add_argument("--use_frs_reconstruction_loss", action="store_true", defaul
                     help="Switches the reconstruction loss to an FRS euclidean distance loss instead of pixelwise.")
 parser.add_argument("--use_frs_morph_loss", action="store_true", default=False,
                     help="Switches the morph loss to an FRS euclidean distance loss instead of pixelwise.")
+parser.add_argument("--use_slerp", action="store_true", default=False,
+                    help="Uses slerp interpolation instead of linear.")
+parser.add_argument("--random_interpolation", action="store_true", default=False,
+                    help="Samples interpolation between z1 and z2 randomly instead of always in the middle")
 
 args = parser.parse_args()
 
@@ -97,7 +101,7 @@ listeners = [
     LossReporter(),
     AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
-    MorphImageLogger(output_path, valid_dataset, args),
+    MorphImageLogger(output_path, valid_dataset, args, slerp=args.use_slerp),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
     ModelSaver(output_path, n=30, overwrite=False, print_output=True),
     KillSwitchListener(output_path)
@@ -135,8 +139,9 @@ train_loop = MorphingGANTrainLoop(
     morph_loss_factor=args.morph_loss_factor,
     reconstruction_loss_mode=rec_loss,
     morph_loss_mode=morph_loss,
-    frs_model=frs_model
-
+    frs_model=frs_model,
+    slerp=args.use_slerp,
+    random_interpolation=args.random_interpolation
 )
 
 train_loop.train()
