@@ -11,6 +11,7 @@ from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
 import matplotlib.pyplot as plt
 import numpy as np
 
+from util.interpolation import torch_slerp
 from util.torch.losses import euclidean_distance, euclidean_distance_per_element
 
 parser = argparse.ArgumentParser(description="Morph Loss Plotter.")
@@ -25,6 +26,8 @@ parser.add_argument("--use_dis_l", action="store_true", default=False,
 parser.add_argument("--n_batches", action="store", type=int, default=None, help="Number of batches to process")
 parser.add_argument("--frs_path", action="store", default=None, help="Path to facial recognition system model. "
                                                                      "Switches to FRS reconstruction loss")
+parser.add_argument("--use_slerp", action="store_true", default=False,
+                    help="Uses slerp interpolation instead of linear.")
 args = parser.parse_args()
 
 trans = []
@@ -103,7 +106,10 @@ for i, batch in enumerate(dataloader):
 
     for i in range(args.n_steps):
         z2_amount = float(i)/(args.n_steps - 1)
-        z_morph = z2 * z2_amount + z1 * (1.0-z2_amount)
+        if not args.use_slerp:
+            z_morph = z2 * z2_amount + z1 * (1.0-z2_amount)
+        else:
+            z_morph = torch_slerp(z2_amount, z1, z2)
         x_morph = Gx(z_morph)
 
         if args.use_dis_l:

@@ -13,10 +13,11 @@ from torch.utils.data import DataLoader
 import torchvision.utils
 import util.output
 from trainloops.listeners.listener import Listener
+from util.interpolation import torch_slerp
 
 
 class MorphImageLogger(Listener):
-    def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0, folder_name="morph_samples", eval_mode=True):
+    def __init__(self, experiment_output_path, validation_dataset, args: Namespace, n_images=16, pad_value=0, folder_name="morph_samples", eval_mode=True, slerp=False):
         super().__init__()
         self.path = os.path.join(experiment_output_path, "imgs", folder_name)
         util.output.make_result_dirs(self.path)
@@ -27,6 +28,7 @@ class MorphImageLogger(Listener):
         self.pad_value = pad_value
         self.loader = DataLoader(validation_dataset, self.n_images, True)
         self.eval_mode = eval_mode
+        self.slerp = slerp
 
     def initialize(self):
         self.x1, self.x2 = self.loader.__iter__().__next__()
@@ -60,7 +62,12 @@ class MorphImageLogger(Listener):
             Gx.eval()
             Gz.eval()
 
-        z_morph = Gz.morph(self.x1, self.x2)
+        if self.slerp:
+            z1 = Gz.encode(self.x1)
+            z2 = Gz.encode(self.x2)
+            z_morph = torch_slerp(0.5, z1, z2)
+        else:
+            z_morph = Gz.morph(self.x1, self.x2)
 
         x_morph = Gx(z_morph)
 
