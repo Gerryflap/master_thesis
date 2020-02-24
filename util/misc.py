@@ -8,4 +8,4 @@ class MergedOptimizers:
 
     def zero_grad(self):
         for opt in self.opt_list:
-            opt.zeros_grad()
+            opt.zero_grad()

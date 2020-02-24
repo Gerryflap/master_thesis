@@ -2,6 +2,7 @@ import torch
 
 from util.torch.initialization import weights_init
 from models.stylegan2.stylegan2_like_discriminator import DownscaleLayer
+from util.torch.modules import Conv2dNormalizedLR, LinearNormalizedLR
 
 
 class DeepAliDiscriminator(torch.nn.Module):
@@ -15,7 +16,7 @@ class DeepAliDiscriminator(torch.nn.Module):
         self.n_channels = n_channels
         self.bn = bn
 
-        self.from_rgb = torch.nn.Conv2d(n_channels, h_size, kernel_size=1)
+        self.from_rgb = Conv2dNormalizedLR(n_channels, h_size, kernel_size=1)
 
         downscale_layers = []
         for i in range(n_downscales):
@@ -27,19 +28,19 @@ class DeepAliDiscriminator(torch.nn.Module):
             downscale_layers.append(layer)
         self.downscale_layers = torch.nn.ModuleList(downscale_layers)
 
-        self.x_fc = torch.nn.Linear(
+        self.x_fc = LinearNormalizedLR(
             int(h_size*(2**(n_downscales)) * self.conv_out_res**2),
             h_size * (2 ** (n_downscales + 1))
         )
 
         self.fc_h_size = h_size * (2 ** (n_downscales + 1))
 
-        self.lin_z1 = torch.nn.Linear(latent_size, self.fc_h_size, bias=False)
-        self.lin_z2 = torch.nn.Linear(self.fc_h_size, self.fc_h_size, bias=False)
+        self.lin_z1 = LinearNormalizedLR(latent_size, self.fc_h_size, bias=False)
+        self.lin_z2 = LinearNormalizedLR(self.fc_h_size, self.fc_h_size, bias=False)
 
-        self.lin_xz1 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2, bias=True)
-        self.lin_xz2 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2, bias=True)
-        self.lin_xz3 = torch.nn.Linear(self.fc_h_size*2, 1, bias=True)
+        self.lin_xz1 = LinearNormalizedLR(self.fc_h_size*2, self.fc_h_size*2, bias=True)
+        self.lin_xz2 = LinearNormalizedLR(self.fc_h_size*2, self.fc_h_size*2, bias=True)
+        self.lin_xz3 = LinearNormalizedLR(self.fc_h_size*2, 1, bias=True)
 
     def compute_dx(self, x):
         x = self.from_rgb(x)
