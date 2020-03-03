@@ -89,7 +89,7 @@ class ALIDiscriminator28(torch.nn.Module):
         dis_l = h
 
         if self.mbatch_stddev:
-            self.add_minibatch_stddev(h, h_stats)
+            h = self.add_minibatch_stddev(h, h_stats)
 
         h = self.conv_4(h)
         if self.dropout != 0:
