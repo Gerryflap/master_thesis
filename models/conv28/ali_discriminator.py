@@ -43,7 +43,7 @@ class ALIDiscriminator28(torch.nn.Module):
             self.dropout_conv_layer = torch.nn.Dropout2d(dropout, False)
 
         self.lin_z1 = torch.nn.Linear(latent_size, self.fc_h_size, bias=False)
-        self.lin_z2 = torch.nn.Linear(self.fc_h_size + (1 if mbatch_stddev else 0), self.fc_h_size, bias=False)
+        self.lin_z2 = torch.nn.Linear(self.fc_h_size, self.fc_h_size, bias=False)
 
         self.lin_xz1 = torch.nn.Linear(h_size*4 + self.fc_h_size, self.fc_h_size*2, bias=True)
         self.lin_xz2 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2, bias=True)
