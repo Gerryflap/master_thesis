@@ -57,6 +57,8 @@ parser.add_argument("--use_lr_norm", action="store_true", default=False,
 parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
                     help="If > 0, enables R1 loss which pushes the gradient "
                          "norm to zero for real samples in the discriminator.")
+parser.add_argument("--minibatch_stddev", action="store_true", default=False,
+                    help="Uses the ProGAN minibatch stddev layer in the Discriminator for more diversity. This is only applied in Dx at the moment.")
 
 args = parser.parse_args()
 
@@ -85,7 +87,7 @@ if args.continue_with is None:
     Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True, use_lr_norm=args.use_lr_norm)
     Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True, use_lr_norm=args.use_lr_norm)
     D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish,
-                           n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
+                           n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size, mbatch_stddev=args.minibatch_stddev)
     G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
     D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
