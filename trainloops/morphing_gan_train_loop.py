@@ -223,7 +223,7 @@ class MorphingGANTrainLoop(TrainLoop):
         if self.morph_loss_mode == "pixelwise":
             x1_loss = self.morgan_pixel_loss(x_morph, x1)
             x2_loss = self.morgan_pixel_loss(x_morph, x2)
-            (beta * x1_loss + (1-beta) * x2_loss).mean()
+            return (beta * x1_loss + (1-beta) * x2_loss).mean()
         else:
             x1_loss = self.dis_l_loss(x_morph, x1)
             x2_loss = self.dis_l_loss(x_morph, x2)
