@@ -166,9 +166,10 @@ class ALIDiscriminator64(torch.nn.Module):
         # Stretch to size of h apart from channel dim and concat
         size = list(h.size())
         size[1] = 1
-        mbatch_stddev = torch.ones(size) * mean_stddev
+        mbatch_stddev = torch.ones(size)
         if h.is_cuda:
             mbatch_stddev = mbatch_stddev.cuda()
+        mbatch_stddev *=  mean_stddev
         h = torch.cat([h, mbatch_stddev], dim=1)
         return h
 
