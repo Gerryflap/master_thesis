@@ -28,6 +28,7 @@ class MixtureDataset(Dataset):
         self.data[:, 0] /= 2.0
         self.data[:, 1] /= 2.0
 
+        self.datapoints_per_grid_position = datapoints_per_grid_position
 
     def __getitem__(self, item):
         return self.data[item], self.data[item]

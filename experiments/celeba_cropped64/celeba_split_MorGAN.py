@@ -20,8 +20,8 @@ from trainloops.split_latent_morgan_train_loop import SplitMorGANTrainLoop
 
 parser = argparse.ArgumentParser(description="Celeba split MorGAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=65, help="Changes the batch size, default is 65")
-parser.add_argument("--lr", action="store", type=float, default=0.00001,
-                    help="Changes the learning rate, default is 0.00001")
+parser.add_argument("--lr", action="store", type=float, default=0.0001,
+                    help="Changes the learning rate, default is 0.0001")
 parser.add_argument("--h_size", action="store", type=int, default=64,
                     help="Sets the h_size, which changes the size of the network")
 parser.add_argument("--fc_h_size", action="store", type=int, default=None,

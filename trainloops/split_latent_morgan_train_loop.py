@@ -26,7 +26,7 @@ class SplitMorGANTrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1,
                  morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
                  reconstruction_loss_mode="pixelwise", constrained_latent_size=128, constrained_latent_loss_factor=1.0,
-                 unconstrained_latent_noise_std=0.0):
+                 unconstrained_latent_noise_std=0.0, use_margin_loss=True):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -51,6 +51,7 @@ class SplitMorGANTrainLoop(TrainLoop):
         self.reconstruction_loss_mode = reconstruction_loss_mode
         self.cll_factor = constrained_latent_loss_factor
         self.unconstrained_latent_noise_std = unconstrained_latent_noise_std
+        self.use_margin_loss = use_margin_loss
 
     def epoch(self):
         self.Gx.train()
@@ -87,15 +88,22 @@ class SplitMorGANTrainLoop(TrainLoop):
             dis_q = self.D((x, z_hat))
 
             z2_hat, z2_mean, _ = self.Gz(x2)
-            z3_hat, z3_mean, _ = self.Gz(x3)
 
-            # Compute L_latent
-            L_latent = torch.nn.functional.triplet_margin_loss(
-                anchor=z_hat[:, :self.constrained_latent_size],
-                positive=z2_hat[:, :self.constrained_latent_size],
-                negative=z3_hat[:, :self.constrained_latent_size],
-                margin=0.5
-            )
+
+            if self.use_margin_loss:
+                z3_hat, z3_mean, _ = self.Gz(x3)
+                # Compute L_latent
+                L_latent = torch.nn.functional.triplet_margin_loss(
+                    anchor=z_hat[:, :self.constrained_latent_size],
+                    positive=z2_hat[:, :self.constrained_latent_size],
+                    negative=z3_hat[:, :self.constrained_latent_size],
+                    margin=0.3
+                )
+            else:
+                L_latent = torch.nn.functional.mse_loss(
+                    z_hat[:, :self.constrained_latent_size],
+                    z2_hat[:, :self.constrained_latent_size]
+                )
 
             if self.unconstrained_latent_noise_std != 0.0:
                 noise = torch.normal(0, self.unconstrained_latent_noise_std, z_hat[:, self.constrained_latent_size:].size())

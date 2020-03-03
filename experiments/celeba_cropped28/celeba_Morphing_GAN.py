@@ -38,6 +38,8 @@ parser.add_argument("--morph_loss_factor", action="store", default=0.3, type=flo
                     help="Scales the morph loss")
 parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", default=False,
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
+parser.add_argument("--unlock_D", action="store_true", default=False,
+                    help="D will continue to train even if G is far behind when this flag is set")
 parser.add_argument("--use_dis_l_morph_loss", action="store_true", default=False,
                     help="Switches the morph loss to a VAEGAN like loss instead of pixelwise.")
 parser.add_argument("--instance_noise_std", action="store", default=0.0, type=float,
@@ -76,7 +78,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
+Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True, deterministic=True)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
@@ -140,7 +142,7 @@ train_loop = MorphingGANTrainLoop(
     reconstruction_loss_mode=rec_loss,
     morph_loss_mode=morph_loss,
     frs_model=frs_model,
-    unlock_D=False,
+    unlock_D=args.unlock_D,
     slerp=args.use_slerp,
     random_interpolation=args.random_interpolation
 

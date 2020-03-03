@@ -11,9 +11,12 @@ class MixturePairs(MixtureDataset):
         return x1, x2
 
     def generate_random_different_index(self, index):
-        # Generate a random number between 0 and len(ident_list) - 2
+        return self.generate_random_different_index_generic(index, self.data.size(0))
+
+    def generate_random_different_index_generic(self, index, length):
+        # Generate a random number between 0 and length - 2
         # (the minus 2 is because 1. randint includes the end value and 2. we do not want to include index.
-        rand_index = random.randint(0, len(self)-2)
+        rand_index = random.randint(0, length-2)
 
         # Skip the current index, because we don't want it to be included
         if rand_index >= index:
