@@ -146,6 +146,8 @@ class ALIDiscriminator28(torch.nn.Module):
         size = list(h.size())
         size[1] = 1
         mbatch_stddev = torch.ones(size) * mean_stddev
+        if h.is_cuda():
+            mbatch_stddev = mbatch_stddev.cuda()
         h = torch.cat([h, mbatch_stddev], dim=1)
         return h
 
