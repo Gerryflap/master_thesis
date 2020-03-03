@@ -9,7 +9,7 @@ from util.torch.initialization import weights_init
 
 class ALIDiscriminator64(torch.nn.Module):
     def __init__(self, latent_size=512, h_size=64, fc_h_size=None, use_bn=True, use_mish=False, n_channels=3,
-                 dropout=0.2, full_dropout=True):
+                 dropout=0.2, full_dropout=True, mbatch_stddev=False):
         super().__init__()
 
         self.n_channels = n_channels
@@ -22,6 +22,7 @@ class ALIDiscriminator64(torch.nn.Module):
 
         self.dropout = dropout
         self.full_dropout = full_dropout
+        self.mbatch_stddev = mbatch_stddev
         self.h_size = h_size
         if fc_h_size is None:
             self.fc_h_size = h_size*16
@@ -36,7 +37,7 @@ class ALIDiscriminator64(torch.nn.Module):
         self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=7, stride=2, bias=False)
         self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
         self.conv_4 = torch.nn.Conv2d(h_size * 4, h_size * 4, kernel_size=7, stride=2, bias=False)
-        self.conv_5 = torch.nn.Conv2d(h_size * 4, h_size * 8, kernel_size=4, stride=1, bias=False)
+        self.conv_5 = torch.nn.Conv2d(h_size * 4 + (1 if mbatch_stddev else 0), h_size * 8, kernel_size=4, stride=1, bias=False)
 
         self.use_bn = use_bn
         if use_bn:
@@ -100,6 +101,7 @@ class ALIDiscriminator64(torch.nn.Module):
         h = self.activ(h)
 
         h = self.conv_4(h)
+        h_stats = h
         if self.dropout != 0 and self.full_dropout:
             h = self.conv_dropout_layer(h)
         if self.use_bn:
@@ -107,6 +109,9 @@ class ALIDiscriminator64(torch.nn.Module):
         h = self.activ(h)
 
         dis_l = h
+
+        if self.minibatch_stddev:
+            h = self.add_minibatch_stddev(h, h_stats)
 
         h = self.conv_5(h)
         if self.dropout != 0 and self.full_dropout:
@@ -150,6 +155,22 @@ class ALIDiscriminator64(torch.nn.Module):
         h = self.lin_xz3(h)
 
         return h
+
+    def add_minibatch_stddev(self, h, h_stats):
+        # Compute stddev over batch dim (so for every pixel/channel)
+        stddevs = torch.std(h_stats, dim=0)
+
+        # Compute mean stddev
+        mean_stddev = stddevs.mean()
+
+        # Stretch to size of h apart from channel dim and concat
+        size = h.size()
+        size[1] = 1
+        mbatch_stddev = torch.ones(size) * mean_stddev
+        h = torch.cat([h, mbatch_stddev], dim=1)
+        return h
+
+
 
     def init_weights(self):
         self.apply(weights_init)

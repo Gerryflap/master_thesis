@@ -8,13 +8,13 @@ from util.torch.initialization import weights_init
 
 
 class ALIDiscriminator28(torch.nn.Module):
-    def __init__(self, latent_size, h_size, fc_h_size=None, use_bn=False, use_mish=False, n_channels=1, dropout=0.0, use_logits=True, progan_variation=False):
+    def __init__(self, latent_size, h_size, fc_h_size=None, use_bn=False, use_mish=False, n_channels=1, dropout=0.0, use_logits=True, mbatch_stddev=False):
         super().__init__()
 
         self.use_logits = use_logits
         self.n_channels = n_channels
         self.latent_size = latent_size
-        self.progan_variation = progan_variation
+        self.mbatch_stddev = mbatch_stddev
 
         if use_mish:
             self.activ = mish
@@ -30,7 +30,7 @@ class ALIDiscriminator28(torch.nn.Module):
         self.conv_1 = torch.nn.Conv2d(n_channels, h_size, kernel_size=4,  stride=1, bias=False)
         self.conv_2 = torch.nn.Conv2d(h_size, h_size * 2, kernel_size=5, stride=2, bias=False)
         self.conv_3 = torch.nn.Conv2d(h_size * 2, h_size * 4, kernel_size=5, stride=2, bias=False)
-        self.conv_4 = torch.nn.Conv2d(h_size * 4 + (1 if progan_variation else 0), h_size * 4, kernel_size=4, stride=1, bias=False)
+        self.conv_4 = torch.nn.Conv2d(h_size * 4 + (1 if mbatch_stddev else 0), h_size * 4, kernel_size=4, stride=1, bias=False)
 
         self.use_bn = use_bn
         if use_bn:
@@ -43,7 +43,7 @@ class ALIDiscriminator28(torch.nn.Module):
             self.dropout_conv_layer = torch.nn.Dropout2d(dropout, False)
 
         self.lin_z1 = torch.nn.Linear(latent_size, self.fc_h_size, bias=False)
-        self.lin_z2 = torch.nn.Linear(self.fc_h_size + (1 if progan_variation else 0), self.fc_h_size, bias=False)
+        self.lin_z2 = torch.nn.Linear(self.fc_h_size + (1 if mbatch_stddev else 0), self.fc_h_size, bias=False)
 
         self.lin_xz1 = torch.nn.Linear(h_size*4 + self.fc_h_size, self.fc_h_size*2, bias=True)
         self.lin_xz2 = torch.nn.Linear(self.fc_h_size*2, self.fc_h_size*2, bias=True)
@@ -79,6 +79,7 @@ class ALIDiscriminator28(torch.nn.Module):
         h = self.activ(h)
 
         h = self.conv_3(h)
+        h_stats = h
         if self.dropout != 0:
             h = self.dropout_conv_layer(h)
         if self.use_bn:
@@ -87,10 +88,8 @@ class ALIDiscriminator28(torch.nn.Module):
 
         dis_l = h
 
-        if self.progan_variation:
-            mean_std = h.std(dim=0, keepdim=True).mean(dim=(1,2,3), keepdim=True)
-            mean_std = mean_std.repeat((h.size(0), 1, h.size(2), h.size(3)))
-            h = torch.cat((h, mean_std), dim=1)
+        if self.mbatch_stddev:
+            self.add_minibatch_stddev(h, h_stats)
 
         h = self.conv_4(h)
         if self.dropout != 0:
@@ -108,11 +107,6 @@ class ALIDiscriminator28(torch.nn.Module):
             z = self.dropout_layer(z)
         h_z = self.lin_z1(z)
         h_z = self.activ(h_z)
-
-        if self.progan_variation:
-            mean_std = h_z.std(dim=0, keepdim=True).mean(dim=1, keepdim=True)
-            mean_std = mean_std.repeat((h_z.size(0), 1))
-            h_z = torch.cat((h_z, mean_std), dim=1)
 
         if self.dropout != 0:
             h_z = self.dropout_layer(h_z)
@@ -139,5 +133,19 @@ class ALIDiscriminator28(torch.nn.Module):
             h = self.dropout_layer(h)
         h = self.lin_xz3(h)
 
+        return h
+
+    def add_minibatch_stddev(self, h, h_stats):
+        # Compute stddev over batch dim (so for every pixel/channel)
+        stddevs = torch.std(h_stats, dim=0)
+
+        # Compute mean stddev
+        mean_stddev = stddevs.mean()
+
+        # Stretch to size of h apart from channel dim and concat
+        size = h.size()
+        size[1] = 1
+        mbatch_stddev = torch.ones(size) * mean_stddev
+        h = torch.cat([h, mbatch_stddev], dim=1)
         return h
 
