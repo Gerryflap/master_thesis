@@ -143,7 +143,7 @@ class ALIDiscriminator28(torch.nn.Module):
         mean_stddev = stddevs.mean()
 
         # Stretch to size of h apart from channel dim and concat
-        size = h.size()
+        size = list(h.size())
         size[1] = 1
         mbatch_stddev = torch.ones(size) * mean_stddev
         h = torch.cat([h, mbatch_stddev], dim=1)
