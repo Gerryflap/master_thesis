@@ -134,7 +134,7 @@ class ALITrainLoop(TrainLoop):
                     only_inputs=True,
                     grad_outputs=grad_outputs
                 )[0]
-                r1_loss = 0.5*(x_grads.norm(2, dim=list(range(1, len(x_grads.size())))).mean() + z_grads.norm(2, dim=1).mean())
+                r1_loss = 0.5*((x_grads.norm(2, dim=list(range(1, len(x_grads.size()))) ) ** 2).mean() + (z_grads.norm(2, dim=1) ** 2).mean())
                 L_d += (self.r1_reg_gamma/2.0) * r1_loss
 
             # ========== Back propagation and updates ==========
