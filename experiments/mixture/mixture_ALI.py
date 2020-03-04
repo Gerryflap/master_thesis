@@ -29,6 +29,9 @@ parser.add_argument("--instance_noise_std", action="store", type=float, default=
 parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
                     help="If > 0, enables R1 loss which pushes the gradient "
                          "norm to zero for real samples in the discriminator.")
+parser.add_argument("--alpha_multiplier", action="store", default=1.0, type=float,
+                    help="MorGAN alpha is multiplied with this factor after every epoch. "
+                         "Useful for moving the alpha over time.")
 
 
 args = parser.parse_args()
@@ -42,7 +45,7 @@ dataloader = torch.utils.data.DataLoader(train, batch_size=args.batch_size, shuf
 
 Gx = Generator(args.l_size, args.h_size)
 Gz = Encoder(args.l_size, args.h_size)
-D = Discriminator(args.l_size, args.h_size if args.d_h_size is None else args.d_h_size, mode="ali")
+D = Discriminator(args.l_size, args.h_size if args.d_h_size is None else args.d_h_size, mode="ali", batchnorm=args.r1_gamma==0.0)
 
 
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
@@ -84,7 +87,9 @@ trainloop = ALITrainLoop(
     morgan_alpha=args.morgan_alpha,
     d_img_noise_std=args.instance_noise_std,
     decrease_noise=True,
-    r1_reg_gamma=args.r1_gamma
+    r1_reg_gamma=args.r1_gamma,
+    alpha_multiplier=args.alpha_multiplier,
+
 )
 
 trainloop.train()

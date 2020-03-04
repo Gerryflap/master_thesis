@@ -25,7 +25,7 @@ def get_log_odds(raw_marginals, use_sigmoid):
 class ALITrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1,
                  morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
-                 reconstruction_loss_mode="pixelwise", frs_model=None, r1_reg_gamma=0.0):
+                 reconstruction_loss_mode="pixelwise", frs_model=None, r1_reg_gamma=0.0, alpha_multiplier=1.0):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -42,6 +42,9 @@ class ALITrainLoop(TrainLoop):
         self.d_img_noise_std = d_img_noise_std
         self.d_real_label = d_real_label
         self.decrease_noise = decrease_noise
+
+        # Multiplies alpha with this factor after every epoch
+        self.alpha_multiplier = alpha_multiplier
 
         if reconstruction_loss_mode not in ["pixelwise", "dis_l", "frs"]:
             raise ValueError("Reconstruction loss mode must be one of \"pixelwise\" \"dis_l\", or \"frs\"")
@@ -134,7 +137,7 @@ class ALITrainLoop(TrainLoop):
                     only_inputs=True,
                     grad_outputs=grad_outputs
                 )[0]
-                r1_loss = 0.5*(x_grads.norm(2, dim=list(range(1, len(x_grads.size())))).mean() + z_grads.norm(2, dim=1).mean())
+                r1_loss = 0.5*((x_grads.norm(2, dim=list(range(1, len(x_grads.size())))) ** 2).mean() + (z_grads.norm(2, dim=1) ** 2).mean())
                 L_d += (self.r1_reg_gamma/2.0) * r1_loss
 
             # ========== Back propagation and updates ==========
@@ -151,6 +154,8 @@ class ALITrainLoop(TrainLoop):
             L_syn.backward()
 
             self.optim_G.step()
+
+        self.morgan_alpha *= self.alpha_multiplier
 
         losses = {
                 "D_loss": L_d.detach().item(),
