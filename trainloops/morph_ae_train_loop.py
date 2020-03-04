@@ -105,10 +105,10 @@ class MorphAETrainLoop(TrainLoop):
             L_dis_x = L_dis_x1 + L_dis_x2
             L_dis_morph = self.disl_loss_fn(disl_xm, disl_x1) + self.disl_loss_fn(disl_xm, disl_x2)
 
-            L_latent = torch.nn.functional.mse_loss(z_batch_mean, torch.zeros_like(z_batch_mean)) +\
-                torch.nn.functional.mse_loss(z_batch_var, torch.ones_like(z_batch_mean))
+            # L_latent = torch.nn.functional.mse_loss(z_batch_mean, torch.zeros_like(z_batch_mean)) +\
+            #     torch.nn.functional.mse_loss(z_batch_var, torch.ones_like(z_batch_mean))
 
-            L_g = L_dis_x1 + L_dis_x2 + L_dis_morph + L_latent
+            L_g = L_dis_x1 + L_dis_x2 + L_dis_morph  # + L_latent
 
             # Compute Gradients and perform updates
             self.optim_Gz.zero_grad()
@@ -130,7 +130,7 @@ class MorphAETrainLoop(TrainLoop):
         return {
             "epoch": self.current_epoch,
             "losses": {
-                "L_latent": L_latent.detach().item(),
+                # "L_latent": L_latent.detach().item(),
                 "L_dis_x": L_dis_x.detach().item(),
                 "L_dis_morph": L_dis_morph.detach().item(),
                 "L_G": L_g.detach().item(),

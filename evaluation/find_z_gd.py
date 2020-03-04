@@ -284,7 +284,7 @@ try:
                 loss += torch.pow(loss1 ,2) + torch.pow(loss2, 2)
         if D is not None and args.d_real_regularization:
             #D_loss = torch.pow(D((x_recon, z_val)), 2).mean()
-            D_loss = torch.sigmoid(D((x_recon, z_val))).mean()
+            D_loss = torch.sigmoid(D((x_recon, z_val.detach()))).mean()
             loss += D_loss
             print("D_loss", D_loss.detach().item())
         if D is None and frs_model is None:
