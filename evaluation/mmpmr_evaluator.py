@@ -17,7 +17,7 @@ from torchvision.utils import make_grid, save_image
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
 from data.frgc_cropped_pairs_look_alike import FRGCPairsLookAlike
 from evaluation.metrics.evaluation_metrics import mmpmr, relative_morph_distance
-from evaluation.util.gradient_descend_on_z import optimize_z_batch
+from evaluation.util.gradient_descend_on_z import optimize_z_batch, optimize_z_batch_recons
 from models.morphing_encoder import MorphingEncoder
 import face_recognition
 
@@ -74,6 +74,9 @@ parser.add_argument("--frgc", action="store_true", default=False,
 parser.add_argument("--gradient_descend_dis_l", action="store_true", default=False,
                     help="When this flag is present, "
                          "z_morph will be optimized further using gradient descend with dis_l loss")
+parser.add_argument("--gradient_descend_dis_l_recon", action="store_true", default=False,
+                    help="When this flag is present, "
+                         "z1 and z2 will be optimized further using gradient descend with dis_l loss")
 parser.add_argument("--slerp", action="store_true", default=False,
                     help="Uses slerp interpolation in latent space. "
                          "This is supposed to work better for normal distributions")
@@ -98,7 +101,7 @@ device = torch.device("cpu") if not args.cuda else torch.device("cuda")
 Gx = torch.load(os.path.join(param_path, args.decoder_filename), map_location=device)
 Gz = torch.load(os.path.join(param_path, args.encoder_filename), map_location=device)
 
-if args.gradient_descend_dis_l:
+if args.gradient_descend_dis_l or args.gradient_descend_dis_l_recon:
     D = torch.load(os.path.join(param_path, args.discriminator_filename), map_location=device)
 
 if not isinstance(Gz, MorphingEncoder):
@@ -174,6 +177,10 @@ for i, batch in enumerate(loader):
 
     if args.gradient_descend_dis_l:
         z_morph, _ = optimize_z_batch(Gx, x1, x2, starting_z=z_morph, dis_l_D=D, n_steps=500)
+        print("Batch %d/%d done..." % (i+1, len(loader)))
+
+    if args.gradient_descend_dis_l_recon:
+        (z1, z2, z_morph), _ = optimize_z_batch_recons(Gx, x1, x2, starting_zs=(z1, z2), dis_l_D=D, n_steps=500)
         print("Batch %d/%d done..." % (i+1, len(loader)))
 
     x1_recon = Gx(z1)

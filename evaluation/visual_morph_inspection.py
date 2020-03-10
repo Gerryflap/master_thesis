@@ -12,6 +12,7 @@ from torchvision.transforms import transforms
 from torchvision.utils import make_grid, save_image
 
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
+from evaluation.util.gradient_descend_on_z import optimize_z_batch, optimize_z_batch_recons
 from models.morphing_encoder import MorphingEncoder
 from util.interpolation import slerp
 from util.output import init_experiment_output_dir
@@ -40,6 +41,9 @@ parser.add_argument("--decoder_filename", action="store", type=str, default="Gx.
 parser.add_argument("--encoder_filename", action="store", type=str, default="Gz.pt",
                     help="Filename of the encoder/Gz network. "
                          "Usually this option can be left at the default value, which is Gz.pt")
+parser.add_argument("--discriminator_filename", action="store", type=str, default="D.pt",
+                    help="Filename of the discriminator network. Only used with gradient descend morphing. "
+                         "Default is D.pt")
 parser.add_argument("--shuffle", action="store_true", default=False, help="Shuffle the dataset randomly")
 parser.add_argument("--use_z_mean", action="store_true", default=False,
                     help="Uses z = z_mean instead of sampling from q(z|x)"
@@ -52,6 +56,12 @@ parser.add_argument("--train", action="store_true", default=False,
 parser.add_argument("--slerp", action="store_true", default=False,
                     help="When this flag is present, slerp interpolation will be used. "
                          "This overrides any other morphing method")
+parser.add_argument("--gradient_descend_dis_l", action="store_true", default=False,
+                    help="When this flag is present, "
+                         "z_morph will be optimized further using gradient descend with dis_l loss")
+parser.add_argument("--gradient_descend_dis_l_recon", action="store_true", default=False,
+                    help="When this flag is present, "
+                         "z1 and z2 will be optimized further using gradient descend with dis_l loss")
 args = parser.parse_args()
 
 output_dir = init_experiment_output_dir("morphing_evaluation", "morphing_evaluation", args)
@@ -86,6 +96,9 @@ if args.eval:
 if args.train:
     Gx.train()
     Gz.train()
+
+if args.gradient_descend_dis_l or args.gradient_descend_dis_l_recon:
+    D = torch.load(os.path.join(param_path, args.discriminator_filename), map_location=device)
 
 trans = []
 if args.res != 64:
@@ -139,7 +152,16 @@ for i, batch in enumerate(loader):
 
             z_morph = 0.5*(z1 + z2)
         else:
-            z_morph = Gz.morph(x1, x2, use_mean=args.use_z_mean)
+            z_morph, z1, z2 = Gz.morph(x1, x2, use_mean=args.use_z_mean, return_all=True)
+
+    if args.gradient_descend_dis_l:
+        z_morph, _ = optimize_z_batch(Gx, x1, x2, starting_z=z_morph, dis_l_D=D, n_steps=500)
+        print("Batch %d/%d done..." % (i+1, len(loader)))
+
+    if args.gradient_descend_dis_l_recon:
+        (z1, z2, z_morph), _ = optimize_z_batch_recons(Gx, x1, x2, starting_zs=(z1, z2), dis_l_D=D, n_steps=500)
+        print("Batch %d/%d done..." % (i+1, len(loader)))
+
     x_morph = Gx(z_morph)
 
     if args.cuda:
