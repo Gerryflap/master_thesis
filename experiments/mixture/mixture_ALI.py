@@ -29,7 +29,10 @@ parser.add_argument("--instance_noise_std", action="store", type=float, default=
 parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
                     help="If > 0, enables R1 loss which pushes the gradient "
                          "norm to zero for real samples in the discriminator.")
-
+parser.add_argument("--ns_gan", action="store_true", default=False,
+                    help="Enables non-saturating G loss")
+parser.add_argument("--no_D_limit", action="store_true", default=False,
+                    help="Disables the limit placed on training D")
 
 args = parser.parse_args()
 
@@ -42,7 +45,7 @@ dataloader = torch.utils.data.DataLoader(train, batch_size=args.batch_size, shuf
 
 Gx = Generator(args.l_size, args.h_size)
 Gz = Encoder(args.l_size, args.h_size)
-D = Discriminator(args.l_size, args.h_size if args.d_h_size is None else args.d_h_size, mode="ali")
+D = Discriminator(args.l_size, args.h_size if args.d_h_size is None else args.d_h_size, mode="ali", batchnorm=False)
 
 
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
@@ -68,6 +71,7 @@ listeners = [
         cuda=args.cuda,
         sample_reconstructions=True,
         every_n_epochs=10,
+        output_latent=True
     )
 ]
 
@@ -84,7 +88,9 @@ trainloop = ALITrainLoop(
     morgan_alpha=args.morgan_alpha,
     d_img_noise_std=args.instance_noise_std,
     decrease_noise=True,
-    r1_reg_gamma=args.r1_gamma
+    r1_reg_gamma=args.r1_gamma,
+    non_saturating_G_loss=args.ns_gan,
+    disable_D_limiting=args.no_D_limit
 )
 
 trainloop.train()

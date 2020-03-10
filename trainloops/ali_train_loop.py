@@ -25,7 +25,8 @@ def get_log_odds(raw_marginals, use_sigmoid):
 class ALITrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1,
                  morgan_alpha=0.0, d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
-                 reconstruction_loss_mode="pixelwise", frs_model=None, r1_reg_gamma=0.0):
+                 reconstruction_loss_mode="pixelwise", frs_model=None, r1_reg_gamma=0.0, non_saturating_G_loss=False,
+                 disable_D_limiting=False):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -48,6 +49,8 @@ class ALITrainLoop(TrainLoop):
         self.reconstruction_loss_mode = reconstruction_loss_mode
         self.frs_model = frs_model
         self.r1_reg_gamma = r1_reg_gamma
+        self.non_saturating = non_saturating_G_loss
+        self.disable_D_limiting = disable_D_limiting
 
     def epoch(self):
         self.Gx.train()
@@ -102,8 +105,12 @@ class ALITrainLoop(TrainLoop):
             L_d_real = F.binary_cross_entropy_with_logits(dis_q, d_real_labels)
             L_d = L_d_real + L_d_fake
 
-            L_g_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
-            L_g_real = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q))
+            if not self.non_saturating:
+                L_g_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
+                L_g_real = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q))
+            else:
+                L_g_fake = -F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q))
+                L_g_real = -F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q))
             L_g = L_g_real + L_g_fake
             L_syn = L_g
 
@@ -140,7 +147,7 @@ class ALITrainLoop(TrainLoop):
             # ========== Back propagation and updates ==========
 
             # Gradient update on Discriminator network
-            if L_g.detach().item() < 3.5:
+            if L_g.detach().item() < 3.5 or self.disable_D_limiting:
                 self.optim_D.zero_grad()
                 L_d.backward(retain_graph=True)
                 self.optim_D.step()

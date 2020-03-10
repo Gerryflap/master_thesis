@@ -51,6 +51,10 @@ parser.add_argument("--use_lr_norm", action="store_true", default=False,
 parser.add_argument("--r1_gamma", action="store", default=0.0, type=float,
                     help="If > 0, enables R1 loss which pushes the gradient "
                          "norm to zero for real samples in the discriminator.")
+parser.add_argument("--ns_gan", action="store_true", default=False,
+                    help="Enables non-saturating G loss")
+parser.add_argument("--no_D_limit", action="store_true", default=False,
+                    help="Disables the limit placed on training D")
 
 args = parser.parse_args()
 
@@ -123,7 +127,9 @@ train_loop = ALITrainLoop(
     use_sigmoid=True,
     reconstruction_loss_mode=reconstruction_loss_mode,
     frs_model=frs_model,
-    r1_reg_gamma=args.r1_gamma
+    r1_reg_gamma=args.r1_gamma,
+    non_saturating_G_loss=args.ns_gan,
+    disable_D_limiting=args.no_D_limit
 )
 
 train_loop.train()

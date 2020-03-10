@@ -310,11 +310,17 @@ try:
                 plt.pause(0.01)
 
         if args.show_loss_plots:
-            ident = face_recognition.face_encodings(to_numpy_img(x_recon[0].cpu(), False))[0]
-            dist = numpy_euclidean_distance(img_ident, ident)
+            idents = face_recognition.face_encodings(to_numpy_img(x_recon[0].cpu(), False))
+            if len(idents) != 1:
+                dist = 2.0
+            else:
+                dist = numpy_euclidean_distance(img_ident, idents[0])
             frs_dists1.append(dist)
             if x2 is not None:
-                dist2 = numpy_euclidean_distance(img2_ident, ident)
+                if len(idents) != 1:
+                    dist2 = 2.0
+                else:
+                    dist2 = numpy_euclidean_distance(img2_ident, idents[0])
                 frs_dists2.append(dist2)
                 recon_losses.append(loss1.detach().item())
                 recon2_losses.append(loss2.detach().item())
