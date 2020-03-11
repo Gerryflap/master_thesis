@@ -10,7 +10,7 @@ import util
 class MixtureVisualizer(Listener):
     def __init__(self, experiment_output_path, n_latent, valid_dataset, output_reproductions=False,
                  discriminator_output=False, d_output_resolution=100, cuda=False, sample_reconstructions=False,
-                 every_n_epochs=10, generator_key=None, output_latent=False):
+                 every_n_epochs=10, generator_key=None, output_latent=False, output_grad_norm=False, ns_gan=False):
         super().__init__()
         folder_name = "mixture_outputs"
         if generator_key is not None:
@@ -19,6 +19,9 @@ class MixtureVisualizer(Listener):
         util.output.make_result_dirs(self.path)
         if output_latent:
             util.output.make_result_dirs(os.path.join(self.path, "latent"))
+
+        if output_grad_norm:
+            util.output.make_result_dirs(os.path.join(self.path, "grad_norms"))
         self.valid_dataset = valid_dataset
         self.output_reproductions = output_reproductions
         self.discriminator_output = discriminator_output
@@ -32,6 +35,9 @@ class MixtureVisualizer(Listener):
             self.static_z = self.static_z.cuda()
         self.generator_key = generator_key
         self.output_latent = output_latent
+        self.output_grad_norm = output_grad_norm
+        # Used for gradient comptuation:
+        self.ns_gan = ns_gan
 
     def initialize(self):
         # Assume that it is a mixture dataset, hence we can just grab the data directly
@@ -75,14 +81,37 @@ class MixtureVisualizer(Listener):
             nn_inp = torch.from_numpy(nn_inp)
             if self.cuda:
                 nn_inp = nn_inp.cuda()
+
+            nn_inp.requires_grad = True
             if D.mode == "ali":
                 zs = Gz.encode(nn_inp)
-                nn_outp = D((nn_inp, zs)).cpu().detach().numpy()
+                nn_outp = D((nn_inp, zs))
             else:
-                nn_outp = D(nn_inp).cpu().detach().numpy()
+                nn_outp = D(nn_inp)
                 if D.mode == "vaegan":
                     nn_outp = nn_outp[0]
 
+            if self.output_grad_norm:
+                plt.clf()
+                if self.ns_gan:
+                    loss = torch.nn.functional.binary_cross_entropy_with_logits(nn_outp, torch.ones_like(nn_outp))
+                else:
+                    loss = -torch.nn.functional.binary_cross_entropy_with_logits(nn_outp, torch.zeros_like(nn_outp))
+                grads = torch.autograd.grad(loss, nn_inp, only_inputs=True)[0]
+                grad_norms = grads.norm(2, dim=1).cpu().detach().numpy()
+                contour = plt.contourf(
+                    xx,
+                    yy,
+                    grad_norms.reshape((self.d_output_resolution, self.d_output_resolution)),
+                    cmap="Greys"
+                )
+                plt.colorbar(contour)
+                plt.xlim(-1.2, 1.2)
+                plt.ylim(-1.2, 1.2)
+                plt.savefig(os.path.join(self.path, "grad_norms", "epoch_%04d.png" % state_dict["epoch"]))
+
+            nn_outp = nn_outp.cpu().detach().numpy()
+            plt.clf()
             contour = plt.contourf(
                 xx,
                 yy,

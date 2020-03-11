@@ -71,7 +71,9 @@ listeners = [
         cuda=args.cuda,
         sample_reconstructions=True,
         every_n_epochs=10,
-        output_latent=True
+        output_latent=True,
+        output_grad_norm=True,
+        ns_gan=args.ns_gan
     )
 ]
 
