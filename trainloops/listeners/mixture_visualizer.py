@@ -94,9 +94,9 @@ class MixtureVisualizer(Listener):
             if self.output_grad_norm:
                 plt.clf()
                 if self.ns_gan:
-                    loss = torch.nn.functional.binary_cross_entropy_with_logits(nn_outp, torch.ones_like(nn_outp))
-                else:
                     loss = -torch.nn.functional.binary_cross_entropy_with_logits(nn_outp, torch.zeros_like(nn_outp))
+                else:
+                    loss = torch.nn.functional.binary_cross_entropy_with_logits(nn_outp, torch.ones_like(nn_outp))
                 grads = torch.autograd.grad(loss, nn_inp, only_inputs=True)[0]
                 grad_norms = grads.norm(2, dim=1).cpu().detach().numpy()
                 contour = plt.contourf(

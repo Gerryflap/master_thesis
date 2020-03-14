@@ -105,12 +105,13 @@ class ALITrainLoop(TrainLoop):
             L_d_real = F.binary_cross_entropy_with_logits(dis_q, d_real_labels)
             L_d = L_d_real + L_d_fake
 
-            if not self.non_saturating:
-                L_g_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
-                L_g_real = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q))
-            else:
+            if self.non_saturating:
                 L_g_fake = -F.binary_cross_entropy_with_logits(dis_p, torch.zeros_like(dis_q))
                 L_g_real = -F.binary_cross_entropy_with_logits(dis_q, torch.ones_like(dis_q))
+            else:
+                L_g_fake = F.binary_cross_entropy_with_logits(dis_p, torch.ones_like(dis_q))
+                L_g_real = F.binary_cross_entropy_with_logits(dis_q, torch.zeros_like(dis_q))
+
             L_g = L_g_real + L_g_fake
             L_syn = L_g
 
