@@ -32,6 +32,14 @@ parser.add_argument("--use_dis_l_reconstruction_loss", action="store_true", defa
                     help="Switches the reconstruction loss to a VAEGAN like loss instead of pixelwise.")
 parser.add_argument("--use_dis_l_morph_loss", action="store_true", default=False,
                     help="Switches the morph loss to a VAEGAN like loss instead of pixelwise.")
+parser.add_argument("--no_morph_loss_on_Gz", action="store_true", default=False,
+                    help="Gradients from the morph loss are not passed to Gz.")
+parser.add_argument("--no_morph_loss_on_Gx", action="store_true", default=False,
+                    help="Gradients from the morph loss are not passed to Gx.")
+parser.add_argument("--use_slerp", action="store_true", default=False,
+                    help="Uses slerp interpolation for morph loss")
+parser.add_argument("--random_interpolation", action="store_true", default=False,
+                    help="Samples interpolation between z1 and z2 randomly instead of always in the middle")
 
 
 args = parser.parse_args()
@@ -67,10 +75,13 @@ listeners = [
         args.l_size,
         valid,
         output_reproductions=True,
-        discriminator_output=False,
+        discriminator_output=True,
         cuda=args.cuda,
         sample_reconstructions=True,
-        every_n_epochs=10
+        every_n_epochs=10,
+        output_latent=True,
+        output_grad_norm=True,
+        output_morph_path=True
     )
 ]
 
@@ -89,7 +100,11 @@ trainloop = MorphingGANTrainLoop(
     decrease_noise=True,
     morph_loss_factor=args.morph_loss_factor,
     reconstruction_loss_mode="pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l",
-    morph_loss_mode="pixelwise" if not args.use_dis_l_morph_loss else "dis_l"
+    morph_loss_mode="pixelwise" if not args.use_dis_l_morph_loss else "dis_l",
+    slerp=args.use_slerp,
+    no_morph_loss_on_Gz=args.no_morph_loss_on_Gz,
+    no_morph_loss_on_Gx=args.no_morph_loss_on_Gx,
+    random_interpolation=args.random_interpolation
 )
 
 trainloop.train()

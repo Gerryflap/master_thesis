@@ -23,7 +23,8 @@ class MorphingGANTrainLoop(TrainLoop):
     def __init__(self, listeners: list, Gz, Gx, D, optim_G, optim_D, dataloader, cuda=False, epochs=1, morgan_alpha=0.0,
                  d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
                  morph_loss_factor=0.0, reconstruction_loss_mode="pixelwise", morph_loss_mode="pixelwise",
-                 frs_model=None, unlock_D=False, random_interpolation=False, slerp=False):
+                 frs_model=None, unlock_D=False, random_interpolation=False, slerp=False, no_morph_loss_on_Gz=False,
+                 no_morph_loss_on_Gx=False):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -41,6 +42,9 @@ class MorphingGANTrainLoop(TrainLoop):
         self.decrease_noise = decrease_noise
         self.frs_model = frs_model
         self.unlock_D = unlock_D
+        self.no_morph_loss_on_Gz = no_morph_loss_on_Gz
+        self.no_morph_loss_on_Gx = no_morph_loss_on_Gx
+
 
         # Sample morph z's along the entire line between z1 and z2 randomly instead of only in the middle
         self.random_interpolation = random_interpolation
@@ -130,8 +134,10 @@ class MorphingGANTrainLoop(TrainLoop):
                 z_morph = beta * z1_hat + (1-beta) * z2_hat
             else:
                 z_morph = torch_slerp(beta, z2_hat, z1_hat, dim=1)
-            x_morph = self.Gx(z_morph)
 
+            if self.no_morph_loss_on_Gz:
+                z_morph = z_morph.detach()
+            x_morph = self.Gx(z_morph)
             if self.reconstruction_loss_mode == "pixelwise":
                 dis_l_x1 = None
                 L_recon = self.reconstruction_loss(x_recon, x1)
@@ -161,7 +167,8 @@ class MorphingGANTrainLoop(TrainLoop):
                 L_morph = torch.zeros((1,), dtype=torch.float32)
                 if self.cuda:
                     L_morph = L_morph.cuda()
-            L_syn = L_g + self.morgan_alpha * L_recon + self.morph_loss_factor * L_morph
+            L_syn_without_morph_loss = L_g + self.morgan_alpha * L_recon
+            L_syn = L_syn_without_morph_loss + self.morph_loss_factor * L_morph
 
             # ========== Back propagation and updates ==========
 
@@ -174,7 +181,13 @@ class MorphingGANTrainLoop(TrainLoop):
             # Gradient update on the Generator networks
             self.optim_G.zero_grad()
 
-            L_syn.backward()
+            if self.morph_loss_factor != 0.0:
+                L_morph_weighted = L_morph * self.morph_loss_factor
+                L_morph_weighted.backward(retain_graph=True)
+                if self.no_morph_loss_on_Gx:
+                    self.Gx.zero_grad()
+
+            L_syn_without_morph_loss.backward()
 
             self.optim_G.step()
 

@@ -10,7 +10,7 @@ import util
 class MixtureVisualizer(Listener):
     def __init__(self, experiment_output_path, n_latent, valid_dataset, output_reproductions=False,
                  discriminator_output=False, d_output_resolution=100, cuda=False, sample_reconstructions=False,
-                 every_n_epochs=10, generator_key=None, output_latent=False, output_grad_norm=False, ns_gan=False):
+                 every_n_epochs=10, generator_key=None, output_latent=False, output_grad_norm=False, ns_gan=False, output_morph_path=False):
         super().__init__()
         folder_name = "mixture_outputs"
         if generator_key is not None:
@@ -39,6 +39,8 @@ class MixtureVisualizer(Listener):
         # Used for gradient comptuation:
         self.ns_gan = ns_gan
 
+        self.output_morph_path = output_morph_path
+
     def initialize(self):
         # Assume that it is a mixture dataset, hence we can just grab the data directly
         self.data = self.valid_dataset.data
@@ -59,19 +61,24 @@ class MixtureVisualizer(Listener):
         else:
             Gx = state_dict["networks"][self.generator_key]
 
-        if self.output_reproductions:
+        Gx.eval()
+
+        if self.output_reproductions or self.output_morph_path:
             if "enc" in state_dict["networks"]:
                 Gz = state_dict["networks"]["enc"]
             elif "Gz" in state_dict["networks"]:
                 Gz = state_dict["networks"]["Gz"]
             else:
                 raise ValueError("Could not find a encoder-like network in the state dict!")
+            Gz.eval()
 
         if self.discriminator_output:
             if "D" in state_dict["networks"]:
                 D = state_dict["networks"]["D"]
             else:
                 raise ValueError("Could not find a Discriminator in the state dict!")
+
+            D.eval()
 
             # Generate contourf
             xs = np.linspace(-1.2, 1.2, self.d_output_resolution, dtype=np.float32)
@@ -136,6 +143,21 @@ class MixtureVisualizer(Listener):
             plt.scatter(x_recon[:, 0], x_recon[:, 1], color="green", s=3, alpha=0.2, label="Gx(Gz(x))")
             # Gz.train()
 
+        if self.output_morph_path:
+            x = self.data
+            if self.cuda:
+                x = x.cuda()
+            z1 = Gz.encode(x[:1])
+            z2 = Gz.encode(x[-1:])
+            interpolations = torch.linspace(0, 1, 21).view(-1, 1)
+            if self.cuda:
+                interpolations = interpolations.cuda()
+            z_interpolations = z1 * interpolations + z2 * (1-interpolations)
+            interpolations = Gx(z_interpolations)
+            interpolations = interpolations.cpu().detach().numpy()
+            plt.plot(interpolations[:, 0], interpolations[:, 1], color="lightgrey", marker="o", markersize=2)
+            xs = torch.cat([x[:1], x[-1:]]).cpu().detach().numpy()
+            plt.scatter(xs[:, 0], xs[:, 1], color="white")
 
 
         plt.xlim(-1.2, 1.2)

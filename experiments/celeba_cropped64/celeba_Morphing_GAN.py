@@ -57,6 +57,10 @@ parser.add_argument("--use_slerp", action="store_true", default=False,
                     help="Uses slerp interpolation instead of linear.")
 parser.add_argument("--random_interpolation", action="store_true", default=False,
                     help="Samples interpolation between z1 and z2 randomly instead of always in the middle")
+parser.add_argument("--no_morph_loss_on_Gz", action="store_true", default=False,
+                    help="Gradients from the morph loss are not passed to Gz.")
+parser.add_argument("--no_morph_loss_on_Gx", action="store_true", default=False,
+                    help="Gradients from the morph loss are not passed to Gx.")
 
 args = parser.parse_args()
 
@@ -141,7 +145,9 @@ train_loop = MorphingGANTrainLoop(
     morph_loss_mode=morph_loss,
     frs_model=frs_model,
     slerp=args.use_slerp,
-    random_interpolation=args.random_interpolation
+    random_interpolation=args.random_interpolation,
+    no_morph_loss_on_Gz=args.no_morph_loss_on_Gz,
+    no_morph_loss_on_Gx=args.no_morph_loss_on_Gx,
 )
 
 train_loop.train()
