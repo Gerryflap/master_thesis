@@ -76,5 +76,31 @@ class Discriminator64(torch.nn.Module):
             x = torch.sigmoid(x)
         return x
 
+    def compute_dx(self, inp):
+        x = self.conv_1(inp)
+        x = self.activ(x)
+
+        x = self.conv_2(x)
+        if self.use_bn:
+            x = self.bn_2(x)
+        x = self.activ(x)
+
+        x = self.conv_3(x)
+        if self.use_bn:
+            x = self.bn_3(x)
+        x = self.activ(x)
+
+        x = self.conv_4(x)
+        if self.use_bn:
+            x = self.bn_4(x)
+        x = self.activ(x)
+        dis_l = x
+
+        x = self.conv_5(x)
+        if self.use_bn:
+            x = self.bn_5(x)
+        x = self.activ(x)
+        return x, dis_l
+
     def init_weights(self):
         self.apply(weights_init)
