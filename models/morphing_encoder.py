@@ -17,10 +17,21 @@ class MorphingEncoder(torch.nn.Module):
         :return: A batch of morphed z values. These will have to go through the decoder/Gx in order to decode.
         """
         z1, z2 = self.encode(x1, use_mean=use_mean), self.encode(x2, use_mean=use_mean)
-        z = 0.5*(z1 + z2)
+        z = self.morph_zs(z1, z2)
         if return_all:
             return z, z1, z2
         return z
+
+    def morph_zs(self, z1, z2):
+        """
+        Morphs the latent vectors z1 and z2 and outputs z_morph
+        :param z1: a batch of latent vectors for the first identities to be morphed
+        :param z2: a batch of latent vectors for the second identities to be morphed
+        :return:
+        """
+        z = 0.5 * (z1 + z2)
+        return z
+
 
     def encode(self, x, use_mean=False):
         """

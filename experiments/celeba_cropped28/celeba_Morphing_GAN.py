@@ -1,5 +1,6 @@
 from data.celeba_cropped_pairs import CelebaCroppedPairs
 from models.conv28.encoder import Encoder28
+from models.conv28.encoder_with_morphing_network import EncoderMorphNet28
 from trainloops.listeners.morph_image_logger import MorphImageLogger
 from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
 from models.conv28.ali_discriminator import ALIDiscriminator28
@@ -62,6 +63,8 @@ parser.add_argument("--no_morph_loss_on_Gz", action="store_true", default=False,
                     help="Gradients from the morph loss are not passed to Gz.")
 parser.add_argument("--no_morph_loss_on_Gx", action="store_true", default=False,
                     help="Gradients from the morph loss are not passed to Gx.")
+parser.add_argument("--use_morph_network", action="store_true", default=False,
+                    help="Adds a morph network to Gz that takes 2 latent vectors and outputs z_morph")
 
 
 args = parser.parse_args()
@@ -82,7 +85,10 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sh
 
 print("Dataset length: ", len(dataset))
 
-Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
+if args.use_morph_network:
+    Gz = EncoderMorphNet28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True, block_Gz_morph_grads=args.no_morph_loss_on_Gz)
+else:
+    Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
 G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
@@ -104,6 +110,9 @@ if args.cuda:
 Gz.init_weights()
 Gx.init_weights()
 D.init_weights()
+
+if args.use_morph_network:
+    Gz.pretrain_morph_network()
 
 listeners = [
     LossReporter(),
@@ -149,8 +158,9 @@ train_loop = MorphingGANTrainLoop(
     unlock_D=args.unlock_D,
     slerp=args.use_slerp,
     random_interpolation=args.random_interpolation,
-    no_morph_loss_on_Gz=args.no_morph_loss_on_Gz,
+    no_morph_loss_on_Gz=args.no_morph_loss_on_Gz and not args.use_morph_network,
     no_morph_loss_on_Gx=args.no_morph_loss_on_Gx,
+    trainable_morph_network_consistency_loss=args.use_morph_network
 
 )
 

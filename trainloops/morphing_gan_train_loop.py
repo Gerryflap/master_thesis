@@ -24,7 +24,7 @@ class MorphingGANTrainLoop(TrainLoop):
                  d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
                  morph_loss_factor=0.0, reconstruction_loss_mode="pixelwise", morph_loss_mode="pixelwise",
                  frs_model=None, unlock_D=False, random_interpolation=False, slerp=False, no_morph_loss_on_Gz=False,
-                 no_morph_loss_on_Gx=False):
+                 no_morph_loss_on_Gx=False, trainable_morph_network_consistency_loss=False):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -44,6 +44,7 @@ class MorphingGANTrainLoop(TrainLoop):
         self.unlock_D = unlock_D
         self.no_morph_loss_on_Gz = no_morph_loss_on_Gz
         self.no_morph_loss_on_Gx = no_morph_loss_on_Gx
+        self.trainable_morph_network_consistency_loss = trainable_morph_network_consistency_loss
 
 
         # Sample morph z's along the entire line between z1 and z2 randomly instead of only in the middle
@@ -131,7 +132,10 @@ class MorphingGANTrainLoop(TrainLoop):
                     beta = beta.cuda()
 
             if not self.slerp:
-                z_morph = beta * z1_hat + (1-beta) * z2_hat
+                if beta == 0.5:
+                    z_morph = self.Gz.morph_zs(z1_hat, z2_hat)
+                else:
+                    z_morph = beta * z1_hat + (1 - beta) * z2_hat
             else:
                 z_morph = torch_slerp(beta, z2_hat, z1_hat, dim=1)
 
@@ -170,6 +174,11 @@ class MorphingGANTrainLoop(TrainLoop):
             L_syn_without_morph_loss = L_g + self.morgan_alpha * L_recon
             L_syn = L_syn_without_morph_loss + self.morph_loss_factor * L_morph
 
+            if self.trainable_morph_network_consistency_loss:
+                z_in = self.generate_z_batch(self.batch_size)
+                z_out = self.Gz.morph_zs(z_in, z_in)
+                morph_cons_loss = torch.nn.functional.mse_loss(z_out, z_in)
+
             # ========== Back propagation and updates ==========
 
             # Gradient update on Discriminator network
@@ -189,6 +198,9 @@ class MorphingGANTrainLoop(TrainLoop):
 
             L_syn_without_morph_loss.backward()
 
+            if self.trainable_morph_network_consistency_loss:
+                morph_cons_loss.backward()
+
             self.optim_G.step()
 
         losses = {
@@ -198,6 +210,8 @@ class MorphingGANTrainLoop(TrainLoop):
                 "L_morph": L_morph.detach().item(),
                 "L_syn": L_syn.detach().item()
             }
+        if self.trainable_morph_network_consistency_loss:
+            losses["Morph consistency loss"] = morph_cons_loss.detach().item()
 
         return {
             "epoch": self.current_epoch,
