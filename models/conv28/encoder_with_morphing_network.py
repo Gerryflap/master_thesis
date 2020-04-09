@@ -29,7 +29,7 @@ class EncoderMorphNet28(Encoder28):
 
     def pretrain_morph_network(self, n_batches=10000, batch_size=64):
         print("Pretraining morph network")
-        pretrain_opt = torch.optim.Adam(self.morph_net.parameters(), 0.01)
+        pretrain_opt = torch.optim.Adam(self.morph_net.parameters(), 0.001)
         device = self.morph_net.parameters().__next__().get_device()
         for i in range(n_batches):
             z1 = torch.randn((batch_size, self.latent_size), device=device)
@@ -44,4 +44,10 @@ class EncoderMorphNet28(Encoder28):
             if i == 0:
                 print("Loss on first pretrain batch: ", loss.detach().item())
         print("Pretraining done...")
-        print("Final pretrain loss: %d"%loss.detach().item())
+        print("Final pretrain loss: %f"%loss.detach().item())
+
+    def morph_network_params(self):
+        return self.morph_net.parameters()
+
+    def Gz_params(self):
+        return set(self.parameters()) - set(self.morph_network_params())

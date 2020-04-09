@@ -10,7 +10,8 @@ import util
 class MixtureVisualizer(Listener):
     def __init__(self, experiment_output_path, n_latent, valid_dataset, output_reproductions=False,
                  discriminator_output=False, d_output_resolution=100, cuda=False, sample_reconstructions=False,
-                 every_n_epochs=10, generator_key=None, output_latent=False, output_grad_norm=False, ns_gan=False, output_morph_path=False):
+                 every_n_epochs=10, generator_key=None, output_latent=False, output_grad_norm=False, ns_gan=False,
+                 output_morph_path=False):
         super().__init__()
         folder_name = "mixture_outputs"
         if generator_key is not None:

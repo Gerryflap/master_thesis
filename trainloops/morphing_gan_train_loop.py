@@ -179,6 +179,13 @@ class MorphingGANTrainLoop(TrainLoop):
                 z_out = self.Gz.morph_zs(z_in, z_in)
                 morph_cons_loss = torch.nn.functional.mse_loss(z_out, z_in)
 
+                # Added 9 April 2020
+                z_morph_detached_from_Gz = self.Gz.morph_zs(z1_hat.detach(), z2_hat.detach())
+                l2_norms = torch.max(z1_hat.detach().norm(2, dim=1), z1_hat.detach().norm(2, dim=1))
+                morph_l2_norms = z_morph_detached_from_Gz.norm(2, dim=1)
+                morph_scale_loss = (torch.nn.functional.relu(morph_l2_norms - l2_norms)**2).mean()
+                morph_cons_loss += 10.0 * morph_scale_loss
+
             # ========== Back propagation and updates ==========
 
             # Gradient update on Discriminator network

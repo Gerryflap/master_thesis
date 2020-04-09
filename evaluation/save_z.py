@@ -10,6 +10,8 @@ from PIL import Image
 
 import dlib
 
+from models.morphing_encoder import MorphingEncoder
+
 parser = argparse.ArgumentParser(description="Image to latent vector converter.")
 parser.add_argument("--enc", action="store", type=str, help="Path to Gz/Encoder model")
 parser.add_argument("--img", action="store", type=str, help="Path to input image")
@@ -87,8 +89,13 @@ z, z_mean, _ = Gz(x1)
 if morphing:
     x2 = load_process_img(args.img2)
     z2, z2_mean, _ = Gz(x2)
-    z = 0.5*(z + z2)
-    z_mean = 0.5*(z_mean + z2_mean)
+    # z = 0.5*(z + z2)
+    if isinstance(Gz, MorphingEncoder):
+        z = Gz.morph_zs(z, z2)
+        z_mean = Gz.morph_zs(z_mean, z2_mean)
+    else:
+        z = 0.5*(z + z2)
+        z_mean = 0.5*(z_mean + z2_mean)
 
 if not args.sample:
     z = z_mean
