@@ -93,9 +93,13 @@ else:
     Gz = Encoder28(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
 Gx = Generator28(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator28(args.l_size, args.h_size, use_bn=args.use_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
-G_no_mn_optimizer = torch.optim.Adam(list(Gz.Gz_params()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
-mn_optimizer = torch.optim.Adam(Gz.morph_network_params(), lr=1e-5, betas=(0.5, 0.999))
-G_optimizer = MergedOptimizers([G_no_mn_optimizer, mn_optimizer])
+if args.use_morph_network:
+    G_no_mn_optimizer = torch.optim.Adam(list(Gz.Gz_params()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
+    mn_optimizer = torch.optim.Adam(Gz.morph_network_params(), lr=1e-5, betas=(0.5, 0.999))
+    G_optimizer = MergedOptimizers([G_no_mn_optimizer, mn_optimizer])
+else:
+    G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
+
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
 
 

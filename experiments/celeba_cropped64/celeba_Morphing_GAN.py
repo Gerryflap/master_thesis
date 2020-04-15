@@ -16,6 +16,8 @@ from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 
 # Parse commandline arguments
+from util.misc import MergedOptimizers
+
 parser = argparse.ArgumentParser(description="Celeba Morphing GAN experiment.")
 parser.add_argument("--batch_size", action="store", type=int, default=64, help="Changes the batch size, default is 65")
 parser.add_argument("--lr", action="store", type=float, default=0.0001,
@@ -87,8 +89,15 @@ else:
     Gz = Encoder64(args.l_size, args.h_size, args.use_mish, n_channels=3, cap_variance=True)
 Gx = Generator64(args.l_size, args.h_size, args.use_mish, n_channels=3, sigmoid_out=True)
 D = ALIDiscriminator64(args.l_size, args.h_size, use_bn=not args.disable_batchnorm_in_D, use_mish=args.use_mish, n_channels=3, dropout=args.dropout_rate, fc_h_size=args.fc_h_size)
-G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
+if args.use_morph_network:
+    G_no_mn_optimizer = torch.optim.Adam(list(Gz.Gz_params()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
+    mn_optimizer = torch.optim.Adam(Gz.morph_network_params(), lr=1e-5, betas=(0.5, 0.999))
+    G_optimizer = MergedOptimizers([G_no_mn_optimizer, mn_optimizer])
+else:
+    G_optimizer = torch.optim.Adam(list(Gz.parameters()) + list(Gx.parameters()), lr=args.lr, betas=(0.5, 0.999))
 D_optimizer = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(0.5, 0.999))
+
+
 
 # Code for loading frs model when frs based reconstruction loss is used
 frs_model = None
