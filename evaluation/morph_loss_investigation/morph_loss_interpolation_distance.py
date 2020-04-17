@@ -28,6 +28,8 @@ parser.add_argument("--frs_path", action="store", default=None, help="Path to fa
                                                                      "Switches to FRS reconstruction loss")
 parser.add_argument("--use_slerp", action="store_true", default=False,
                     help="Uses slerp interpolation instead of linear.")
+parser.add_argument("--use_max_morph_loss", action="store_true", default=False,
+                    help="Uses max morph loss, which takes the max distance instead of the sum")
 args = parser.parse_args()
 
 trans = []
@@ -73,8 +75,8 @@ def disl_losses(pred, target1, target2):
     _, disl_pred = D.compute_dx(pred)
     _, disl_target1 = D.compute_dx(target1)
     _, disl_target2 = D.compute_dx(target2)
-    loss1 = torch.nn.functional.mse_loss(disl_pred, disl_target1, reduce=False).mean(dim=(1, 2, 3))
-    loss2 = torch.nn.functional.mse_loss(disl_pred, disl_target2, reduce=False).mean(dim=(1, 2, 3))
+    loss1 = torch.nn.functional.mse_loss(disl_pred, disl_target1, reduction='none').mean(dim=(1, 2, 3))
+    loss2 = torch.nn.functional.mse_loss(disl_pred, disl_target2, reduction='none').mean(dim=(1, 2, 3))
     return loss1, loss2
 
 def frs_losses(pred, target1, target2):
@@ -117,8 +119,8 @@ for i, batch in enumerate(dataloader):
         elif frs_model is not None:
             loss_1, loss_2 = frs_losses(x_morph, x1, x2)
         else:
-            loss_1 = torch.nn.functional.l1_loss(x_morph, x1, reduce=False).mean(dim=(1, 2, 3))
-            loss_2 = torch.nn.functional.l1_loss(x_morph, x2, reduce=False).mean(dim=(1, 2, 3))
+            loss_1 = torch.nn.functional.l1_loss(x_morph, x1, reduction='none').mean(dim=(1, 2, 3))
+            loss_2 = torch.nn.functional.l1_loss(x_morph, x2, reduction='none').mean(dim=(1, 2, 3))
         x1_batch_losses.append(loss_1.detach())
         x2_batch_losses.append(loss_2.detach())
     x1_batch_losses = torch.stack(x1_batch_losses, dim=0)
@@ -128,13 +130,17 @@ for i, batch in enumerate(dataloader):
 
 x1_losses = torch.cat(x1_losses, dim=1).cpu()
 x2_losses = torch.cat(x2_losses, dim=1).cpu()
-
+if args.use_max_morph_loss:
+    morph_losses = torch.max(x1_losses, x2_losses)
+else:
+    morph_losses = (0.5 * x1_losses + 0.5 * x2_losses)
 steps = np.array([i/(args.n_steps - 1) for i in range(args.n_steps)])
 
 # Loop over batch dim
 for i in range(x1_losses.size(1)):
     plt.plot(steps, x1_losses[:, i].numpy(), color="blue", linewidth=1, alpha=0.3)
     plt.plot(steps, x2_losses[:, i].numpy(), color="red", linewidth=1, alpha=0.3)
+    plt.plot(steps, morph_losses[:, i].numpy(), color="green", linewidth=1, alpha=0.3)
 
 plt.plot(
     [0.5, 0.5],
@@ -144,6 +150,7 @@ plt.plot(
     ],
     color="orange"
 )
+
 plt.ylabel("Loss")
 plt.xlabel("Amount of z2 in z_morph.")
 plt.title("All loss graphs")
@@ -151,8 +158,10 @@ plt.show()
 
 x1_losses_mean = x1_losses.mean(dim=1).numpy()
 x2_losses_mean = x2_losses.mean(dim=1).numpy()
-plt.plot(steps, x1_losses_mean, color="blue")
-plt.plot(steps, x2_losses_mean, color="red")
+morph_loss_mean = morph_losses.mean(dim=1).numpy()
+plt.plot(steps, x1_losses_mean, color="blue", label="loss wrt. x1")
+plt.plot(steps, x2_losses_mean, color="red", label="loss wrt. x2")
+plt.plot(steps, morph_loss_mean, color="green", label="morph loss")
 plt.plot(
     [0.5, 0.5],
     [
@@ -161,6 +170,7 @@ plt.plot(
     ],
     color="orange"
 )
+plt.legend()
 plt.ylabel("Mean loss")
 plt.xlabel("Amount of z2 in z_morph.")
 plt.title("Mean loss graph over dataset")

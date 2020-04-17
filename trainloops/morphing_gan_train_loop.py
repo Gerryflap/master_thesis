@@ -24,7 +24,7 @@ class MorphingGANTrainLoop(TrainLoop):
                  d_img_noise_std=0.0, d_real_label=1.0, decrease_noise=True, use_sigmoid=True,
                  morph_loss_factor=0.0, reconstruction_loss_mode="pixelwise", morph_loss_mode="pixelwise",
                  frs_model=None, unlock_D=False, random_interpolation=False, slerp=False, no_morph_loss_on_Gz=False,
-                 no_morph_loss_on_Gx=False, trainable_morph_network_consistency_loss=False):
+                 no_morph_loss_on_Gx=False, trainable_morph_network_consistency_loss=False, max_morph_loss=False):
         super().__init__(listeners, epochs)
         self.use_sigmoid = use_sigmoid
         self.batch_size = dataloader.batch_size
@@ -45,6 +45,7 @@ class MorphingGANTrainLoop(TrainLoop):
         self.no_morph_loss_on_Gz = no_morph_loss_on_Gz
         self.no_morph_loss_on_Gx = no_morph_loss_on_Gx
         self.trainable_morph_network_consistency_loss = trainable_morph_network_consistency_loss
+        self.max_morph_loss = max_morph_loss
 
 
         # Sample morph z's along the entire line between z1 and z2 randomly instead of only in the middle
@@ -61,6 +62,13 @@ class MorphingGANTrainLoop(TrainLoop):
             raise ValueError("Reconstruction loss mode must be one of \"pixelwise\", \"dis_l\" or \"frs\"")
         self.morph_loss_mode = morph_loss_mode
         self.morph_loss_factor = morph_loss_factor
+
+        if max_morph_loss and random_interpolation:
+            print("WARNING! Using max morph loss with random interpolation will probably result in weird behaviour! "
+                  "The max morph loss is not scaled with beta and as such will always be minimal around 50%/50%.")
+        if max_morph_loss and morph_loss_mode == "frs":
+            print("Note: using max morph loss is always enabled for the frs based loss. Enabling the flag has no effect"
+                  )
 
     def epoch(self):
         self.Gx.train()
@@ -257,11 +265,15 @@ class MorphingGANTrainLoop(TrainLoop):
         if self.morph_loss_mode == "pixelwise":
             x1_loss = self.morgan_pixel_loss(x_morph, x1)
             x2_loss = self.morgan_pixel_loss(x_morph, x2)
-            return (beta * x1_loss + (1-beta) * x2_loss).mean()
+
         else:
             x1_loss = self.dis_l_loss(x_morph, x1)
             x2_loss = self.dis_l_loss(x_morph, x2)
-            return (beta * x1_loss + (1-beta) * x2_loss).mean()
+
+        if self.max_morph_loss:
+            return torch.max(x1_loss, x2_loss).mean()
+        else:
+            return (beta * x1_loss + (1 - beta) * x2_loss).mean()
 
     def dis_l_loss(self, dis_l_prediction, dis_l_target):
         return torch.nn.functional.mse_loss(dis_l_prediction, dis_l_target, reduction='none').view(self.batch_size, -1).mean(dim=1, keepdim=True)

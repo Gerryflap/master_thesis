@@ -71,6 +71,8 @@ parser.add_argument("--no_morph_loss_on_Gx", action="store_true", default=False,
                     help="Gradients from the morph loss are not passed to Gx.")
 parser.add_argument("--use_morph_network", action="store_true", default=False,
                     help="Adds a morph network to Gz that takes 2 latent vectors and outputs z_morph")
+parser.add_argument("--use_max_morph_loss", action="store_true", default=False,
+                    help="Morph loss is max of x1 and x2 loss instead of mean.")
 args = parser.parse_args()
 
 output_path = util.output.init_experiment_output_dir("mnist", "Morphing_GAN", args)
@@ -165,7 +167,8 @@ train_loop = MorphingGANTrainLoop(
     random_interpolation=args.random_interpolation,
     no_morph_loss_on_Gz=args.no_morph_loss_on_Gz and not args.use_morph_network,
     no_morph_loss_on_Gx=args.no_morph_loss_on_Gx,
-    trainable_morph_network_consistency_loss=args.use_morph_network
+    trainable_morph_network_consistency_loss=args.use_morph_network,
+    max_morph_loss=args.use_max_morph_loss
 
 )
 
