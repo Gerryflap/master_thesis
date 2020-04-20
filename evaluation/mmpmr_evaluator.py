@@ -68,7 +68,8 @@ parser.add_argument("--eval", action="store_true", default=False,
 parser.add_argument("--train", action="store_true", default=False,
                     help="When this flag is present, the models are put in train mode. This affects BatchNorm")
 parser.add_argument("--visualize", action="store_true", default=False,
-                    help="When this flag is present, a matplotlib visualization is shown with the best and worst morphs")
+                    help="When this flag is present, a matplotlib visualization is written to the output folder"
+                         " with the best and worst morphs")
 parser.add_argument("--frgc", action="store_true", default=False,
                     help="When this flag is present, the FRGC dataset will be used for evaluation")
 parser.add_argument("--gradient_descend_dis_l", action="store_true", default=False,
@@ -80,6 +81,11 @@ parser.add_argument("--gradient_descend_dis_l_recon", action="store_true", defau
 parser.add_argument("--slerp", action="store_true", default=False,
                     help="Uses slerp interpolation in latent space. "
                          "This is supposed to work better for normal distributions")
+parser.add_argument("--force_linear_morph", action="store_true", default=False,
+                    help="Forces linear morphing (the way morgan does it). "
+                         "Can be useful to use as a baseline on a model that implements a different morph function")
+parser.add_argument("--shuffle", action="store_true", default=False,
+                    help="Shuffles the dataset. THIS IS EXPERIMENTAL AND MIGHT NOT YIELD CORRECT RESULTS!")
 args = parser.parse_args()
 
 if args.test:
@@ -106,6 +112,8 @@ if args.gradient_descend_dis_l or args.gradient_descend_dis_l_recon:
 
 if not isinstance(Gz, MorphingEncoder):
     print("Gz is not a subclass of MorphingEncoder! Morphing is now done the MorGAN way.")
+    manual_morph = True
+elif args.force_linear_morph:
     manual_morph = True
 else:
     manual_morph = False
@@ -138,7 +146,7 @@ if args.frgc:
     dataset = FRGCPairsLookAlike(transform=transforms.Compose(trans))
 else:
     dataset = CelebaCroppedPairsLookAlike(split=split, transform=transforms.Compose(trans))
-loader = DataLoader(dataset, args.batch_size, shuffle=False)
+loader = DataLoader(dataset, args.batch_size, shuffle=args.shuffle)
 
 print("Generating Morphs...")
 x1_list = []
