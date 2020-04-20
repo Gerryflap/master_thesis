@@ -58,14 +58,25 @@ class MorphImageLogger(Listener):
         else:
             raise ValueError("Could not find a encoder-like network in the state dict!")
 
+        morph_net = None
+        if "morph_net" in state_dict["networks"]:
+            morph_net = state_dict["networks"]["morph_net"]
+
         if self.eval_mode:
             Gx.eval()
             Gz.eval()
+
+            if morph_net:
+                morph_net.eval()
 
         if self.slerp:
             z1 = Gz.encode(self.x1)
             z2 = Gz.encode(self.x2)
             z_morph = torch_slerp(0.5, z1, z2)
+        elif morph_net:
+            z1 = Gz.encode(self.x1)
+            z2 = Gz.encode(self.x2)
+            z_morph = morph_net.morph_zs(z1, z2)
         else:
             z_morph = Gz.morph(self.x1, self.x2)
 

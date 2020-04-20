@@ -38,6 +38,12 @@ class MorphNetTrainLoop(TrainLoop):
 
 
     def epoch(self):
+        self.Gx.requires_grad = False
+        self.Gz.requires_grad = False
+        self.D.requires_grad = False
+        self.Gx.eval()
+        self.Gz.eval()
+        self.D.eval()
         for i, (x1, x2) in enumerate(self.dataloader):
             if x1.size(0) != self.batch_size:
                 continue

@@ -9,7 +9,11 @@ import torch
 
 from data.celeba_cropped_pairs import CelebaCroppedPairs
 from models.morph.morph_network import MorphNetwork
+from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
+from trainloops.listeners.cluster_killswitch import KillSwitchListener
 from trainloops.listeners.loss_reporter import LossReporter
+from trainloops.listeners.model_saver import ModelSaver
+from trainloops.listeners.morph_image_logger import MorphImageLogger
 from trainloops.morph_network_train_loop import MorphNetTrainLoop
 
 parser = argparse.ArgumentParser(description="Celeba Morph network trainer.")
@@ -50,6 +54,11 @@ dataset = CelebaCroppedPairs(split="train", download=True, transform=transforms.
     transforms.ToTensor(),
 ]))
 
+valid_dataset = CelebaCroppedPairs(split="valid", download=True, transform=transforms.Compose([
+    transforms.Resize(args.res),
+    transforms.ToTensor(),
+]))
+
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
 latent_size = Gx.latent_size
@@ -63,7 +72,13 @@ optim = torch.optim.Adam(morph_net.parameters(), lr=args.lr)
 morph_net.pretrain_morph_network(optim)
 
 listeners = [
-    LossReporter()
+    LossReporter(),
+    AEImageSampleLogger(output_path, valid_dataset, args, folder_name="AE_samples_valid", print_stats=True),
+    AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
+    MorphImageLogger(output_path, valid_dataset, args, slerp=False),
+    ModelSaver(output_path, n=1, overwrite=True, print_output=True),
+    ModelSaver(output_path, n=30, overwrite=False, print_output=True),
+    KillSwitchListener(output_path)
 ]
 
 if args.use_dis_l_morph_loss:
