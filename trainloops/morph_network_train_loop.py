@@ -12,7 +12,7 @@ from util.torch.losses import euclidean_distance
 class MorphNetTrainLoop(TrainLoop):
     def __init__(self, listeners: list, morph_net, Gz, Gx, D, optim, dataloader, cuda=False, epochs=1,
                  morph_loss_factor=1.0, morph_loss_mode="pixelwise",
-                 frs_model=None):
+                 frs_model=None, two_sided_l2_constraint=False):
         super().__init__(listeners, epochs)
         self.batch_size = dataloader.batch_size
         self.morph_net = morph_net
@@ -23,6 +23,7 @@ class MorphNetTrainLoop(TrainLoop):
         self.dataloader = dataloader
         self.cuda = cuda
         self.frs_model = frs_model
+        self.two_sided_l2_constraint = two_sided_l2_constraint
 
         if morph_loss_mode not in ["pixelwise", "dis_l", "frs"]:
             raise ValueError("Reconstruction loss mode must be one of \"pixelwise\", \"dis_l\" or \"frs\"")
@@ -82,10 +83,16 @@ class MorphNetTrainLoop(TrainLoop):
 
             # Added 9 April 2020
             z_morph_detached_from_Gz = self.morph_net((z1_hat.detach(), z2_hat.detach()))
-            l2_norms = torch.max(z1_hat.detach().norm(2, dim=1), z1_hat.detach().norm(2, dim=1))
             morph_l2_norms = z_morph_detached_from_Gz.norm(2, dim=1)
-            morph_scale_loss = (torch.nn.functional.relu(morph_l2_norms - l2_norms)**2).mean()
-            morph_cons_loss += 10.0 * morph_scale_loss
+
+            if not self.two_sided_l2_constraint:
+                # Changed from only z1_hat on 23 Apr 2020 11:44
+                l2_norms = torch.max(z1_hat.detach().norm(2, dim=1), z2_hat.detach().norm(2, dim=1))
+                morph_scale_loss = (torch.nn.functional.relu(morph_l2_norms - l2_norms)**2).mean()
+            else:
+                l2_norms = (z1_hat.detach().norm(2, dim=1) + z2_hat.detach().norm(2, dim=1)) * 0.5
+                morph_scale_loss = ((morph_l2_norms - l2_norms)**2).mean()
+            morph_cons_loss += morph_scale_loss
 
             # ========== Back propagation and updates ==========
 

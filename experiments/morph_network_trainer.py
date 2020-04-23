@@ -39,6 +39,9 @@ parser.add_argument("--encoder_filename", action="store", type=str, default="Gz.
 parser.add_argument("--discriminator_filename", action="store", type=str, default="D.pt",
                     help="Filename of the discriminator network. Only used with gradient descend morphing. "
                          "Default is D.pt")
+parser.add_argument("--use_two_sided_z_l2_loss", action="store_true", default=False,
+                    help="Uses the mse between the mean l2 norm of z1 and z2 and the l2 norm of z_morph "
+                         "as a regularization instead of the default.")
 args = parser.parse_args()
 
 param_path = args.trained_net_path
@@ -97,7 +100,8 @@ trainloop = MorphNetTrainLoop(
     cuda=args.cuda,
     epochs=args.epochs,
     morph_loss_factor=args.morph_loss_factor,
-    morph_loss_mode=morph_loss
+    morph_loss_mode=morph_loss,
+    two_sided_l2_constraint=args.use_two_sided_z_l2_loss
 )
 
 trainloop.train()
