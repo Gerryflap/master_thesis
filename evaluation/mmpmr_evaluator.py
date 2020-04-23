@@ -107,6 +107,14 @@ device = torch.device("cpu") if not args.cuda else torch.device("cuda")
 Gx = torch.load(os.path.join(param_path, args.decoder_filename), map_location=device)
 Gz = torch.load(os.path.join(param_path, args.encoder_filename), map_location=device)
 
+morph_net = None
+if os.path.exists(os.path.join(param_path, "morph_net.pt")):
+    if args.force_linear_morph or args.slerp:
+        print("Morph network found but not used due to force_linear_morph or slerp.")
+    else:
+        print("Found morph network in folder. It will be used for morphing. To disable this use --force_linear_morph")
+        morph_net = torch.load(os.path.join(param_path, "morph_net.pt"), map_location=device)
+
 if args.gradient_descend_dis_l or args.gradient_descend_dis_l_recon:
     D = torch.load(os.path.join(param_path, args.discriminator_filename), map_location=device)
 
@@ -165,14 +173,22 @@ for i, batch in enumerate(loader):
         x2 = x2.cuda()
 
     if args.slerp:
+        # Use slerp interpolation
         z1, z1m, _ = Gz(x1)
         z2, z2m, _ = Gz(x2)
 
         if args.use_z_mean:
             z1, z2 = z1m, z2m
         z_morph = torch_slerp(0.5, z1, z2, dim=1)
+    elif morph_net is not None:
+        z1, z1m, _ = Gz(x1)
+        z2, z2m, _ = Gz(x2)
 
-    if manual_morph:
+        if args.use_z_mean:
+            z1, z2 = z1m, z2m
+        z_morph = morph_net.morph_zs(z1, z2)
+    elif manual_morph:
+        # Use linear interpolation (Like MorGAN)
         z1, z1m, _ = Gz(x1)
         z2, z2m, _ = Gz(x2)
 
@@ -181,6 +197,7 @@ for i, batch in enumerate(loader):
 
         z_morph = 0.5*(z1 + z2)
     else:
+        # Use provided morph method (this will often also be linear)
         z_morph, z1, z2 = Gz.morph(x1, x2, use_mean=args.use_z_mean, return_all=True)
 
     if args.gradient_descend_dis_l:

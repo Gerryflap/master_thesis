@@ -5,20 +5,29 @@ import matplotlib.pyplot as plt
 from util.interpolation import torch_slerp
 
 parser = argparse.ArgumentParser(description="Image to latent vector converter.")
-parser.add_argument("--enc", required=True, action="store", type=str, help="Path to Gz/Encoder model")
+parser.add_argument("--enc", default=None, action="store", type=str, help="Path to Gz/Encoder model")
+parser.add_argument("--morph_net", default=None, action="store", type=str, help="Path to the morph net model")
 parser.add_argument("--n_samples", action="store", type=str, help="Number of z morphs to generate", default=1000)
 parser.add_argument("--use_z_morph_sort", action="store_true", help="Sorts z1 and puts all others in that order as well")
 
 args = parser.parse_args()
 
-Gz = torch.load(args.enc).cpu()
+if args.morph_net is None and args.enc is None:
+    print("You must provide either --enc or --morph_net.")
+    print("Exiting...")
+    exit()
 
-latent_size = Gz.latent_size
+if args.morph_net is None:
+    morph_net = torch.load(args.enc).cpu()
+else:
+    morph_net = torch.load(args.morph_net).cpu()
+
+latent_size = morph_net.latent_size
 
 z1 = torch.randn((args.n_samples, latent_size))
 z2 = torch.randn((args.n_samples, latent_size))
 
-z_morph = Gz.morph_zs(z1, z2)
+z_morph = morph_net.morph_zs(z1, z2)
 linear_morph = 0.5*(z1 + z2)
 slerp_morph = torch_slerp(0.5, z1, z2)
 
