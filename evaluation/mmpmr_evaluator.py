@@ -86,6 +86,9 @@ parser.add_argument("--force_linear_morph", action="store_true", default=False,
                          "Can be useful to use as a baseline on a model that implements a different morph function")
 parser.add_argument("--shuffle", action="store_true", default=False,
                     help="Shuffles the dataset. THIS IS EXPERIMENTAL AND MIGHT NOT YIELD CORRECT RESULTS!")
+parser.add_argument("--disable_batched_face_detection", action="store_true", default=False,
+                    help="Disables face detection in batches. This might remove the batch effects that "
+                         "cause the RR to change when only the morphs are different")
 args = parser.parse_args()
 
 if args.test:
@@ -239,8 +242,14 @@ n_morphs = len(morph_list)
 faces_list = x1_list + x2_list + morph_list + x1_recon_list + x2_recon_list
 
 print("Detecting faces in all input and morph images...")
-face_locations = face_recognition.batch_face_locations(faces_list)
+if not args.disable_batched_face_detection:
+    face_locations = face_recognition.batch_face_locations(faces_list)
+else:
+
+    face_locations = [face_recognition.face_locations(face, number_of_times_to_upsample=2) for face in faces_list]
+    print(face_locations[0])
 print("Done.")
+
 
 print("Computing embedding vectors for all input and morph images...")
 face_encodings = []
