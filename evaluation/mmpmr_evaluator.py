@@ -7,6 +7,7 @@
 
 import argparse
 import os
+from multiprocessing import Pool
 
 import numpy as np
 import torch
@@ -86,17 +87,19 @@ parser.add_argument("--force_linear_morph", action="store_true", default=False,
                          "Can be useful to use as a baseline on a model that implements a different morph function")
 parser.add_argument("--shuffle", action="store_true", default=False,
                     help="Shuffles the dataset. THIS IS EXPERIMENTAL AND MIGHT NOT YIELD CORRECT RESULTS!")
-parser.add_argument("--disable_batched_face_detection", action="store_true", default=False,
-                    help="Disables face detection in batches. This might remove the batch effects that "
-                         "cause the RR to change when only the morphs are different")
+parser.add_argument("--enable_batched_face_detection", action="store_true", default=False,
+                    help="Enables face detection in batches. This might speed the script up very slightly.")
 args = parser.parse_args()
 
 if args.test:
     print("WARNING! Test set is enabled. This is only allowed when evaluating the model!")
-    response = input("Please type \"use test\" in order to continue: \n")
-    if response != "use test":
-        print("Input did not match the required string: exiting...")
-        exit()
+    # Test set lock has been removed as of the 29th of April 2020 to allow for running many tests sequentially without
+    # intervention.
+    #
+    # response = input("Please type \"use test\" in order to continue: \n")
+    # if response != "use test":
+    #     print("Input did not match the required string: exiting...")
+    #     exit()
 
 if args.parameter_path is None and args.experiment_path is None:
     raise ValueError("No path specified. Please specify either parameter_path or experiment_path")
@@ -242,7 +245,7 @@ n_morphs = len(morph_list)
 faces_list = x1_list + x2_list + morph_list + x1_recon_list + x2_recon_list
 
 print("Detecting faces in all input and morph images...")
-if not args.disable_batched_face_detection:
+if args.enable_batched_face_detection:
     face_locations = face_recognition.batch_face_locations(faces_list)
 else:
 
@@ -252,15 +255,26 @@ print("Done.")
 
 
 print("Computing embedding vectors for all input and morph images...")
-face_encodings = []
-for face, face_location in zip(faces_list, face_locations):
+# face_encodings = []
+# for face, face_location in zip(faces_list, face_locations):
+
+
+def compute_encoding(tup):
+    face, face_location = tup
     if len(face_location) != 1:
         nans = np.zeros((128,), dtype=np.float32)
         nans.fill(np.nan)
-        face_encodings.append(nans)
+        return nans
     else:
-        face_enc = face_recognition.face_encodings(face, face_location)[0]
-        face_encodings.append(face_enc)
+        face_enc = face_recognition.face_encodings(face, face_location, num_jitters=10)[0]
+        return face_enc
+
+
+pool = Pool(processes=16)
+face_encodings = pool.map(compute_encoding, zip(faces_list, face_locations))
+pool.close()
+
+
 print("Done.")
 print("Collecting data and computing statistics...")
 x1_list = np.stack(x1_list, axis=0)
