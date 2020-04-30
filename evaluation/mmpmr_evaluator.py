@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
-from torchvision.utils import make_grid, save_image
+import json
 
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
 from data.frgc_cropped_pairs_look_alike import FRGCPairsLookAlike
@@ -351,6 +351,17 @@ out_str += "==================="
 print(out_str)
 with open(os.path.join(output_path, "results.txt"), "w") as f:
     f.write(out_str)
+
+json_info = {
+    "path": param_path,
+    "mmpmr": mmpmr_value,
+    "rr": correct_reconstruction_rate,
+    "mmd": float(np.concatenate((dist_x1, dist_x2), axis=0).mean()),
+    "mrd": float(dist_recon.mean())
+}
+
+with open(os.path.join(output_path, "results.json"), "w") as f:
+    json.dump(json_info, f)
 
 if args.visualize:
     import matplotlib.pyplot as plt

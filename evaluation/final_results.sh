@@ -22,7 +22,7 @@ python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/validatio
 
 # MorGAN+ 3.0 (MorGAN/2020-01-21T15:31:40)
 echo "MorGAN+ 3.0 (MorGAN/2020-01-21T15:31:40)"
-python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/results/MorGAN/2020-01-21T15:31:40/params/all_epochs/ --eval --batch_size=32 --visualize --test
+python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/results/celeba64/MorGAN/2020-01-21T15:31:40/params/all_epochs/ --eval --batch_size=32 --visualize --test
 
 # MorGAN+ dis_l 3.0
 echo "MorGAN+ dis_l 3.0"
@@ -42,7 +42,7 @@ python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/results/c
 
 # Morph network linear interpolation (so without actually using the morph network) (Morphing_GAN/2020-04-17T18:29:45)
 echo "Morph network linear interpolation (so without actually using the morph network) (Morphing_GAN/2020-04-17T18:29:45)"
-python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/rresults/celeba64/Morphing_GAN/2020-04-17T18:29:45/params/all_epochs/ --eval --batch_size=32 --visualize --test --force_linear_morph
+python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/results/celeba64/Morphing_GAN/2020-04-17T18:29:45/params/all_epochs/ --eval --batch_size=32 --visualize --test --force_linear_morph
 
 # MorGAN+ dis_l 3.0 3.0 (with morph loss) (no Gx loss)
 echo "MorGAN+ dis_l 3.0 3.0 (with morph loss) (no Gx loss)"
