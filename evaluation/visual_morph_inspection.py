@@ -68,10 +68,10 @@ output_dir = init_experiment_output_dir("morphing_evaluation", "morphing_evaluat
 
 if args.test:
     print("WARNING! Test set is enabled. This is only allowed when evaluating the model!")
-    response = input("Please type \"use test\" in order to continue: \n")
-    if response != "use test":
-        print("Input did not match the required string: exiting...")
-        exit()
+    # response = input("Please type \"use test\" in order to continue: \n")
+    # if response != "use test":
+    #     print("Input did not match the required string: exiting...")
+    #     exit()
 
 if args.parameter_path is None and args.experiment_path is None:
     raise ValueError("Not path specified. Please specify either parameter_path or experiment_path")
@@ -184,3 +184,4 @@ print(out_img.size())
 print(os.path.join(output_dir, "morphs.png"))
 
 save_image(out_img, os.path.join(output_dir, "morphs.png"))
+save_image(morph_column, os.path.join(output_dir, "morphs_only.png"))
