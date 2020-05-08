@@ -9,6 +9,7 @@ from models.mixture.generator import Generator
 from models.mixture.encoder import Encoder
 from models.mixture.discriminator import Discriminator
 from trainloops.ali_train_loop import ALITrainLoop
+from trainloops.listeners.loss_plotter import LossPlotter
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.mixture_visualizer import MixtureVisualizer
 from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
@@ -82,7 +83,8 @@ listeners = [
         output_latent=True,
         output_grad_norm=True,
         output_morph_path=True
-    )
+    ),
+    LossPlotter(output_path)
 ]
 
 trainloop = MorphingGANTrainLoop(

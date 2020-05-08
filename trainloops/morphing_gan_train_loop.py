@@ -223,6 +223,8 @@ class MorphingGANTrainLoop(TrainLoop):
                 "G_loss": L_g.detach().item(),
                 "L_recon": L_recon.detach().item(),
                 "L_morph": L_morph.detach().item(),
+                "L_recon_scaled": self.morgan_alpha * L_recon.detach().item(),
+                "L_morph_scaled": self.morph_loss_factor * L_morph.detach().item(),
                 "L_syn": L_syn.detach().item()
             }
         if self.trainable_morph_network_consistency_loss:

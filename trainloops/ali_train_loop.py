@@ -166,6 +166,7 @@ class ALITrainLoop(TrainLoop):
             }
         if self.morgan:
             losses["L_pixel"] = L_pixel.detach().item()
+            losses["L_pixel_scaled"] = L_pixel.detach().item() * self.morgan_alpha
             losses["L_syn"] = L_syn.detach().item()
 
         if self.r1_reg_gamma != 0.0:

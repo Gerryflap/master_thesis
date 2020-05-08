@@ -6,6 +6,7 @@ from models.conv64_ali.generator import Generator64
 
 from trainloops.listeners.ae_image_sample_logger import AEImageSampleLogger
 from trainloops.listeners.cluster_killswitch import KillSwitchListener
+from trainloops.listeners.loss_plotter import LossPlotter
 from trainloops.listeners.loss_reporter import LossReporter
 from trainloops.listeners.model_saver import ModelSaver
 from trainloops.ali_train_loop import ALITrainLoop
@@ -117,7 +118,8 @@ listeners = [
     AEImageSampleLogger(output_path, dataset, args, folder_name="AE_samples_train"),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
     ModelSaver(output_path, n=30, overwrite=False, print_output=True),
-    KillSwitchListener(output_path)
+    LossPlotter(output_path),
+    KillSwitchListener(output_path),
 ]
 
 reconstruction_loss_mode = "pixelwise" if not args.use_dis_l_reconstruction_loss else "dis_l"

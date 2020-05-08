@@ -2,6 +2,7 @@ from data.celeba_cropped_pairs import CelebaCroppedPairs
 from models.conv64_ali.encoder import Encoder64
 from models.conv64_ali.encoder_with_morphing_network import EncoderMorphNet64
 from trainloops.listeners.cluster_killswitch import KillSwitchListener
+from trainloops.listeners.loss_plotter import LossPlotter
 from trainloops.listeners.morph_image_logger import MorphImageLogger
 from trainloops.morphing_gan_train_loop import MorphingGANTrainLoop
 from models.conv64_ali.ali_discriminator import ALIDiscriminator64
@@ -129,7 +130,8 @@ listeners = [
     MorphImageLogger(output_path, valid_dataset, args, slerp=args.use_slerp),
     ModelSaver(output_path, n=1, overwrite=True, print_output=True),
     ModelSaver(output_path, n=30, overwrite=False, print_output=True),
-    KillSwitchListener(output_path)
+    LossPlotter(output_path),
+    KillSwitchListener(output_path),
 ]
 
 if args.use_dis_l_reconstruction_loss:

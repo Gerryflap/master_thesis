@@ -54,7 +54,7 @@ class ALIDiscriminator28(torch.nn.Module):
 
     @staticmethod
     def leaky_relu(x):
-        return torch.nn.functional.leaky_relu(x, 0.02)
+        return torch.nn.functional.leaky_relu(x, 0.02, inplace=False)
 
     def forward(self, inp):
         x, z = inp
