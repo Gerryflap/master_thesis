@@ -446,6 +446,7 @@ if args.visualize:
     plt.clf()
 
     all_dists = np.concatenate([dist_ref, dist_mated_impostor, dist_morph, dist_random_impostor])
+    all_dists = all_dists[~np.isnan(all_dists)]
     dmin, dmax = all_dists.min(), all_dists.max()
     binwidth = 0.025
     bins = np.arange(dmin, dmax + binwidth, binwidth)
