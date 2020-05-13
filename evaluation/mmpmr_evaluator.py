@@ -21,6 +21,7 @@ from evaluation.metrics.evaluation_metrics import mmpmr, relative_morph_distance
 from evaluation.util.gradient_descend_on_z import optimize_z_batch, optimize_z_batch_recons
 from models.morphing_encoder import MorphingEncoder
 import face_recognition
+import seaborn as sns
 
 from util.interpolation import torch_slerp
 from util.output import init_experiment_output_dir
@@ -89,6 +90,8 @@ parser.add_argument("--shuffle", action="store_true", default=False,
                     help="Shuffles the dataset. THIS IS EXPERIMENTAL AND MIGHT NOT YIELD CORRECT RESULTS!")
 parser.add_argument("--enable_batched_face_detection", action="store_true", default=False,
                     help="Enables face detection in batches. This might speed the script up very slightly.")
+parser.add_argument("--fast_mode", action="store_true", default=False,
+                    help="Does image encoding way faster, but results will be less accurate.")
 args = parser.parse_args()
 
 if args.test:
@@ -164,10 +167,12 @@ loader = DataLoader(dataset, args.batch_size, shuffle=args.shuffle)
 
 print("Generating Morphs...")
 x1_list = []
-morph_list = []
 x2_list = []
+morph_list = []
 x1_recon_list = []
 x2_recon_list = []
+x1_inp_list = []
+x2_inp_list = []
 
 for i, batch in enumerate(loader):
     if args.max_output_batches is not None and i >= args.max_output_batches:
@@ -239,10 +244,16 @@ for i, batch in enumerate(loader):
 
     for img in torch.unbind(x2_recon, dim=0):
         x2_recon_list.append(to_numpy_img(img, args.tanh))
+
+    for img in torch.unbind(x1, dim=0):
+        x1_inp_list.append(to_numpy_img(img, args.tanh))
+
+    for img in torch.unbind(x2, dim=0):
+        x2_inp_list.append(to_numpy_img(img, args.tanh))
 print("Done.")
 
 n_morphs = len(morph_list)
-faces_list = x1_list + x2_list + morph_list + x1_recon_list + x2_recon_list
+faces_list = x1_list + x2_list + morph_list + x1_recon_list + x2_recon_list + x1_inp_list + x2_inp_list
 
 print("Detecting faces in all input and morph images...")
 if args.enable_batched_face_detection:
@@ -266,7 +277,7 @@ def compute_encoding(tup):
         nans.fill(np.nan)
         return nans
     else:
-        face_enc = face_recognition.face_encodings(face, face_location, num_jitters=10)[0]
+        face_enc = face_recognition.face_encodings(face, face_location, num_jitters=10 if not args.fast_mode else 1)[0]
         return face_enc
 
 
@@ -287,7 +298,9 @@ x1_enc = np.stack(face_encodings[:n_morphs], axis=0)
 x2_enc = np.stack(face_encodings[n_morphs:2*n_morphs], axis=0)
 morphs_enc = np.stack(face_encodings[2*n_morphs:3*n_morphs], axis=0)
 x1_recon_enc = np.stack(face_encodings[3*n_morphs:4*n_morphs], axis=0)
-x2_recon_enc = np.stack(face_encodings[4*n_morphs:], axis=0)
+x2_recon_enc = np.stack(face_encodings[4*n_morphs:5*n_morphs], axis=0)
+x1_inp_enc = np.stack(face_encodings[5*n_morphs:6*n_morphs], axis=0)
+x2_inp_enc = np.stack(face_encodings[6*n_morphs:], axis=0)
 
 
 # Filter any rows with nan embeddings in the x1 and x2
@@ -306,10 +319,16 @@ x2_enc = x2_enc[not_nan_indices]
 morphs_enc = morphs_enc[not_nan_indices]
 x1_recon_enc = x1_recon_enc[not_nan_indices]
 x2_recon_enc = x2_recon_enc[not_nan_indices]
+x1_inp_enc = x1_inp_enc[not_nan_indices]
+x2_inp_enc = x2_inp_enc[not_nan_indices]
 
 
 # Assert that there are no nans in the comparison faces
 # assert not (np.isnan(x1_enc).any() or np.isnan(x2_enc).any())
+
+# Make shifted versions for impostor scores
+x1_enc_shifted = np.concatenate([x1_enc[1:], x1_enc[:1]])
+x2_enc_shifted = np.concatenate([x2_enc[1:], x2_enc[:1]])
 
 
 # Compute euclidean distances between x1 and the morph and x2 and the morph
@@ -318,10 +337,19 @@ dist_x2 = np.sqrt(np.sum(np.square(x2_enc - morphs_enc), axis=1))
 dist_x1_x2 = np.sqrt(np.sum(np.square(x1_enc - x2_enc), axis=1))
 dist_x1_recon = np.sqrt(np.sum(np.square(x1_enc - x1_recon_enc), axis=1))
 dist_x2_recon = np.sqrt(np.sum(np.square(x2_enc - x2_recon_enc), axis=1))
+dist_x1_to_ref = np.sqrt(np.sum(np.square(x1_enc - x1_inp_enc), axis=1))
+dist_x2_to_ref = np.sqrt(np.sum(np.square(x2_enc - x2_inp_enc), axis=1))
+dist_x1_to_other = np.sqrt(np.sum(np.square(x1_enc - x1_enc_shifted), axis=1))
+dist_x2_to_other = np.sqrt(np.sum(np.square(x2_enc - x2_enc_shifted), axis=1))
 
 dist_recon = np.concatenate([dist_x1_recon, dist_x2_recon], axis=0)
+dist_ref = np.concatenate([dist_x1_to_ref, dist_x2_to_ref], axis=0)
+dist_morph = np.concatenate([dist_x1, dist_x2], axis=0)
+dist_mated_impostor = dist_x1_x2
+dist_random_impostor = np.concatenate([dist_x1_to_other, dist_x2_to_other], axis=0)
 
-# Replace nan values with the maximal euclidean distance on a 1-D hypersphere
+
+# Replace nan values with the maximal euclidean distance on a 1-D hypersphere (this might not be the correct assumption!)
 dist_x1[np.isnan(dist_x1)] = 2.0
 dist_x2[np.isnan(dist_x2)] = 2.0
 dist_recon[np.isnan(dist_recon)] = 1.0
@@ -362,6 +390,16 @@ json_info = {
 
 with open(os.path.join(output_path, "results.json"), "w") as f:
     json.dump(json_info, f)
+
+json_distances = {
+    "x_ref_to_x": list(dist_ref),
+    "x_ref_to_morph": list(dist_morph),
+    "x1_ref_to_x2_ref": list(dist_mated_impostor),
+    "x_ref_to_x_recon": list(dist_recon),
+    "x_ref_to_random_ref": list(dist_random_impostor)
+}
+with open(os.path.join(output_path, "distances.json"), "w") as f:
+    json.dump(json_distances, f)
 
 if args.visualize:
     import matplotlib.pyplot as plt
@@ -405,3 +443,45 @@ if args.visualize:
     plt.hist(rmd_values, bins=60)
     plt.title("RMD Values")
     plt.savefig(os.path.join(output_path, "rmd.png"))
+    plt.clf()
+
+    all_dists = np.concatenate([dist_ref, dist_mated_impostor, dist_morph, dist_random_impostor])
+    dmin, dmax = all_dists.min(), all_dists.max()
+    binwidth = 0.025
+    bins = np.arange(dmin, dmax + binwidth, binwidth)
+    # plt.hist(dist_recon, bins=60, label="$x^{ref}$ to $x^{recon}$", alpha=0.7, density=True)
+    plt.hist(dist_ref, bins=bins, label="$x$ to $x^{ref}$", alpha=0.7, density=True, color="blue")
+    plt.hist(dist_mated_impostor, bins=bins, label="$x_1^{ref}$ to $x_2^{ref}$", alpha=0.7, density=True, color="orange")
+    plt.hist(dist_random_impostor, bins=bins, label="$x^{ref}$ to random other $x^{ref}$", alpha=0.7, density=True, color="red")
+    plt.hist(dist_morph, bins=bins, label="$x^{ref}$ to $x^{morph}$", alpha=0.7, density=True, color="green")
+    plt.title("Model performance overview")
+    plt.ylabel("Density")
+    plt.xlabel("FRS encoding euclidean distance")
+    plt.legend()
+    plt.savefig(os.path.join(output_path, "overview.png"))
+    plt.clf()
+
+    sns.distplot(dist_mated_impostor, bins=bins, label="$x_1^{ref}$ to $x_2^{ref}$", hist=False,  kde=True, color="orange", kde_kws={'shade': True, 'linewidth': 1})
+    sns.distplot(dist_morph, bins=bins, label="$x^{ref}$ to $x^{morph}$", color="green", hist=False, kde=True, kde_kws={'shade': True, 'linewidth': 1})
+    sns.distplot(dist_random_impostor, bins=bins, label="$x^{ref}$ to random other $x^{ref}$", hist=False, kde=True, color="red", kde_kws={'shade': True, 'linewidth': 1})
+    sns.distplot(dist_ref, bins=bins, label="$x$ to $x^{ref}$", hist=False, kde=True, color="blue", kde_kws={'shade': True, 'linewidth': 1})
+
+    plt.title("Model performance overview")
+    plt.ylabel("Density")
+    plt.xlabel("FRS encoding euclidean distance")
+    plt.legend()
+    plt.savefig(os.path.join(output_path, "overview_kernel_density.png"))
+    plt.clf()
+
+    plt.hist(
+        [dist_ref, dist_mated_impostor, dist_morph, dist_random_impostor],
+        label=["$x$ to $x^{ref}$", "$x_1^{ref}$ to $x_2^{ref}$", "$x^{ref}$ to $x^{morph}$", "$x^{ref}$ to random other $x^{ref}$"],
+        color=["blue", "orange", "green", "red"],
+        bins=40,
+        density=True
+    )
+    plt.title("Model performance overview")
+    plt.ylabel("Density")
+    plt.xlabel("FRS encoding euclidean distance")
+    plt.legend()
+    plt.savefig(os.path.join(output_path, "overview_split_bars.png"))
