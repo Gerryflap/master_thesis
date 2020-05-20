@@ -66,21 +66,21 @@ class ALIDiscriminator28(torch.nn.Module):
         return prediction
 
     def compute_dx(self, x):
-        h = self.conv_1(x)
         if self.dropout != 0:
-            h = self.dropout_conv_layer(h)
+            x = self.dropout_conv_layer(x)
+        h = self.conv_1(x)
         h = self.activ(h)
 
-        h = self.conv_2(h)
         if self.dropout != 0:
             h = self.dropout_conv_layer(h)
+        h = self.conv_2(h)
         if self.use_bn:
             h = self.bn_2(h)
         h = self.activ(h)
 
-        h = self.conv_3(h)
         if self.dropout != 0:
             h = self.dropout_conv_layer(h)
+        h = self.conv_3(h)
         if self.use_bn:
             h = self.bn_3(h)
         h = self.activ(h)
@@ -92,9 +92,9 @@ class ALIDiscriminator28(torch.nn.Module):
             mean_std = mean_std.repeat((h.size(0), 1, h.size(2), h.size(3)))
             h = torch.cat((h, mean_std), dim=1)
 
-        h = self.conv_4(h)
         if self.dropout != 0:
             h = self.dropout_conv_layer(h)
+        h = self.conv_4(h)
         if self.use_bn:
             h = self.bn_4(h)
         h = self.activ(h)
