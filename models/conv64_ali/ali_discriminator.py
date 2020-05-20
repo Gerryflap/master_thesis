@@ -81,6 +81,8 @@ class ALIDiscriminator64(torch.nn.Module):
 
     def compute_dx(self, x):
         h = self.conv_1(x)
+        # Curiously I've applied dropout after the layer here, but in the z and xz methods I did it before.
+        # This might affect performance, but I'm leaving it in to keep the results as reproducible as possible.
         if self.dropout != 0 and self.full_dropout:
             h = self.conv_dropout_layer(h)
         h = self.activ(h)
