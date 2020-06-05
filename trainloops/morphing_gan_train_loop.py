@@ -189,6 +189,7 @@ class MorphingGANTrainLoop(TrainLoop):
 
                 # Added 9 April 2020
                 z_morph_detached_from_Gz = self.Gz.morph_zs(z1_hat.detach(), z2_hat.detach())
+                # There has been an error here as only z1 is used. This bug is kept to ensure reproducible results.
                 l2_norms = torch.max(z1_hat.detach().norm(2, dim=1), z1_hat.detach().norm(2, dim=1))
                 morph_l2_norms = z_morph_detached_from_Gz.norm(2, dim=1)
                 morph_scale_loss = (torch.nn.functional.relu(morph_l2_norms - l2_norms)**2).mean()

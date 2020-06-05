@@ -216,8 +216,10 @@ for i, batch in enumerate(loader):
         print("Batch %d/%d done..." % (i+1, len(loader)))
 
     if args.gradient_descend_dis_l_recon:
-        (z1, z2, z_morph), _ = optimize_z_batch_recons(Gx, x1, x2, starting_zs=(z1, z2), dis_l_D=D, n_steps=500)
+        (z1, z2, z_morph_from_recons), _ = optimize_z_batch_recons(Gx, x1, x2, starting_zs=(z1, z2), dis_l_D=D, n_steps=500)
         print("Batch %d/%d done..." % (i+1, len(loader)))
+        if not args.gradient_descend_dis_l:
+            z_morph = z_morph_from_recons
 
     x1_recon = Gx(z1)
     x2_recon = Gx(z2)
