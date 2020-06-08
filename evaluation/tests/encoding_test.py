@@ -1,5 +1,6 @@
 """
-    This script tries to uncover why the results vary
+    This script tries to uncover why the results vary.
+    Using n_jitters=10 will cause varying results for similar pictures, while n_jitters=0 or 1 does not.
 """
 import random
 
@@ -35,8 +36,8 @@ def compute_dist(img_tup):
     x1_pos = face_recognition.face_locations(x1_img, number_of_times_to_upsample=2)
     x2_pos = face_recognition.face_locations(x2_img, number_of_times_to_upsample=2)
 
-    x1_enc = face_recognition.face_encodings(x1_img, x1_pos)[0]
-    x2_enc = face_recognition.face_encodings(x2_img, x2_pos)[0]
+    x1_enc = face_recognition.face_encodings(x1_img, x1_pos, num_jitters=1)[0]
+    x2_enc = face_recognition.face_encodings(x2_img, x2_pos, num_jitters=1)[0]
     dist = np.sqrt(np.sum((x1_enc - x2_enc) ** 2))
     return dist
 

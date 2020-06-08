@@ -26,13 +26,15 @@ import seaborn as sns
 from util.interpolation import torch_slerp
 from util.output import init_experiment_output_dir
 
+
 def to_numpy_img(img, tanh_mode):
     if tanh_mode:
-        img = (img + 1)/2
+        img = (img + 1) / 2
     img = np.moveaxis(img.detach().numpy(), 0, 2)
     img *= 255
     img = img.astype(np.uint8)
     return img
+
 
 parser = argparse.ArgumentParser(description="Morph inspection tool.")
 parser.add_argument("--batch_size", action="store", type=int, default=24,
@@ -49,7 +51,7 @@ parser.add_argument("--max_output_batches", action="store", type=int, default=No
                     help="If defined, limits the amount of rows in the output image")
 parser.add_argument("--res", action="store", type=int, default=64,
                     help="Image resolution. 64 (for 64x64) by default. 28 if you're loading a 28x28 model")
-parser.add_argument("--tanh", action="store_true",  default=False,
+parser.add_argument("--tanh", action="store_true", default=False,
                     help="Has to be used if the model is a tanh model instead of sigmoid")
 parser.add_argument("--test", action="store_true", default=False, help="Switches to the test set")
 parser.add_argument("--decoder_filename", action="store", type=str, default="Gx.pt",
@@ -94,6 +96,10 @@ parser.add_argument("--fast_mode", action="store_true", default=False,
                     help="Does image encoding way faster, but results will be less accurate.")
 args = parser.parse_args()
 
+if not args.fast_mode:
+    print("Warning! fast mode is not enabled. "
+          "Disabling fast mode will lead to randomness in results and is therefore not used for the final evaluation")
+
 if args.test:
     print("WARNING! Test set is enabled. This is only allowed when evaluating the model!")
     # Test set lock has been removed as of the 29th of April 2020 to allow for running many tests sequentially without
@@ -137,7 +143,6 @@ else:
 
 output_path = init_experiment_output_dir("celeba64" if not args.frgc else "frgc64", "model_evaluation", args)
 
-
 if args.eval:
     Gx.eval()
     Gz.eval()
@@ -153,7 +158,7 @@ if args.res != 64:
 trans.append(transforms.ToTensor())
 
 if args.tanh:
-    trans.append(transforms.Lambda(lambda img: img*2.0 - 1.0))
+    trans.append(transforms.Lambda(lambda img: img * 2.0 - 1.0))
 split = "valid"
 
 if args.test:
@@ -206,18 +211,19 @@ for i, batch in enumerate(loader):
         if args.use_z_mean:
             z1, z2 = z1m, z2m
 
-        z_morph = 0.5*(z1 + z2)
+        z_morph = 0.5 * (z1 + z2)
     else:
         # Use provided morph method (this will often also be linear)
         z_morph, z1, z2 = Gz.morph(x1, x2, use_mean=args.use_z_mean, return_all=True)
 
     if args.gradient_descend_dis_l:
         z_morph, _ = optimize_z_batch(Gx, x1, x2, starting_z=z_morph, dis_l_D=D, n_steps=500)
-        print("Batch %d/%d done..." % (i+1, len(loader)))
+        print("Batch %d/%d done..." % (i + 1, len(loader)))
 
     if args.gradient_descend_dis_l_recon:
-        (z1, z2, z_morph_from_recons), _ = optimize_z_batch_recons(Gx, x1, x2, starting_zs=(z1, z2), dis_l_D=D, n_steps=500)
-        print("Batch %d/%d done..." % (i+1, len(loader)))
+        (z1, z2, z_morph_from_recons), _ = optimize_z_batch_recons(Gx, x1, x2, starting_zs=(z1, z2), dis_l_D=D,
+                                                                   n_steps=500)
+        print("Batch %d/%d done..." % (i + 1, len(loader)))
         if not args.gradient_descend_dis_l:
             z_morph = z_morph_from_recons
 
@@ -255,7 +261,7 @@ for i, batch in enumerate(loader):
 print("Done.")
 
 n_morphs = len(morph_list)
-faces_list = x1_list + x2_list + morph_list + x1_recon_list + x2_recon_list + x1_inp_list + x2_inp_list
+faces_list = x1_list + x2_list + x1_recon_list + x2_recon_list + x1_inp_list + x2_inp_list + morph_list
 
 print("Detecting faces in all input and morph images...")
 if args.enable_batched_face_detection:
@@ -266,8 +272,9 @@ else:
     print(face_locations[0])
 print("Done.")
 
-
 print("Computing embedding vectors for all input and morph images...")
+
+
 # face_encodings = []
 # for face, face_location in zip(faces_list, face_locations):
 
@@ -279,14 +286,13 @@ def compute_encoding(tup):
         nans.fill(np.nan)
         return nans
     else:
-        face_enc = face_recognition.face_encodings(face, face_location, num_jitters=10 if not args.fast_mode else 1)[0]
+        face_enc = face_recognition.face_encodings(face, face_location, num_jitters=10 if not args.fast_mode else 0)[0]
         return face_enc
 
 
 pool = Pool(processes=16)
 face_encodings = pool.map(compute_encoding, zip(faces_list, face_locations))
 pool.close()
-
 
 print("Done.")
 print("Collecting data and computing statistics...")
@@ -297,18 +303,17 @@ x1_recon_list = np.stack(x1_recon_list, axis=0)
 x2_recon_list = np.stack(x2_recon_list, axis=0)
 
 x1_enc = np.stack(face_encodings[:n_morphs], axis=0)
-x2_enc = np.stack(face_encodings[n_morphs:2*n_morphs], axis=0)
-morphs_enc = np.stack(face_encodings[2*n_morphs:3*n_morphs], axis=0)
-x1_recon_enc = np.stack(face_encodings[3*n_morphs:4*n_morphs], axis=0)
-x2_recon_enc = np.stack(face_encodings[4*n_morphs:5*n_morphs], axis=0)
-x1_inp_enc = np.stack(face_encodings[5*n_morphs:6*n_morphs], axis=0)
-x2_inp_enc = np.stack(face_encodings[6*n_morphs:], axis=0)
+x2_enc = np.stack(face_encodings[n_morphs:2 * n_morphs], axis=0)
+x1_recon_enc = np.stack(face_encodings[2 * n_morphs:3 * n_morphs], axis=0)
+x2_recon_enc = np.stack(face_encodings[3 * n_morphs:4 * n_morphs], axis=0)
+x1_inp_enc = np.stack(face_encodings[4 * n_morphs:5 * n_morphs], axis=0)
+x2_inp_enc = np.stack(face_encodings[5 * n_morphs:6 * n_morphs], axis=0)
+morphs_enc = np.stack(face_encodings[6 * n_morphs:], axis=0)
 
-
-# Filter any rows with nan embeddings in the x1 and x2
+# Filter any rows with nan embeddings in the x1 or x2
 not_nan_indices = ~(np.isnan(np.sum(x1_enc, axis=1)) + np.isnan(np.sum(x2_enc, axis=1)))
 
-print("WARNING! Due to undetectable faces in the dataset, %d images have been dropped!"%int(np.sum(~not_nan_indices)))
+print("WARNING! Due to undetectable faces in the dataset, %d images have been dropped!" % int(np.sum(~not_nan_indices)))
 
 x1_list = x1_list[not_nan_indices]
 x2_list = x2_list[not_nan_indices]
@@ -324,14 +329,12 @@ x2_recon_enc = x2_recon_enc[not_nan_indices]
 x1_inp_enc = x1_inp_enc[not_nan_indices]
 x2_inp_enc = x2_inp_enc[not_nan_indices]
 
-
 # Assert that there are no nans in the comparison faces
 # assert not (np.isnan(x1_enc).any() or np.isnan(x2_enc).any())
 
 # Make shifted versions for impostor scores
 x1_enc_shifted = np.concatenate([x1_enc[1:], x1_enc[:1]])
 x2_enc_shifted = np.concatenate([x2_enc[1:], x2_enc[:1]])
-
 
 # Compute euclidean distances between x1 and the morph and x2 and the morph
 dist_x1 = np.sqrt(np.sum(np.square(x1_enc - morphs_enc), axis=1))
@@ -350,12 +353,10 @@ dist_morph = np.concatenate([dist_x1, dist_x2], axis=0)
 dist_mated_impostor = dist_x1_x2
 dist_random_impostor = np.concatenate([dist_x1_to_other, dist_x2_to_other], axis=0)
 
-
 # Replace nan values with the maximal euclidean distance on a 1-D hypersphere (this might not be the correct assumption!)
 dist_x1[np.isnan(dist_x1)] = 2.0
 dist_x2[np.isnan(dist_x2)] = 2.0
 dist_recon[np.isnan(dist_recon)] = 1.0
-
 
 s = np.stack([dist_x1, dist_x2], axis=1)
 
@@ -366,15 +367,14 @@ correct_reconstruction_rate = (dist_recon < 0.6).mean()
 print("Done.")
 print()
 
-
 out_str = ""
 out_str += "===== RESULTS =====\n"
 out_str += "\n"
-out_str += "Computed MMPMR: %s\n"%str(mmpmr_value)
-out_str += "Computed reconstruction rate: %s\n"%str(correct_reconstruction_rate)
-out_str += "Computed Mean RMD: %s\n"%str(rmd)
-out_str += "Mean distance morph to x1 and morph to x2: %s\n"%str(np.concatenate((dist_x1, dist_x2), axis=0).mean())
-out_str += "Mean distance x to x_recon: %s\n"%str(dist_recon.mean())
+out_str += "Computed MMPMR: %s\n" % str(mmpmr_value)
+out_str += "Computed reconstruction rate: %s\n" % str(correct_reconstruction_rate)
+out_str += "Computed Mean RMD: %s\n" % str(rmd)
+out_str += "Mean distance morph to x1 and morph to x2: %s\n" % str(np.concatenate((dist_x1, dist_x2), axis=0).mean())
+out_str += "Mean distance x to x_recon: %s\n" % str(dist_recon.mean())
 out_str += "\n"
 out_str += "==================="
 
@@ -405,6 +405,7 @@ with open(os.path.join(output_path, "distances.json"), "w") as f:
 
 if args.visualize:
     import matplotlib.pyplot as plt
+
     plt.rcParams.update({'axes.titlesize': 8})
 
     f = plt.figure(dpi=250)
@@ -418,13 +419,13 @@ if args.visualize:
     for plot_index, i in enumerate(top5):
         img = np.concatenate([x1_list[i], morph_list[i], x2_list[i]], axis=1)
         axs[plot_index, 0].imshow(img)
-        axs[plot_index, 0].set_title("No %d of top 5, Max distance: %.2f" % (plot_index+1, max_distances[i]))
+        axs[plot_index, 0].set_title("No %d of top 5, Max distance: %.2f" % (plot_index + 1, max_distances[i]))
         axs[plot_index, 0].axis('off')
 
     for plot_index, i in enumerate(worst5):
         img = np.concatenate([x1_list[i], morph_list[i], x2_list[i]], axis=1)
         axs[plot_index, 1].imshow(img)
-        axs[plot_index, 1].set_title("No %d of bottom 5, Max distance: %.2f" % (plot_index+1, max_distances[i]))
+        axs[plot_index, 1].set_title("No %d of bottom 5, Max distance: %.2f" % (plot_index + 1, max_distances[i]))
 
         axs[plot_index, 1].axis('off')
 
@@ -463,10 +464,14 @@ if args.visualize:
     plt.savefig(os.path.join(output_path, "overview.png"))
     plt.clf()
 
-    sns.distplot(dist_mated_impostor, bins=bins, label="mated impostor", hist=False,  kde=True, color="orange", kde_kws={'shade': True, 'linewidth': 1})
-    sns.distplot(dist_morph, bins=bins, label="morph", color="green", hist=False, kde=True, kde_kws={'shade': True, 'linewidth': 1})
-    sns.distplot(dist_random_impostor, bins=bins, label="random impostor", hist=False, kde=True, color="red", kde_kws={'shade': True, 'linewidth': 1})
-    sns.distplot(dist_ref, bins=bins, label="genuine", hist=False, kde=True, color="blue", kde_kws={'shade': True, 'linewidth': 1})
+    sns.distplot(dist_mated_impostor, bins=bins, label="mated impostor", hist=False, kde=True, color="orange",
+                 kde_kws={'shade': True, 'linewidth': 1})
+    sns.distplot(dist_morph, bins=bins, label="morph", color="green", hist=False, kde=True,
+                 kde_kws={'shade': True, 'linewidth': 1})
+    sns.distplot(dist_random_impostor, bins=bins, label="random impostor", hist=False, kde=True, color="red",
+                 kde_kws={'shade': True, 'linewidth': 1})
+    sns.distplot(dist_ref, bins=bins, label="genuine", hist=False, kde=True, color="blue",
+                 kde_kws={'shade': True, 'linewidth': 1})
 
     plt.ylabel("Density")
     plt.xlabel("FRS encoding euclidean distance")
@@ -476,7 +481,8 @@ if args.visualize:
 
     plt.hist(
         [dist_ref, dist_mated_impostor, dist_morph, dist_random_impostor],
-        label=["$x$ to $x^{ref}$", "$x_1^{ref}$ to $x_2^{ref}$", "$x^{ref}$ to $x^{morph}$", "$x^{ref}$ to random other $x^{ref}$"],
+        label=["$x$ to $x^{ref}$", "$x_1^{ref}$ to $x_2^{ref}$", "$x^{ref}$ to $x^{morph}$",
+               "$x^{ref}$ to random other $x^{ref}$"],
         color=["blue", "orange", "green", "red"],
         bins=40,
         density=True
