@@ -12,6 +12,8 @@ from torchvision.transforms import transforms
 
 from data.celeba_cropped_pairs_look_alike import CelebaCroppedPairsLookAlike
 
+# Change this value to your liking:
+num_jitters = 1
 
 def to_numpy_img(img):
     img = np.moveaxis(img.detach().numpy(), 0, 2)
@@ -36,8 +38,8 @@ def compute_dist(img_tup):
     x1_pos = face_recognition.face_locations(x1_img, number_of_times_to_upsample=2)
     x2_pos = face_recognition.face_locations(x2_img, number_of_times_to_upsample=2)
 
-    x1_enc = face_recognition.face_encodings(x1_img, x1_pos, num_jitters=1)[0]
-    x2_enc = face_recognition.face_encodings(x2_img, x2_pos, num_jitters=1)[0]
+    x1_enc = face_recognition.face_encodings(x1_img, x1_pos, num_jitters=num_jitters)[0]
+    x2_enc = face_recognition.face_encodings(x2_img, x2_pos, num_jitters=num_jitters)[0]
     dist = np.sqrt(np.sum((x1_enc - x2_enc) ** 2))
     return dist
 
