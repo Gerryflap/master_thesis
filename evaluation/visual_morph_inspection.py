@@ -62,6 +62,9 @@ parser.add_argument("--gradient_descend_dis_l", action="store_true", default=Fal
 parser.add_argument("--gradient_descend_dis_l_recon", action="store_true", default=False,
                     help="When this flag is present, "
                          "z1 and z2 will be optimized further using gradient descend with dis_l loss")
+parser.add_argument("--force_linear_morph", action="store_true", default=False,
+                    help="Forces linear morphing (the way morgan does it). "
+                         "Can be useful to use as a baseline on a model that implements a different morph function")
 args = parser.parse_args()
 
 output_dir = init_experiment_output_dir("morphing_evaluation", "morphing_evaluation", args)
@@ -86,6 +89,8 @@ Gx = torch.load(os.path.join(param_path, args.decoder_filename), map_location=de
 Gz = torch.load(os.path.join(param_path, args.encoder_filename), map_location=device)
 if not isinstance(Gz, MorphingEncoder):
     print("Gz is not a subclass of MorphingEncoder! Morphing is now done the MorGAN way.")
+    manual_morph = True
+elif args.force_linear_morph:
     manual_morph = True
 else:
     manual_morph = False
@@ -159,8 +164,10 @@ for i, batch in enumerate(loader):
         print("Batch %d/%d done..." % (i+1, len(loader)))
 
     if args.gradient_descend_dis_l_recon:
-        (z1, z2, z_morph), _ = optimize_z_batch_recons(Gx, x1, x2, starting_zs=(z1, z2), dis_l_D=D, n_steps=500)
+        (z1, z2, z_morph_recon), _ = optimize_z_batch_recons(Gx, x1, x2, starting_zs=(z1, z2), dis_l_D=D, n_steps=500)
         print("Batch %d/%d done..." % (i+1, len(loader)))
+        if not args.gradient_descend_dis_l:
+            z_morph = z_morph_recon
 
     x_morph = Gx(z_morph)
 
