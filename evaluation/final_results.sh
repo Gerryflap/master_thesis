@@ -28,6 +28,10 @@ python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/results/c
 echo "MorGAN+ dis_l 3.0"
 python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/validation_results/MorGANp_disl_3/2020-01-19T11:10:36/params/all_epochs/ --eval --batch_size=32 --visualize --test --use_z_mean --fast_mode
 
+# MorGAN+ 30.0
+echo "MorGAN+ 30.0"
+python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/results/celeba64/MorGAN/morganp_30/params/all_epochs/ --eval --batch_size=32 --visualize --test --use_z_mean --fast_mode
+
 # MorGAN+ dis_l 30.0
 echo "MorGAN+ dis_l 30.0"
 python -m evaluation.mmpmr_evaluator --cuda --parameter_path=hdd_store/validation_results/MorGANp_disl_30/2020-01-22T14:35:20/params/all_epochs/ --eval --batch_size=32 --visualize --test --use_z_mean --fast_mode
